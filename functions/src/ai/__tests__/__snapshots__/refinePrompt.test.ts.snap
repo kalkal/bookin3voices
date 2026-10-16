@@ -1,0 +1,204 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`buildRefinePrompt snapshot: prompt con sinossi e outline (seconda metà dell’outline) 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "suggestions": {
+        "description": "Suggerimenti puntuali; lista vuota se il testo funziona già.",
+        "items": {
+          "properties": {
+            "kind": {
+              "description": "Categoria del suggerimento.",
+              "enum": [
+                "style",
+                "grammar",
+                "pacing",
+              ],
+              "type": "STRING",
+            },
+            "original": {
+              "description": "Le parole ESATTE del testo su cui intervieni, copiate senza alcuna modifica. Il passaggio più breve possibile ma inequivocabile: deve comparire UNA SOLA volta nel testo.",
+              "type": "STRING",
+            },
+            "proposals": {
+              "description": "Il testo che sostituirebbe original. grammar: esattamente 1 proposta. style e pacing: da 1 a 3 varianti, dalla più conservativa.",
+              "items": {
+                "type": "STRING",
+              },
+              "type": "ARRAY",
+            },
+            "rationale": {
+              "description": "Motivazione in una riga, concreta: perché questo punto.",
+              "type": "STRING",
+            },
+          },
+          "propertyOrdering": [
+            "original",
+            "kind",
+            "rationale",
+            "proposals",
+          ],
+          "required": [
+            "original",
+            "kind",
+            "rationale",
+            "proposals",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+    },
+    "propertyOrdering": [
+      "suggestions",
+    ],
+    "required": [
+      "suggestions",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "# Style Bible di prova
+Regola zero: la voce è intoccabile.
+
+---
+
+# Esempi (few-shot): il gesto che ci si aspetta da te
+
+## Esempio 1
+Testo → suggerimento.
+
+---
+
+# Formato della risposta (vincolante)
+
+Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.
+Per ogni suggerimento:
+- \`original\`: le parole esatte del testo, copiate carattere per carattere
+  (stessa punteggiatura, stesse maiuscole). Scegli il passaggio più breve
+  possibile ma inequivocabile: deve comparire una sola volta nel testo.
+  Un original che non combacia o che è ambiguo viene scartato.
+- \`kind\`: style, grammar o pacing, secondo le regole operative.
+- \`rationale\`: una riga concreta, nella lingua del libro.
+- \`proposals\`: il testo che sostituirebbe original. grammar: esattamente
+  UNA proposta. style e pacing: da 1 a 3 varianti, ordinate dalla più
+  conservativa. Mai una proposta identica all original.
+Se il testo funziona già, restituisci la lista vuota: il silenzio è una
+risposta giusta.",
+  "userText": "Libro: «Il faro»
+Genere: thriller
+Lingua del libro: it
+Capitolo: «La tempesta»
+
+Sinossi del libro (solo contesto di trama, non intervenire su di essa):
+Un guardiano scopre che il faro chiama le navi.
+
+Traccia del capitolo (solo contesto: aiuta a giudicare ritmo e coerenza,
+NON suggerire modifiche di trama né segnalare beat mancanti):
+La prima notte di burrasca.
+1. Arriva la burrasca
+2. La lampada si spegne
+
+Testo del capitolo (dettato a voce, da rifinire con suggerimenti puntuali):
+<<<
+Elena posò lentamente la tazza sul tavolo.
+>>>",
+}
+`;
+
+exports[`buildRefinePrompt snapshot: prompt minimo senza sinossi né outline 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "suggestions": {
+        "description": "Suggerimenti puntuali; lista vuota se il testo funziona già.",
+        "items": {
+          "properties": {
+            "kind": {
+              "description": "Categoria del suggerimento.",
+              "enum": [
+                "style",
+                "grammar",
+                "pacing",
+              ],
+              "type": "STRING",
+            },
+            "original": {
+              "description": "Le parole ESATTE del testo su cui intervieni, copiate senza alcuna modifica. Il passaggio più breve possibile ma inequivocabile: deve comparire UNA SOLA volta nel testo.",
+              "type": "STRING",
+            },
+            "proposals": {
+              "description": "Il testo che sostituirebbe original. grammar: esattamente 1 proposta. style e pacing: da 1 a 3 varianti, dalla più conservativa.",
+              "items": {
+                "type": "STRING",
+              },
+              "type": "ARRAY",
+            },
+            "rationale": {
+              "description": "Motivazione in una riga, concreta: perché questo punto.",
+              "type": "STRING",
+            },
+          },
+          "propertyOrdering": [
+            "original",
+            "kind",
+            "rationale",
+            "proposals",
+          ],
+          "required": [
+            "original",
+            "kind",
+            "rationale",
+            "proposals",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+    },
+    "propertyOrdering": [
+      "suggestions",
+    ],
+    "required": [
+      "suggestions",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "# Style Bible di prova
+Regola zero: la voce è intoccabile.
+
+---
+
+# Esempi (few-shot): il gesto che ci si aspetta da te
+
+## Esempio 1
+Testo → suggerimento.
+
+---
+
+# Formato della risposta (vincolante)
+
+Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.
+Per ogni suggerimento:
+- \`original\`: le parole esatte del testo, copiate carattere per carattere
+  (stessa punteggiatura, stesse maiuscole). Scegli il passaggio più breve
+  possibile ma inequivocabile: deve comparire una sola volta nel testo.
+  Un original che non combacia o che è ambiguo viene scartato.
+- \`kind\`: style, grammar o pacing, secondo le regole operative.
+- \`rationale\`: una riga concreta, nella lingua del libro.
+- \`proposals\`: il testo che sostituirebbe original. grammar: esattamente
+  UNA proposta. style e pacing: da 1 a 3 varianti, ordinate dalla più
+  conservativa. Mai una proposta identica all original.
+Se il testo funziona già, restituisci la lista vuota: il silenzio è una
+risposta giusta.",
+  "userText": "Libro: «Il faro»
+Genere: thriller
+Lingua del libro: it
+Capitolo: «La tempesta»
+
+Testo del capitolo (dettato a voce, da rifinire con suggerimenti puntuali):
+<<<
+Elena posò lentamente la tazza sul tavolo.
+>>>",
+}
+`;

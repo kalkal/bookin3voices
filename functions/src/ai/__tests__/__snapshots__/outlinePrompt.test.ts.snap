@@ -1,0 +1,135 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`buildOutlinePrompt snapshot con capitoli già scritti (contesto) 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "chapters": {
+        "items": {
+          "properties": {
+            "beats": {
+              "description": "Da 3 a 5 beat narrativi principali del capitolo, in ordine",
+              "items": {
+                "type": "STRING",
+              },
+              "type": "ARRAY",
+            },
+            "summary": {
+              "description": "Riassunto del capitolo in 2–4 frasi",
+              "type": "STRING",
+            },
+            "title": {
+              "description": "Titolo del capitolo",
+              "type": "STRING",
+            },
+          },
+          "propertyOrdering": [
+            "title",
+            "summary",
+            "beats",
+          ],
+          "required": [
+            "title",
+            "summary",
+            "beats",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+    },
+    "propertyOrdering": [
+      "chapters",
+    ],
+    "required": [
+      "chapters",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "Sei un editor di narrativa esperto di struttura del romanzo.
+Dalla sinossi che ricevi costruisci la scaletta dei capitoli del libro.
+Per ogni capitolo proponi: un titolo evocativo ma sobrio, un riassunto di 2–4 frasi,
+e da 3 a 5 beat narrativi (gli snodi concreti della scena, in ordine).
+Decidi tu il numero di capitoli in base al respiro della storia.
+Scrivi tutto nella lingua del libro indicata.
+Se ti vengono elencati capitoli già scritti, NON riproporli e non riscriverli:
+la tua scaletta copre solo la parte di storia che manca, proseguendo con coerenza
+da dove i capitoli esistenti sono arrivati.
+Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.",
+  "userText": "Libro: «Il faro di Levante»
+Genere: romanzo
+Lingua del libro: it
+
+Capitoli GIÀ SCRITTI (in ordine — non riproporli, la scaletta prosegue dopo di loro):
+1. Il ritorno
+2. Il registro
+
+Sinossi:
+Nora Ferrandi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso su un’isola del Levante e scopre nei registri del guardiano annotazioni cifrate su navi mai arrivate in porto.",
+}
+`;
+
+exports[`buildOutlinePrompt snapshot senza capitoli già scritti 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "chapters": {
+        "items": {
+          "properties": {
+            "beats": {
+              "description": "Da 3 a 5 beat narrativi principali del capitolo, in ordine",
+              "items": {
+                "type": "STRING",
+              },
+              "type": "ARRAY",
+            },
+            "summary": {
+              "description": "Riassunto del capitolo in 2–4 frasi",
+              "type": "STRING",
+            },
+            "title": {
+              "description": "Titolo del capitolo",
+              "type": "STRING",
+            },
+          },
+          "propertyOrdering": [
+            "title",
+            "summary",
+            "beats",
+          ],
+          "required": [
+            "title",
+            "summary",
+            "beats",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+    },
+    "propertyOrdering": [
+      "chapters",
+    ],
+    "required": [
+      "chapters",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "Sei un editor di narrativa esperto di struttura del romanzo.
+Dalla sinossi che ricevi costruisci la scaletta dei capitoli del libro.
+Per ogni capitolo proponi: un titolo evocativo ma sobrio, un riassunto di 2–4 frasi,
+e da 3 a 5 beat narrativi (gli snodi concreti della scena, in ordine).
+Decidi tu il numero di capitoli in base al respiro della storia.
+Scrivi tutto nella lingua del libro indicata.
+Se ti vengono elencati capitoli già scritti, NON riproporli e non riscriverli:
+la tua scaletta copre solo la parte di storia che manca, proseguendo con coerenza
+da dove i capitoli esistenti sono arrivati.
+Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.",
+  "userText": "Libro: «Il faro di Levante»
+Genere: romanzo
+Lingua del libro: it
+
+Sinossi:
+Nora Ferrandi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso su un’isola del Levante e scopre nei registri del guardiano annotazioni cifrate su navi mai arrivate in porto.",
+}
+`;
