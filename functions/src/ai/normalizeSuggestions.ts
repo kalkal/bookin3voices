@@ -1,5 +1,5 @@
-// Normalizzazione dell'output del modello in suggerimenti ancorati al testo
-//. Qui vivono le difese meccaniche del contratto:
+// Normalizzazione dell'output del modello in suggerimenti ancorati al testo.
+// Qui vivono le difese meccaniche del contratto:
 // - `original` che non compare nel testo o compare più di una volta → SCARTATO
 //   (mai un'applicazione cieca);
 // - proposte vuote o identiche all'original → rimosse; senza proposte → scartato;

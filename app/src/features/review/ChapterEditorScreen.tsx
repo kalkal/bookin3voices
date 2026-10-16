@@ -1,5 +1,5 @@
 /**
- * Editor capitolo (mockup schermata Editor): testo con capolettera
+ * Editor capitolo: testo con capolettera
  * ed evidenziazioni inline per categoria, chip contatore dei suggerimenti che
  * apre la Review, bottone «Rifinisci con AI» che invoca il provider (oggi il
  * finto, con la callable). La matita passa in modalità edit manuale:

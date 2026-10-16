@@ -15,7 +15,7 @@ describe('chapterCodec', () => {
     expect(decodeChapterDoc(validDoc)).toEqual({ ...validDoc, outline: null });
   });
 
-  it('decodifica un documento con outline (Fase 2)', () => {
+  it('decodifica un documento con outline', () => {
     const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'] };
     expect(decodeChapterDoc({ ...validDoc, outline })).toEqual({
       ...validDoc,

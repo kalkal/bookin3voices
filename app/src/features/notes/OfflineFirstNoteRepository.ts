@@ -1,4 +1,4 @@
-// Composito offline-first delle note (feature Taccuino, review F2). Stessa rete
+// Composito offline-first delle note (feature Taccuino). Stessa rete
 // di sicurezza dei capitoli (OfflineFirstChapterRepository): la cache del JS SDK
 // di Firestore su React Native è solo in memoria, quindi una nota creata offline
 // morirebbe con l'app prima del sync. Qui ogni creazione tocca PRIMA l'outbox

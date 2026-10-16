@@ -1,10 +1,9 @@
 // Nomi dei modelli Gemini per tier: il nome vive in CONFIG, mai
 // cablato nel codice — i parametri firebase-functions si sovrascrivono da
-// .env/deploy senza toccare il codice. Default (verificati sull'endpoint
+// .env/deploy senza toccare il codice. Default (da verificare sull'endpoint
 // ListModels):
 //  - flash: gemini-3.6-flash (default);
-//  - pro:   gemini-3.1-pro-preview — l'unico Pro testuale della famiglia
-//    Gemini 3 oggi esposto; il 2.5-pro va in pensione il 16/10/2026.
+//  - pro:   gemini-3.1-pro-preview.
 // L'outline usa il tier PRO di default.
 
 import { defineString } from 'firebase-functions/params';

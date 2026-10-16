@@ -1,5 +1,5 @@
 // Callable `refineChapter(bookId, chapterId, text, textHash, requestId)`
-//: testo dettato → Gemini (Style Bible +
+// testo dettato → modello AI (Style Bible +
 // few-shot + contesto, structured output) → suggerimenti puntuali VALIDATI e
 // ancorati al testo, scritti in un BATCH ATOMICO nella sottocollezione
 // `suggestions` del capitolo (mai parziali) e restituiti al client.
@@ -15,7 +15,7 @@
 // - un suggerimento il cui `original` non combacia col testo viene scartato
 //   dal server (normalizeSuggestions), mai applicato alla cieca;
 // - Strategy AiProvider: il provider attivo si legge da
-//   users/{uid}/settings/app.aiProvider (default e unico: gemini); il
+//   users/{uid}/settings/app.aiProvider (predefinito: bedrock, Amazon Nova); il
 //   modello primario e la riserva arrivano da config (models.ts).
 
 import type { Firestore } from 'firebase-admin/firestore';
@@ -66,13 +66,13 @@ export interface RefineChapterDeps {
 
 /**
  * Provider attivo da users/{uid}/settings/app: documento assente o
- * campo malformato → default gemini; un provider sconosciuto esplicito →
+ * campo malformato → default bedrock; un provider sconosciuto esplicito →
  * failed-precondition (meglio un errore chiaro che ignorare la scelta).
  */
 export async function readAiProviderId(
   db: Firestore,
   uid: string,
-  defaultId: AiProviderId = 'gemini',
+  defaultId: AiProviderId = 'bedrock',
 ): Promise<AiProviderId> {
   const snap = await db.doc(`users/${uid}/settings/app`).get();
   if (!snap.exists) return defaultId;
@@ -174,7 +174,7 @@ async function generateValidatedSuggestions(
     const lenient = parseModelOutput(candidate);
     if (lenient) {
       if (lenient.dropped > 0) {
-        logger.warn('refineChapter: dropped malformed suggestions', {
+        logger.warn('refineChapter: dropped invalid or over-limit suggestions', {
           model: model.modelName,
           dropped: lenient.dropped,
         });

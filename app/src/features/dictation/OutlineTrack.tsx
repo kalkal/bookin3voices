@@ -1,6 +1,6 @@
 /**
- * Traccia del capitolo in Dettatura (Fase 2,
- * mockup schermata 3): pannello richiudibile sopra il testo con etichetta
+ * Traccia del capitolo in Dettatura:
+ * pannello richiudibile sopra il testo con etichetta
  * "Traccia · Capitolo <romano>" e i beat della scaletta, ciascuno con il
  * rombo dorato della firma visiva. Un tocco su un beat lo marca coperto/da
  * fare — puro segno visivo persistito in `outline.beatsDone` sul capitolo,

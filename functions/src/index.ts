@@ -63,7 +63,7 @@ export const exportBackup = onCall(
   createExportBackupHandler({ db: getFirestore() }),
 );
 
-// Scaletta capitoli dalla sinossi (Fase 2): Gemini tier
+// Scaletta capitoli dalla sinossi: Gemini tier
 // Pro (modello da config, ai/models.ts) con structured output validato Zod.
 // La callable restituisce SOLO la proposta: la conferma e il merge additivo
 // (mai toccare capitoli con testo) restano all'app.

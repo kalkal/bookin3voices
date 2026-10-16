@@ -236,7 +236,7 @@ describe('FirestoreChapterRepository', () => {
     expect(await bookRepository.getBook(book.id)).toMatchObject({ wordCount: 4 });
   });
 
-  it('outline (Fase 2): round-trip su create e update, null per i capitoli senza', async () => {
+  it('outline: round-trip su create e update, null per i capitoli senza', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Con scaletta' });
     const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'], beatsDone: [] };

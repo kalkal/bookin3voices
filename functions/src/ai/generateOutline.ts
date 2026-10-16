@@ -1,5 +1,5 @@
-// Callable `generateOutline(bookId, synopsis, requestId)` (
-// Fase 2): sinossi → Gemini (tier Pro, structured output) → scaletta capitoli
+// Callable `generateOutline(bookId, synopsis, requestId)`:
+// sinossi → modello AI (structured output) → scaletta capitoli
 // {titolo, riassunto, beat[]} VALIDATA con Zod. La callable NON scrive capitoli:
 // restituisce la proposta, l'anteprima corkboard e il merge additivo (che non
 // tocca mai capitoli con testo) sono dell'app.

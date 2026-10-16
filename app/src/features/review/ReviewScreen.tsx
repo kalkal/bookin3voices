@@ -1,5 +1,5 @@
 /**
- * Review suggerimenti (mockup schermata Review): card
+ * Review suggerimenti: card
  * originale→proposta con categoria e motivazione in una riga; per lo stile
  * fino a 3 varianti selezionabili (tap = scegli), per grammatica/ritmo una
  * proposta sola; swipe destra = accetta, sinistra = rifiuta (stessi comandi

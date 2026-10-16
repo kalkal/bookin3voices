@@ -193,7 +193,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
   }, []);
 
   // pausa automatica quando l'app va in background o lo schermo si blocca
-  //; se non si sta ascoltando, comunque flush: mai testo solo in RAM
+  // (se non si sta ascoltando, comunque flush: mai testo solo in RAM)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') return;

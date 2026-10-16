@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -98,7 +101,7 @@ jobs:
           "npm --prefix app run test:integration"
 
   # Test delle Cloud Functions: unit + integrazione su emulatore
-  # Firestore, con EPUBCheck sul file generato (stesso motore di Amazon KDP).
+  # Firestore, con EPUBCheck sul file generato.
   functions:
     name: Functions — typecheck, lint, test su emulatore
     runs-on: ubuntu-latest

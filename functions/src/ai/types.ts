@@ -1,4 +1,4 @@
-// Contratti della generazione outline (Fase 2):
+// Contratti della generazione outline:
 // input della callable validato con Zod al confine, output di Gemini MAI
 // fidato (parse, don't validate) e interfaccia `OutlineModel` in stile
 // Strategy/AiProvider — la callable è un orchestratore sottile, il modello
@@ -9,8 +9,8 @@ import { z } from 'zod';
 import type { OutlinePrompt } from './outlinePrompt';
 
 /**
- * Un capitolo proposto dalla scaletta: titolo, riassunto e beat principali
- * (Fase 2). I limiti servono da guardrail sull'output del modello:
+ * Un capitolo proposto dalla scaletta: titolo, riassunto e beat principali.
+ * I limiti servono da guardrail sull'output del modello:
  * un outline fuori misura è un output non conforme, non un dato da salvare.
  */
 export const outlineChapterSchema = z.object({

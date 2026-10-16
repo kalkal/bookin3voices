@@ -1,5 +1,5 @@
-// Prompt della generazione outline. I prompt sono CODICE (
-//): versionati (OUTLINE_PROMPT_VERSION) e coperti da snapshot test — un
+// Prompt della generazione outline. I prompt sono CODICE:
+// versionati (OUTLINE_PROMPT_VERSION) e coperti da snapshot test — un
 // refactor non deve cambiarli silenziosamente, una modifica voluta aggiorna
 // versione e snapshot insieme.
 //

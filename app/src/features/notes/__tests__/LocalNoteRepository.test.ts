@@ -1,4 +1,4 @@
-// Outbox durabile delle note (review F2): upsert per id, rimozione, e payload
+// Outbox durabile delle note: upsert per id, rimozione, e payload
 // corrotto messo in quarantena senza perdere lo storage (come LocalChapterRepository).
 
 import { LocalNoteRepository, type KeyValueStorage } from '../LocalNoteRepository';

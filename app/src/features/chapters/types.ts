@@ -18,7 +18,7 @@ export const CHAPTER_STATUSES = ['draft', 'refined', 'final'] as const;
 export type ChapterStatus = (typeof CHAPTER_STATUSES)[number];
 
 /**
- * Traccia del capitolo generata dalla scaletta (Fase 2):
+ * Traccia del capitolo generata dalla scaletta:
  * riassunto e beat principali. Il titolo proposto vive nel `title` del
  * capitolo stesso. Visibile in dettatura come traccia.
  */
@@ -40,7 +40,7 @@ export type ChapterOutline = z.infer<typeof chapterOutlineSchema>;
  * Documento capitolo come vive su Firestore, validato al confine.
  * `updatedAt` viaggia nel dominio come millisecondi epoch: i tipi dell'SDK
  * (Timestamp) non escono mai dal repository.
- * `outline` è additivo (Fase 2): i documenti nati prima non ce l'hanno,
+ * `outline` è additivo: i documenti nati prima non ce l'hanno,
  * il default li normalizza a null senza bump di schemaVersion.
  */
 export const chapterDocSchema = z.object({
@@ -85,7 +85,7 @@ export interface ChapterPatch {
 
 export interface CreateChapterInput {
   title: string;
-  /** Traccia dalla scaletta (Fase 2); assente = capitolo senza outline. */
+  /** Traccia dalla scaletta; assente = capitolo senza outline. */
   outline?: ChapterOutline;
 }
 

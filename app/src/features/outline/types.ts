@@ -1,4 +1,4 @@
-// Contratti della scaletta capitoli (Fase 2): la risposta
+// Contratti della scaletta capitoli: la risposta
 // della callable passa da Zod al confine e il servizio è
 // un'interfaccia — la UI non importa mai l'SDK Firebase (Repository/Strategy).
 

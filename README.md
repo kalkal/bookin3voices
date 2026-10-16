@@ -25,10 +25,12 @@ tells you what Amazon would reject before you upload.
   rewrites the chapter. Pick the style per book: **Suspense / Horror**, **Mystery (whodunit)**
   or **Thriller**.
 - **Outline generator**: from a synopsis to a chapter-by-chapter outline you confirm.
-- **KDP preflight check** before export: title and author, description length, cover size and
-  format, empty chapters, blank table-of-contents entries, minimum length. Errors and warnings
-  with clear messages; optionally blocks the export (`strict`).
-- **Export** to EPUB (checked with EPUBCheck, the engine KDP uses) and DOCX, plus a Markdown
+- **KDP preflight check** before export: title and author, description length, empty chapters,
+  blank table-of-contents entries, minimum length, and cover size and format when cover
+  details are supplied (the app has no cover upload yet, so it warns that the cover is
+  missing). Errors and warnings with clear messages; the server can also block the export
+  (`strict`).
+- **Export** to EPUB (checked with EPUBCheck, the W3C conformance checker) and DOCX, plus a Markdown
   backup of the raw text.
 - Notes, daily word goals and streaks.
 
@@ -134,7 +136,7 @@ enable access to the model in the Bedrock console.
 names in `functions/.env.example` are examples: check the current
 [Gemini model list](https://ai.google.dev/gemini-api/docs/models) before you deploy.
 
-Both providers share the same prompts, timeouts (80 s per call, three attempts at most), error
+Both providers share the same prompts, timeouts (80 s per call, 140 s for the outline; three attempts at most), error
 classes (`throttled`, `timeout`, `blocked`, `truncated`, `invalid_json`, ...) and logging (no
 prompt or text is ever logged).
 
@@ -186,11 +188,20 @@ fill in the `EXPO_PUBLIC_FIREBASE_*` values.
 ## Run the tests
 
 ```bash
-cd functions && npm test            # AI providers, styles, KDP preflight, exporters (no services)
-cd app && npm test                  # screens, repositories, state machines (no services)
-cd rules-tests && npm test          # Firestore rules; needs the Firestore emulator (Java)
-cd functions && npm run test:integration   # needs the emulators (and EPUBCheck jar, see below)
+# unit tests, no services needed
+(cd functions && npm test)   # AI providers, styles, KDP preflight, exporters
+(cd app && npm test)         # screens, repositories, state machines
+
+# on the Firebase emulators (Java 21 + firebase-tools 14)
+cp functions/.env.example functions/.env
+(cd functions && npm run build)
+firebase emulators:exec --only firestore --project demo-bookvoice "npm --prefix rules-tests run test:jest"
+firebase emulators:exec --only firestore --project demo-bookvoice-functions "npm --prefix functions run test:integration"
+firebase emulators:exec --only auth,firestore,functions --project demo-bookvoice-app "npm --prefix app run test:integration"
 ```
+
+On Windows, `cd rules-tests && npm test` runs the rules suite through a PowerShell script.
+The CI workflow runs the same commands.
 
 The unit suites need no emulator, no network and no credentials. Integration tests use the
 emulators; the EPUB checks use [EPUBCheck](https://github.com/w3c/epubcheck) (set `EPUBCHECK_JAR`

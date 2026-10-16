@@ -1,5 +1,5 @@
 /**
- * Schermata Dettatura (la schermata cuore, mockup schermata 3):
+ * Schermata Dettatura (la schermata cuore):
  * testo live a schermo intero (parziali in grigio attenuato, consolidato in
  * inchiostro), pannello inferiore con contatore parole di sessione, indicatore
  * di salvataggio e offline, chip dei comandi vocali «così» e microfono

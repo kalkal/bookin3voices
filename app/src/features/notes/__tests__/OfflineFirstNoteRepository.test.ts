@@ -1,4 +1,4 @@
-// Regole del composito offline-first delle note (review F2): l'outbox durabile
+// Regole del composito offline-first delle note: l'outbox durabile
 // prima di Firestore, la nota che compare anche quando il remoto rifiuta, la
 // recovery al ritorno del remoto e la sopravvivenza dell'outbox al riavvio
 // dell'app (nuovo repository sullo STESSO storage).

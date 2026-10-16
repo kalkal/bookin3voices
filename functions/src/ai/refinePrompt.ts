@@ -1,5 +1,5 @@
-// Prompt della rifinitura capitolo. I prompt sono CODICE (
-//): versionati (REFINE_PROMPT_VERSION) e coperti da snapshot test.
+// Prompt della rifinitura capitolo. I prompt sono CODICE:
+// versionati (REFINE_PROMPT_VERSION) e coperti da snapshot test.
 // QUALSIASI modifica qui (o alla Style Bible / few-shots che questo prompt
 // ingloba) va rigiocata sull'intero golden set col runner
 // (tools/goldenSetRunner) PRIMA di essere integrata — regola di manutenzione

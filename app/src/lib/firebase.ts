@@ -12,7 +12,7 @@ import { connectFunctionsEmulator, Functions, getFunctions } from 'firebase/func
 import { connectStorageEmulator, FirebaseStorage, getStorage } from 'firebase/storage';
 
 // In sviluppo si lavora SOLO contro l'Emulator Suite: il projectId coincide con
-// il progetto reale demo-bookvoice (come in .firebaserc) ma l'apiKey di default è
+// il progetto demo demo-bookvoice (come in .firebaserc, mai un progetto reale) ma l'apiKey di default è
 // fittizia, quindi nessuna chiamata può raggiungere il cloud. La config reale
 // (apiKey/appId della web app) arriva via EXPO_PUBLIC_*.
 const firebaseConfig = {

@@ -149,8 +149,8 @@ export function SettingsScreen({
             );
           })}
           <Text style={[captionStyle, { marginTop: spacing.md }]}>
-            Altri motori si potranno innestare in seguito; le rifiniture leggono il provider da
-            queste impostazioni.
+            Il motore delle rifiniture lo decide il server (variabile AI_PROVIDER, predefinito
+            Amazon Nova); qui resta la tua preferenza.
           </Text>
         </Card>
 

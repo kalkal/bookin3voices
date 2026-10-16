@@ -38,7 +38,7 @@ export const appSettingsSchema = z.object({
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 /**
- * Valori di partenza del doc `settings/app`: Gemini è il provider
+ * Valori di partenza del doc `settings/app`: Amazon Nova (bedrock) è il provider
  * DEFAULT; il tema di default dell'app è la carta.
  */
 export const DEFAULT_SETTINGS: AppSettings = {

@@ -10,7 +10,7 @@ import type { Unsubscribe } from '../chapters';
 /**
  * Stato del libro. Il campo non fissa i valori:
  * si riusa la scala dei capitoli (bozza → rifinito → finale), che copre il
- * ciclo di vita che serve alla Libreria di Fase 0.
+ * ciclo di vita che serve alla Libreria.
  */
 export const BOOK_STATUSES = ['draft', 'refined', 'final'] as const;
 export type BookStatus = (typeof BOOK_STATUSES)[number];

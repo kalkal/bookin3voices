@@ -42,7 +42,7 @@ describe('style registry', () => {
         const p = loadStyleProfileContent(id);
         return p.styleBible + p.fewShots;
       }).join('\n');
-    expect(everything).not.toMatch(/stephen|\bking\b|christie|doyle|patterson|grisham/i);
+    expect(everything).not.toMatch(/stephen|\bking\b|christie|doyle|patterson|grisham|on writing/i);
   });
 
   it('unknown or missing style resolves to the default', () => {

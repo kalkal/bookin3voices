@@ -6,7 +6,7 @@
  *   sign-in anonimo (auth) → FirestoreBookRepository/FirestoreChapterRepository
  *   creano libro e capitoli (rules vere) → CallableBookExportService chiama la
  *   callable exportBook (functions emulator) → il file torna in base64 → si
- *   scrive su disco e si valida con EPUBCheck (stesso motore di Amazon KDP).
+ *   scrive su disco e si valida con EPUBCheck.
  *
  * Prerequisiti: `firebase emulators:exec --only auth,firestore,functions` con
  * functions/ già compilato (npm --prefix functions run build) e EPUBCheck

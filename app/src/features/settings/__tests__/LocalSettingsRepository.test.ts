@@ -17,12 +17,12 @@ function memoryStorage(initial: Record<string, string> = {}) {
 const KEY = 'bookvoice/settings/app';
 
 describe('LocalSettingsRepository', () => {
-  it('senza nulla di salvato tornano i default, con aiProvider = gemini', async () => {
+  it('senza nulla di salvato tornano i default, con aiProvider = bedrock', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalSettingsRepository(storage);
     const settings = await repo.load();
     expect(settings).toEqual(DEFAULT_SETTINGS);
-    expect(settings.aiProvider).toBe('gemini');
+    expect(settings.aiProvider).toBe('bedrock');
     expect(settings.theme).toBe('paper');
   });
 

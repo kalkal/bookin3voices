@@ -1,4 +1,4 @@
-// Outbox LOCALE durabile delle note (feature Taccuino, review F2). Il JS SDK di
+// Outbox LOCALE durabile delle note (feature Taccuino). Il JS SDK di
 // Firestore su React Native ha SOLO cache in memoria: una nota creata offline
 // vive in RAM e muore con l'app prima del sync. Come per i capitoli (LocalChapterRepository),
 // la rete di sicurezza su disco la mette questo modulo:

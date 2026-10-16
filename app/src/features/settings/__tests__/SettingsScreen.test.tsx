@@ -48,13 +48,15 @@ async function renderScreen(
 }
 
 describe('SettingsScreen', () => {
-  it('di default il motore attivo è Gemini, con i tier Flash e Pro in vista', async () => {
+  it('di default il motore attivo è Amazon Nova, con Gemini come alternativa', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
-    const provider = await screen.findByTestId('provider-gemini');
+    const provider = await screen.findByTestId('provider-bedrock');
+    expect(provider).toHaveTextContent(/Amazon Nova/);
     expect(provider).toHaveTextContent(/Attivo/);
+    expect(screen.getByTestId('provider-gemini')).not.toHaveTextContent(/Attivo/);
+    expect(screen.getByText('Lite')).toBeOnTheScreen();
     expect(screen.getByText('Flash')).toBeOnTheScreen();
-    expect(screen.getByText('Pro')).toBeOnTheScreen();
     expect(screen.getByTestId('goal-value')).toHaveTextContent('500');
     await screen.unmount();
   });
