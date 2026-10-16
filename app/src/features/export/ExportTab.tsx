@@ -11,6 +11,7 @@ import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-nati
 import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
+import { preflightNote } from './kdpMessages';
 import { makeRequestId } from './requestId';
 import {
   EXPORT_FORMATS,
@@ -330,15 +331,4 @@ export function ExportTab({
       )}
     </ScrollView>
   );
-}
-
-/** One-line summary of the KDP preflight (empty when there is nothing to say). */
-export function preflightNote(file: {
-  preflight?: { errors: { message: string }[]; warnings: { message: string }[] };
-}): string {
-  const report = file.preflight;
-  if (report === undefined) return '';
-  const issues = [...report.errors, ...report.warnings];
-  if (issues.length === 0) return ' KDP check: all good.';
-  return ` KDP check: ${report.errors.length} error(s), ${report.warnings.length} warning(s). ${issues[0]?.message ?? ''}`;
 }
