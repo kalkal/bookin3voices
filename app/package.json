@@ -1,0 +1,83 @@
+{
+  "name": "app",
+  "license": "MIT",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@expo-google-fonts/cormorant-garamond": "^0.4.1",
+    "@expo-google-fonts/eb-garamond": "^0.4.3",
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~57.0.20",
+    "expo-asset": "~57.0.16",
+    "expo-dev-client": "~57.0.18",
+    "expo-file-system": "~57.0.6",
+    "expo-font": "~57.0.3",
+    "expo-haptics": "~57.0.2",
+    "expo-keep-awake": "~57.0.1",
+    "expo-network": "~57.0.1",
+    "expo-sharing": "~57.0.18",
+    "expo-speech-recognition": "~57.0.0",
+    "expo-status-bar": "~57.0.1",
+    "firebase": "^12.18.0",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "29.5.14",
+    "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "jest": "~29.7.0",
+    "jest-expo": "~57.0.5",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:integration": "jest -c jest.integration.config.js --runInBand",
+    "emulators": "powershell -ExecutionPolicy Bypass -File ../scripts/start-emulators.ps1",
+    "emulators:smoke": "node scripts/emulator-smoke.mjs",
+    "e2e:android": "node ../e2e/run-android.mjs",
+    "prepare": "cd .. && husky app/.husky"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|firebase|@firebase/.*)"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/__integration__/"
+    ],
+    "moduleNameMapper": {
+      "postinstall\\.mjs$": "<rootDir>/__mocks__/firebase-postinstall.js"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write",
+      "jest --bail --findRelatedTests --passWithNoTests"
+    ],
+    "*.{js,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "private": true
+}

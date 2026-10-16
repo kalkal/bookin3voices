@@ -1,0 +1,53 @@
+# Flusso E2E — export EPUB dalla tab Export (EXPO_PUBLIC_E2E=1).
+# In modalità E2E l'app è tutta in memoria per progetto (App.tsx): l'export è
+# servito da InMemoryBookExportService/-FileSink e il conteggio pending è
+# fisso a 2. Il flusso copre l'avviso «suggerimenti in sospeso», l'avvio della
+# generazione e l'esito a schermo — senza Emulator Suite né share sheet di
+# sistema. La callable exportBook vera (EPUB reale) è coperta dai test Jest
+# della feature Export sul Firebase Emulator.
+appId: dev.kalkal.bookvoice
+name: Export EPUB con avviso pending
+---
+- runFlow: ../helpers/open-e2e-app.yaml
+
+# Dalla Dettatura iniziale a Libreria → Libro → tab Export.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "library-screen"
+    timeout: 10000
+- tapOn:
+    id: "library-book-libro-di-prova"
+- extendedWaitUntil:
+    visible:
+      id: "book-screen"
+    timeout: 10000
+- tapOn:
+    id: "book-tab-export"
+- extendedWaitUntil:
+    visible:
+      id: "export-tab"
+    timeout: 10000
+
+# Avviso pending (2 seminati in App.tsx): c'è e dice quanti sono. Lo scroll
+# punta il TESTO, non la card: la card «visibile» col solo bordo nel viewport
+# lascerebbe il testo sotto la piega (assertVisible non scrolla).
+- scrollUntilVisible:
+    element:
+      text: "Ci sono 2 suggerimenti in sospeso"
+    direction: DOWN
+- assertVisible:
+    id: "export-pending-warning"
+
+# EPUB è il formato di default: si genera e si attende l'esito
+# (file finto: «libro.epub», 5 byte → «1 KB» arrotondato per difetto a 1).
+- scrollUntilVisible:
+    element:
+      text: "Genera EPUB"
+    direction: DOWN
+- tapOn:
+    id: "export-generate"
+- scrollUntilVisible:
+    element:
+      text: '«libro\.epub» generato \(1 KB\)\.'
+    direction: DOWN

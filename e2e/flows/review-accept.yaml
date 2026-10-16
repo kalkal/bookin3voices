@@ -1,0 +1,86 @@
+# Flusso E2E — review dei suggerimenti (EXPO_PUBLIC_E2E=1).
+# Percorso: Libreria → Libro → capitolo seminato «La tazza» (App.tsx, modalità
+# E2E) → «Rifinisci con AI» col FakeSuggestionsProvider → in Review si
+# sceglie la variante B dello stile e si accetta, si rifiuta la grammatica →
+# testo aggiornato, contatore pending a zero. I testID sono quelli della schermata Editor;
+# gli id dei suggerimenti del provider finto sono deterministici
+# (fake-<hash>-<indice>) e si matchano via regex sull'hash.
+appId: dev.kalkal.bookvoice
+name: Review — accetta una variante, rifiuta un suggerimento
+---
+- runFlow: ../helpers/open-e2e-app.yaml
+
+# Dalla Dettatura iniziale si risale alla Libreria e si apre il libro.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "library-screen"
+    timeout: 10000
+- tapOn:
+    id: "library-book-libro-di-prova"
+- extendedWaitUntil:
+    visible:
+      id: "book-screen"
+    timeout: 10000
+
+# Il capitolo seminato in modalità E2E: 11 parole, nessuna rifinitura ancora.
+- tapOn:
+    id: "book-chapter-capitolo-2"
+- extendedWaitUntil:
+    visible:
+      id: "editor-screen"
+    timeout: 10000
+- assertVisible:
+    text: '.*Elena posò lentamente la tazza sul tavolo\..*'
+
+# «Rifinisci con AI»: il provider finto trova 2 suggerimenti
+# (stile: «posò lentamente»; grammatica: «un altra»).
+- tapOn:
+    id: "editor-refine"
+- extendedWaitUntil:
+    visible:
+      id: "editor-suggestions-chip"
+    timeout: 10000
+- assertVisible:
+    text: "2 suggerimenti"
+- tapOn:
+    id: "editor-suggestions-chip"
+- extendedWaitUntil:
+    visible:
+      id: "review-screen"
+    timeout: 10000
+- assertVisible:
+    text: ".*2 in attesa"
+
+# Card di stile: 3 varianti, si sceglie la B («posò, piano,») e si accetta.
+- assertVisible:
+    text: "3 varianti — tocca per scegliere"
+- tapOn:
+    id: "review-variant-fake-.*-0-1"
+- tapOn:
+    id: "review-accept-fake-.*-0"
+- assertVisible:
+    text: ".*1 in attesa"
+
+# Card di grammatica («un altra» → «un'altra»): si rifiuta.
+- tapOn:
+    id: "review-reject-fake-.*-1"
+- assertVisible:
+    text: ".*0 in attesa"
+- assertVisible:
+    id: "review-empty"
+
+# Ritorno all'editor: il testo riflette la variante accettata, il tratto
+# rifiutato è intatto e il contatore pending è sparito.
+- tapOn:
+    id: "review-back"
+- extendedWaitUntil:
+    visible:
+      id: "editor-screen"
+    timeout: 10000
+- assertVisible:
+    text: '.*Elena posò, piano, la tazza sul tavolo\..*'
+- assertVisible:
+    text: '.*Prese un altra decisione\..*'
+- assertNotVisible:
+    id: "editor-suggestions-chip"

@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "bookin3voice",
+    "slug": "bookvoice",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F5EFE0",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.kalkal.bookvoice",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Serve il riconoscimento vocale per trascrivere la dettatura dei capitoli.",
+        "NSMicrophoneUsageDescription": "Serve il microfono per dettare il testo del libro."
+      }
+    },
+    "android": {
+      "package": "dev.kalkal.bookvoice",
+      "permissions": ["android.permission.RECORD_AUDIO"],
+      "adaptiveIcon": {
+        "backgroundColor": "#F0E8D3",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-asset",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Serve il microfono per dettare il testo del libro.",
+          "speechRecognitionPermission": "Serve il riconoscimento vocale per trascrivere la dettatura dei capitoli."
+        }
+      ],
+      "expo-sharing"
+    ]
+  }
+}

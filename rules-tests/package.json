@@ -1,0 +1,23 @@
+{
+  "name": "rules-tests",
+  "license": "MIT",
+  "private": true,
+  "description": "Test delle security rules Firestore con @firebase/rules-unit-testing sull'Emulator Suite",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "powershell -ExecutionPolicy Bypass -File ../scripts/test-rules.ps1",
+    "test:jest": "jest --runInBand",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "firebase": "^12.18.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "~5.7.0"
+  }
+}

@@ -1,0 +1,4 @@
+# Hooks run from the repo root; the app lives in app/
+cd app || exit 1
+npx lint-staged
+npm run typecheck

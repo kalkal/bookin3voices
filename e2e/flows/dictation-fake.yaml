@@ -1,0 +1,49 @@
+# Flusso E2E — dettatura col motore finto (EXPO_PUBLIC_E2E=1).
+# Avvio e prerequisiti nel preambolo comune (e2e/helpers/open-e2e-app.yaml).
+# Percorso: apri dettatura → detta (script del Fake) → pausa → verifica
+# testo e contatore parole. I testID sono quelli della schermata Dettatura.
+appId: dev.kalkal.bookvoice
+name: Dettatura con FakeDictationEngine
+---
+- runFlow: ../helpers/open-e2e-app.yaml
+
+# Capitolo vuoto (repository in memoria in modalità E2E) e pre-flight verde:
+# il suggerimento iniziale è visibile e la caption invita a dettare.
+- assertVisible:
+    id: "dictation-empty-hint"
+- extendedWaitUntil:
+    visible:
+      text: "Tocca il microfono per dettare"
+    timeout: 15000
+
+# Avvio dettatura: il motore finto recita lo script (2 frasi, 11 parole).
+- tapOn:
+    id: "dictation-mic"
+- extendedWaitUntil:
+    visible:
+      text: "In ascolto.*"
+    timeout: 10000
+
+# Il testo consolidato arriva a schermo (ultima frase dello script inclusa).
+- extendedWaitUntil:
+    visible:
+      text: '.*La biblioteca profumava di carta antica\..*'
+    timeout: 15000
+
+# Pausa: caption dedicata, contatore parole della sessione e flush salvato.
+- tapOn:
+    id: "dictation-mic"
+- extendedWaitUntil:
+    visible:
+      text: "In pausa.*"
+    timeout: 10000
+- assertVisible:
+    text: "11 parole in questa sessione"
+- extendedWaitUntil:
+    visible:
+      text: "Salvato"
+    timeout: 10000
+
+# Il testo dettato è ancora tutto lì dopo la pausa.
+- assertVisible:
+    text: 'Il caffè era ancora caldo\. La biblioteca profumava di carta antica\.'

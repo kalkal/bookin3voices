@@ -1,0 +1,33 @@
+# Preambolo comune dei flussi E2E: rilancio pulito dell'app in
+# modalità E2E e gestione del developer menu del dev client.
+# Prerequisiti (li prepara e2e/run-android.mjs): emulatore avviato, dev client
+# dev.kalkal.bookvoice installato, Metro su 8081 con EXPO_PUBLIC_E2E=1 e
+# `adb reverse tcp:8081`.
+# `stopApp` prima del deep link: ogni flusso riparte da processo (e quindi
+# stato in memoria) fresco anche quando i flussi girano in sequenza.
+appId: dev.kalkal.bookvoice
+---
+- stopApp
+# Il deep link del dev client carica il bundle E2E servito da Metro.
+- openLink: "exp+bookvoice://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+
+# Si attende il primo bundle (download da Metro, timeout largo). Al primo
+# avvio dopo l'installazione il dev client mostra il developer menu in un
+# bottom sheet che copre l'intera gerarchia: va chiuso prima di procedere.
+- extendedWaitUntil:
+    visible:
+      text: 'Continue|CAPITOLO I'
+    timeout: 120000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+      # dopo «Continue» resta aperto il menu vero e proprio: back lo chiude
+      - back
+
+# Rotta iniziale in modalità E2E: la Dettatura del "Capitolo I".
+- extendedWaitUntil:
+    visible:
+      id: "dictation-screen"
+    timeout: 30000
