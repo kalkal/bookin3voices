@@ -1,6 +1,6 @@
-// La build react-native di @firebase/auth esporta getReactNativePersistence,
-// ma i tipi pubblici di `firebase/auth` (browser) non la dichiarano: questa
-// augmentation allinea il typecheck a ciò che Metro risolve davvero a runtime.
+// The react-native build of @firebase/auth exports getReactNativePersistence,
+// but the public types of `firebase/auth` (browser) do not declare it: this
+// augmentation aligns the typecheck with what Metro actually resolves at runtime.
 import type { Persistence } from 'firebase/auth';
 
 declare module 'firebase/auth' {
