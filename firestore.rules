@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Security rules per-utente: solo il proprietario
+// autenticato accede al proprio albero users/{uid}/**; tutto il resto negato.
+//
+// Scelta deliberata: match ESPLICITI sulle collezioni dello schema invece
+// del wildcard ricorsivo users/{uid}/{document=**}. In Firestore basta un
+// match che consente per aprire l'accesso, quindi il wildcard permetterebbe
+// di aggirare le validazioni di forma. Rovescio della medaglia:
+// una collezione nuova nasce negata (fail-closed) finché non viene aggiunta
+// qui — aggiornare queste rules fa parte di ogni evoluzione dello schema.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // schemaVersion presente e intero positivo (upgrade-on-read).
+    // Su update request.resource.data è il documento risultante, quindi la
+    // guardia impedisce anche di rimuovere il campo.
+    function hasSchemaVersion() {
+      return request.resource.data.schemaVersion is int
+        && request.resource.data.schemaVersion > 0;
+    }
+
+    match /users/{uid} {
+      // Lo schema non prevede un documento utente vero e proprio:
+      // nessuna regola sul doc users/{uid} stesso (resta negato).
+
+      match /books/{bookId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && hasSchemaVersion();
+
+        match /chapters/{chapterId} {
+          allow read, delete: if isOwner(uid);
+          allow create, update: if isOwner(uid) && hasSchemaVersion();
+
+          match /sessions/{sessionId} {
+            allow read, write: if isOwner(uid);
+          }
+          match /suggestions/{suggestionId} {
+            allow read, write: if isOwner(uid);
+          }
+          match /revisions/{revisionId} {
+            allow read, write: if isOwner(uid);
+          }
+        }
+
+        // Taccuino (idee/pensieri per libro): sottocollezione del
+        // libro. Create/update passano dalla guardia schemaVersion come books
+        // e chapters (upgrade-on-read); read/delete solo al proprietario.
+        match /notes/{noteId} {
+          allow read, delete: if isOwner(uid);
+          allow create, update: if isOwner(uid) && hasSchemaVersion();
+        }
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /styleProfiles/{profileId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /exports/{exportId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Default deny esplicito (ridondante — Firestore nega ciò che nessun
+    // match consente — ma documenta l'intenzione).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

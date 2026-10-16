@@ -1,0 +1,11 @@
+# Firebase — artefatti locali di CLI ed Emulator Suite
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+database-debug.log*
+pubsub-debug.log*
+ui-debug.log*
+emulator-data/
+
+.env
+.secret.local

@@ -1,0 +1,19 @@
+# build output
+lib/
+
+# dipendenze
+node_modules/
+
+# segreti locali per l'Emulator Suite (chiave Gemini free di sviluppo):
+# NON entrano mai nel repo — in produzione si usa Secret Manager.
+.secret.local
+*.local
+
+# log emulatori
+*-debug.log
+
+# profili di stile copiati dalla build (fonte: content/ nel repo)
+content/
+
+# local env files
+.env
