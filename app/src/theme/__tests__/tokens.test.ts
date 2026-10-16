@@ -1,6 +1,6 @@
 import { candlelightPalette, paperPalette, radius, spacing, typeScale } from '../tokens';
 
-describe('palette carta (tabella token, valori esatti)', () => {
+describe('paper palette (token table, exact values)', () => {
   it.each([
     ['background', '#F5EFE0'],
     ['surface', '#FBF6EA'],
@@ -15,23 +15,23 @@ describe('palette carta (tabella token, valori esatti)', () => {
   });
 });
 
-describe('palette a lume di candela (abbozzo)', () => {
-  it('ha fondo bruno scuro e testo ambrato, diversi dal tema carta', () => {
+describe('candlelight palette (sketch)', () => {
+  it('has a dark brown background and amber text, different from the paper theme', () => {
     expect(candlelightPalette.background).not.toBe(paperPalette.background);
     expect(candlelightPalette.text).not.toBe(paperPalette.text);
   });
 
-  it('copre le stesse chiavi della palette carta', () => {
+  it('covers the same keys as the paper palette', () => {
     expect(Object.keys(candlelightPalette).sort()).toEqual(Object.keys(paperPalette).sort());
   });
 });
 
-describe('raggi e spaziature', () => {
-  it('gli angoli sono quasi vivi: 3px', () => {
+describe('radii and spacing', () => {
+  it('corners are nearly sharp: 3px', () => {
     expect(radius.sharp).toBe(3);
   });
 
-  it('la scala di spaziatura è crescente', () => {
+  it('the spacing scale is increasing', () => {
     const values = [
       spacing.xs,
       spacing.sm,
@@ -45,7 +45,7 @@ describe('raggi e spaziature', () => {
     expect(values).toEqual(sorted);
   });
 
-  it('la scala tipografica è crescente dal micro al display', () => {
+  it('the type scale is increasing from micro to display', () => {
     expect(typeScale.micro).toBeLessThan(typeScale.body);
     expect(typeScale.body).toBeLessThan(typeScale.title);
     expect(typeScale.title).toBeLessThan(typeScale.display);

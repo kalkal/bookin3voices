@@ -1,10 +1,10 @@
 /**
- * Tab Sinossi del Libro: campo sinossi con
- * salvataggio, "Genera scaletta capitoli" → anteprima a schede tipo corkboard
- * (titolo + riassunto + beat), modificabili ed eliminabili PRIMA della
- * conferma; conferma = merge additivo via repository (i capitoli
- * con testo non si toccano MAI, le schede riempiono prima gli slot vuoti).
- * Stato di avanzamento ed errori sempre visibili, mai spinner muti.
+ * Synopsis tab of the Book: synopsis field with
+ * save, "Genera scaletta capitoli" → corkboard-style card preview
+ * (title + summary + beats), editable and deletable BEFORE
+ * confirmation; confirmation = additive merge via repository (chapters
+ * with text are NEVER touched, cards fill empty slots first).
+ * Progress and errors always visible, never mute spinners.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
@@ -27,9 +27,9 @@ import type { ChapterRepository, ChapterSummary } from '../chapters';
 import { applyOutlineMerge, planOutlineMerge } from './merge';
 import type { OutlineCard, OutlineService } from './types';
 
-// Avviso chiave di sviluppo: costante condivisa con le altre
-// superfici AI (editor) in lib/freeTier, riesportata da qui per gli usi
-// esistenti. Spenta con il provider predefinito (vedi lib/freeTier).
+// Development-key warning: constant shared with the other
+// AI surfaces (editor) in lib/freeTier, re-exported from here for existing
+// uses. Off with the default provider (see lib/freeTier).
 import { SHOW_FREE_TIER_WARNING } from '../../lib/freeTier';
 
 export { SHOW_FREE_TIER_WARNING };
@@ -77,8 +77,8 @@ export function SynopsisTab({
 }: SynopsisTabProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
 
-  // La sinossi parte dal libro e resta dell'utente finché non salva: gli
-  // aggiornamenti remoti (observeBook) non sovrascrivono ciò che sta digitando.
+  // The synopsis starts from the book and stays the user's until they save: remote
+  // updates (observeBook) do not overwrite what they are typing.
   const [synopsis, setSynopsis] = useState(book.synopsis);
   const [synopsisSaved, setSynopsisSaved] = useState(false);
 

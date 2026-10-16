@@ -1,11 +1,11 @@
-// L'adapter si testa iniettando un modulo nativo finto: qui si verifica SOLO il
-// mapping (opzioni di start, risultati, errori) e che l'adapter NON deduplichi
-// il doppio `end` — quella responsabilità è di DictationSession.
+// The adapter is tested by injecting a fake native module: this checks ONLY the
+// mapping (start options, results, errors) and that the adapter does NOT
+// deduplicate the double `end`; that responsibility belongs to DictationSession.
 
 import { ExpoDictationEngine, type SpeechModule } from '../engines/ExpoDictationEngine';
 import type { DictationEngineEvents } from '../types';
 
-// jest solleva il mock prima degli import: il modulo nativo reale non si carica
+// jest hoists the mock above the imports: the real native module is never loaded
 jest.mock('expo-speech-recognition', () => ({ ExpoSpeechRecognitionModule: {} }));
 
 type Handler = (event: unknown) => void;
@@ -43,8 +43,8 @@ function setup(granted = true) {
   return { engine, nativeModule, handlers, removals, received };
 }
 
-describe('ExpoDictationEngine — adapter su expo-speech-recognition', () => {
-  it('avvia il motore con le opzioni validate in prova', async () => {
+describe('ExpoDictationEngine — adapter over expo-speech-recognition', () => {
+  it('starts the engine with the options validated in testing', async () => {
     const { engine, nativeModule } = setup();
     await engine.start({ lang: 'it-IT' });
     expect(nativeModule.start).toHaveBeenCalledWith({
@@ -56,14 +56,14 @@ describe('ExpoDictationEngine — adapter su expo-speech-recognition', () => {
     });
   });
 
-  it('permesso negato: errore fatale, il motore non parte', async () => {
+  it('permission denied: fatal error, the engine does not start', async () => {
     const { engine, nativeModule, received } = setup(false);
     await engine.start({ lang: 'it-IT' });
     expect(nativeModule.start).not.toHaveBeenCalled();
     expect(received.errors).toEqual([{ code: 'permission-denied', recoverable: false }]);
   });
 
-  it('mappa i risultati: parziali e finali, scartando i trascritti vuoti', () => {
+  it('maps results: interim and final, discarding empty transcripts', () => {
     const { handlers, received } = setup();
     handlers.result({ isFinal: false, results: [{ transcript: 'oggi pio' }] });
     handlers.result({ isFinal: true, results: [{ transcript: 'oggi piove' }] });
@@ -73,11 +73,11 @@ describe('ExpoDictationEngine — adapter su expo-speech-recognition', () => {
     expect(received.finals).toEqual(['oggi piove']);
   });
 
-  it('inoltra start e OGNI end senza deduplicare (la dedup è della sessione)', () => {
+  it('forwards start and EVERY end without deduplicating (dedup belongs to the session)', () => {
     const { handlers, received } = setup();
     handlers.start(null);
     handlers.end(null);
-    handlers.end(null); // doppio end del motore reale: passa tale e quale
+    handlers.end(null); // double end from the real engine: passes through as-is
     expect(received.starts).toBe(1);
     expect(received.ends).toBe(2);
   });
@@ -98,14 +98,14 @@ describe('ExpoDictationEngine — adapter su expo-speech-recognition', () => {
     expect(received.errors).toEqual([{ code, recoverable }]);
   });
 
-  it('stop() e pause() fermano il motore in modo gentile (consolida i finali)', async () => {
+  it('stop() and pause() stop the engine gently (finalizing the results)', async () => {
     const { engine, nativeModule } = setup();
     await engine.stop();
     await engine.pause();
     expect(nativeModule.stop).toHaveBeenCalledTimes(2);
   });
 
-  it('dispose() rimuove tutte le subscription native', () => {
+  it('dispose() removes all native subscriptions', () => {
     const { engine, removals } = setup();
     expect(removals).toHaveLength(4); // start, end, result, error
     engine.dispose();

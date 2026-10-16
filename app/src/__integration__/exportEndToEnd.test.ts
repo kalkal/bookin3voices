@@ -1,17 +1,17 @@
 /**
- * End-to-end dell'export su Emulator Suite COMPLETA (auth +
- * firestore + functions: mai progetti reali): il percorso è
- * esattamente quello dell'app vera, con il codice dell'app.
+ * Export end-to-end on the FULL Emulator Suite (auth + firestore +
+ * functions: never real projects): the path is exactly that of the real
+ * app, using the app's code.
  *
- *   sign-in anonimo (auth) → FirestoreBookRepository/FirestoreChapterRepository
- *   creano libro e capitoli (rules vere) → CallableBookExportService chiama la
- *   callable exportBook (functions emulator) → il file torna in base64 → si
- *   scrive su disco e si valida con EPUBCheck.
+ *   anonymous sign-in (auth) → FirestoreBookRepository/FirestoreChapterRepository
+ *   create book and chapters (real rules) → CallableBookExportService calls the
+ *   exportBook callable (functions emulator) → the file comes back as base64 →
+ *   it is written to disk and validated with EPUBCheck.
  *
- * Prerequisiti: `firebase emulators:exec --only auth,firestore,functions` con
- * functions/ già compilato (npm --prefix functions run build) e EPUBCheck
- * raggiungibile (vedi ./epubcheck.ts). Il caricamento di prova su KDP resta
- * manuale (criterio di done dell’export, passo finale manuale).
+ * Prerequisites: `firebase emulators:exec --only auth,firestore,functions` with
+ * functions/ already built (npm --prefix functions run build) and EPUBCheck
+ * reachable (see ./epubcheck.ts). The trial upload to KDP stays manual (the
+ * export's done criterion, final manual step).
  */
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -36,7 +36,7 @@ import { base64ToUint8Array } from '../features/export/base64';
 import { runEpubcheck } from './epubcheck';
 
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
-  throw new Error('Questi test girano SOLO contro l’Emulator Suite (firebase emulators:exec).');
+  throw new Error('These tests run ONLY against the Emulator Suite (firebase emulators:exec).');
 }
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'demo-bookvoice-app';
@@ -64,8 +64,8 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     await deleteApp(app);
   });
 
-  it('genera dall’app un EPUB che passa EPUBCheck, ignorando i pending', async () => {
-    // 1. libro e capitoli creati col codice vero dell'app (rules vere)
+  it('generates from the app an EPUB that passes EPUBCheck, ignoring pending', async () => {
+    // 1. book and chapters created with the app's real code (real rules)
     const books = new FirestoreBookRepository({ db, uid });
     const chapters = new FirestoreChapterRepository({ db, uid });
     const book = await books.createBook({
@@ -87,8 +87,8 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
       'Date, orari & coordinate <in codice>.',
     );
 
-    // 2. un suggerimento pending: l'avviso pre-export lo conta,
-    //    l'export lo ignora
+    // 2. a pending suggestion: the pre-export warning counts it,
+    //    the export ignores it
     await setDoc(
       doc(db, 'users', uid, 'books', book.id, 'chapters', capitolo1.id, 'suggestions', 'sug-1'),
       {
@@ -105,7 +105,7 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     const pending = new FirestorePendingSuggestionsRepository({ db, uid });
     expect(await pending.countPending(book.id)).toBe(1);
 
-    // 3. export attraverso la callable, come farebbe la tab Export
+    // 3. export through the callable, as the Export tab would
     const exportService = new CallableBookExportService({ functions: getFunctions(app) });
     const file = await exportService.exportBook({
       bookId: book.id,
@@ -121,7 +121,7 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     const text = Buffer.from(bytes).toString('utf8');
     expect(text).not.toContain('PROPOSTA-PENDING-CHE-NON-DEVE-ENTRARE');
 
-    // 4. EPUBCheck verde: il criterio di done dell'export
+    // 4. EPUBCheck green: the export's done criterion
     const dir = mkdtempSync(join(tmpdir(), 'bookvoice-e2e-'));
     const epubPath = join(dir, file.fileName);
     writeFileSync(epubPath, bytes);
@@ -129,7 +129,7 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     expect(`${result.status}\n${result.output}`).toMatch(/^0\n/);
   });
 
-  it('la callable è idempotente anche attraverso l’SDK (stesso requestId)', async () => {
+  it('the callable is idempotent also through the SDK (same requestId)', async () => {
     const books = new FirestoreBookRepository({ db, uid });
     const chapters = new FirestoreChapterRepository({ db, uid });
     const book = await books.createBook({ title: 'Doppio invio' });

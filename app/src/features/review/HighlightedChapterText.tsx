@@ -1,10 +1,10 @@
 /**
- * Testo del capitolo con evidenziazioni inline dei suggerimenti pending
- * (stile track-changes del mockup Editor):
- * - stile: fondo carta dorata + sottolineatura oro puntinata;
- * - grammatica: sottolineatura verde piena;
- * - ritmo: sottolineatura oro tratteggiata.
- * Il primo paragrafo apre col capolettera verde (firma visiva).
+ * Chapter text with inline highlights of the pending suggestions
+ * (track-changes style from the Editor mockup):
+ * - style: golden paper background + dotted gold underline;
+ * - grammar: solid green underline;
+ * - pacing: dashed gold underline.
+ * The first paragraph opens with a green drop cap (visual signature).
  */
 import { Text } from 'react-native';
 import type { TextStyle } from 'react-native';
@@ -15,7 +15,7 @@ import type { Suggestion, SuggestionKind } from './types';
 interface HighlightedChapterTextProps {
   text: string;
   suggestions: readonly Suggestion[];
-  /** Tap su un'evidenziazione (per saltare alla Review). */
+  /** Tap on a highlight (to jump to the Review). */
   onPressSuggestion?: (suggestionId: string) => void;
   testID?: string;
 }
@@ -116,7 +116,7 @@ export function HighlightedChapterText({
 
 interface Paragraph {
   text: string;
-  /** Offset del primo carattere nel testo intero. */
+  /** Offset of the first character in the whole text. */
   start: number;
 }
 
@@ -132,7 +132,7 @@ function splitParagraphs(text: string): Paragraph[] {
   return paragraphs.length > 0 ? paragraphs : [{ text, start: 0 }];
 }
 
-/** Spezza un paragrafo in tratti pieni/evidenziati sui pending che lo toccano. */
+/** Splits a paragraph into plain/highlighted runs over the pendings that touch it. */
 function segmentsFor(text: string, offset: number, pending: readonly Suggestion[]): Segment[] {
   const end = offset + text.length;
   const segments: Segment[] = [];

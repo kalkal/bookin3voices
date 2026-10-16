@@ -1,6 +1,6 @@
-// Flusso "Scarica backup ora": chiama la callable, salva in locale
-// e apre lo share sheet, con stato di avanzamento sempre visibile (mai spinner
-// muti, come nel tab Export della feature Export). La schermata resta solo resa.
+// "Scarica backup ora" flow: calls the callable, saves locally
+// and opens the share sheet, with progress state always visible (never mute
+// spinners, as in the Export tab of the Export feature). The screen stays rendering-only.
 
 import { useCallback, useState } from 'react';
 
@@ -23,14 +23,14 @@ function errorMessage(error: unknown): string {
 export interface BackupDownload {
   progress: BackupProgress;
   working: boolean;
-  /** Avvia il backup di tutti i libri; gli errori finiscono in `progress`. */
+  /** Starts the backup of all books; errors end up in `progress`. */
   download: () => void;
 }
 
 export function useBackupDownload(
   service: BackupService,
   fileSink: ExportFileSink,
-  /** Chiamata a backup riuscito, con il createdAt del file (promemoria). */
+  /** Called on a successful backup, with the file's createdAt (reminder). */
   onSuccess: (createdAt: number) => void,
 ): BackupDownload {
   const [progress, setProgress] = useState<BackupProgress>({ phase: 'idle' });

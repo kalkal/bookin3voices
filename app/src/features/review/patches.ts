@@ -1,14 +1,14 @@
-// Patch di testo del Command pattern: ogni accettazione/undo è un
-// oggetto {span, before, after} con inverso. Regole di convivenza:
-// (b) all'applicazione di una patch gli span pending vengono ri-mappati;
-// (d) una patch verifica che `before` combaci ancora col testo allo span
-//     prima di applicarsi — se no, rifiuto pulito, MAI applicazione cieca.
+// Text patches for the Command pattern: every acceptance/undo is an
+// {span, before, after} object with an inverse. Coexistence rules:
+// (b) when a patch is applied, the pending spans are re-mapped;
+// (d) a patch verifies that `before` still matches the text at the span
+//     before applying: otherwise a clean rejection, NEVER a blind application.
 
 import type { Span } from './types';
 
 export interface TextPatch {
   span: Span;
-  /** Testo atteso allo span (il suggerimento lo chiama `original`). */
+  /** Text expected at the span (the suggestion calls it `original`). */
   before: string;
   after: string;
 }
@@ -17,7 +17,7 @@ export type PatchFailure = 'span-out-of-range' | 'original-mismatch';
 
 export type PatchResult = { ok: true; text: string } | { ok: false; reason: PatchFailure };
 
-/** Applica la patch solo se `before` combacia ancora col testo allo span. */
+/** Applies the patch only if `before` still matches the text at the span. */
 export function applyPatch(text: string, patch: TextPatch): PatchResult {
   const { from, to } = patch.span;
   if (to > text.length) {
@@ -29,7 +29,7 @@ export function applyPatch(text: string, patch: TextPatch): PatchResult {
   return { ok: true, text: text.slice(0, from) + patch.after + text.slice(to) };
 }
 
-/** Patch inversa: applicata dopo l'originale, ripristina il testo (undo). */
+/** Inverse patch: applied after the original, restores the text (undo). */
 export function invertPatch(patch: TextPatch): TextPatch {
   return {
     span: { from: patch.span.from, to: patch.span.from + patch.after.length },
@@ -39,11 +39,11 @@ export function invertPatch(patch: TextPatch): TextPatch {
 }
 
 /**
- * Ri-mappa uno span dopo l'applicazione di `applied`:
- * - interamente prima della patch → invariato;
- * - interamente dopo → shift del delta di lunghezza;
- * - si sovrappone alla zona patchata → 'overlap': il chiamante lo marca stale.
- * I confini che si toccano senza intersecarsi NON sono sovrapposizione.
+ * Re-maps a span after `applied` is applied:
+ * - entirely before the patch → unchanged;
+ * - entirely after → shifted by the length delta;
+ * - overlaps the patched zone → 'overlap': the caller marks it stale.
+ * Boundaries that touch without intersecting are NOT an overlap.
  */
 export function remapSpan(span: Span, applied: TextPatch): Span | 'overlap' {
   if (span.to <= applied.span.from) {
@@ -57,11 +57,11 @@ export function remapSpan(span: Span, applied: TextPatch): Span | 'overlap' {
 }
 
 /**
- * Riduce un edit manuale (testo intero prima/dopo) a UNA patch minima,
- * confrontando prefisso e suffisso comuni. Basta per gli edit di un editor
- * mobile (una zona toccata per volta); un multi-cursore produrrebbe una patch
- * più larga del necessario, che al peggio rende stale qualche suggerimento in
- * più — mai un'applicazione sbagliata.
+ * Reduces a manual edit (whole text before/after) to ONE minimal patch,
+ * comparing common prefix and suffix. Enough for the edits of a mobile
+ * editor (one touched zone at a time); multi-cursor would produce a patch
+ * wider than necessary, which at worst makes a few more suggestions stale,
+ * never a wrong application.
  */
 export function diffAsPatch(oldText: string, newText: string): TextPatch | null {
   if (oldText === newText) return null;

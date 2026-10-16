@@ -1,6 +1,7 @@
-// Unit test degli exporter (Strategy): struttura degli archivi generati,
-// senza emulatore. La validazione EPUBCheck completa vive nei test
-// d'integrazione (src/__integration__), che generano il file dalla callable.
+// Unit tests of the exporters (Strategy): structure of the generated
+// archives, without the emulator. Full EPUBCheck validation lives in the
+// integration tests (src/__integration__), which generate the file from the
+// callable.
 
 import JSZip from 'jszip';
 
@@ -25,7 +26,7 @@ const BOOK: BookForExport = {
 const GENERATED_AT = new Date('2026-09-06T12:00:00Z');
 
 describe('exporterFactory', () => {
-  it('registra un exporter per formato con mime ed estensione coerenti', () => {
+  it('registers one exporter per format with consistent mime type and extension', () => {
     expect(createExporter('epub')).toBeInstanceOf(EpubExporter);
     expect(createExporter('docx')).toBeInstanceOf(DocxExporter);
     expect(createExporter('epub').mimeType).toBe('application/epub+zip');
@@ -34,7 +35,7 @@ describe('exporterFactory', () => {
 });
 
 describe('EpubExporter', () => {
-  it('genera un EPUB con mimetype, TOC "Indice" e testo con escape', async () => {
+  it('generates an EPUB with mimetype, "Indice" TOC and escaped text', async () => {
     const buffer = await new EpubExporter().render(BOOK, GENERATED_AT);
     const zip = await JSZip.loadAsync(buffer);
 
@@ -46,8 +47,8 @@ describe('EpubExporter', () => {
     const toc = await zip.file(tocFile as string)?.async('string');
     expect(toc).toContain('Indice');
     expect(toc).toContain('Capitolo I — Il ritorno');
-    // il frontespizio resta fuori dall'indice (excludeFromToc):
-    // nessun link della nav punta al file del frontespizio (0_*.xhtml)
+    // the title page stays out of the index (excludeFromToc):
+    // no nav link points to the title page file (0_*.xhtml)
     expect(toc).not.toContain('href="0_');
 
     const chapterFiles = files.filter((name) => /\/\d+_.*\.xhtml$/.test(name));
@@ -56,12 +57,12 @@ describe('EpubExporter', () => {
     );
     const allContent = contents.join('\n');
     expect(allContent).toContain('Nora scese sulla banchina.');
-    // testo puro, mai HTML: i metacaratteri arrivano con escape
+    // plain text, never HTML: metacharacters arrive escaped
     expect(allContent).toContain('Tom &amp; Jerry &lt;segreti&gt;');
     expect(allContent).not.toContain('<segreti>');
   });
 
-  it('scrive i metadati KDP nel package OPF', async () => {
+  it('writes the KDP metadata into the OPF package', async () => {
     const buffer = await new EpubExporter().render(BOOK, GENERATED_AT);
     const zip = await JSZip.loadAsync(buffer);
     const opfFile = Object.keys(zip.files).find((name) => name.endsWith('.opf'));
@@ -74,11 +75,11 @@ describe('EpubExporter', () => {
 });
 
 describe('DocxExporter', () => {
-  it('genera un DOCX apribile: struttura OOXML, indice e capitoli', async () => {
+  it('generates an openable DOCX: OOXML structure, index and chapters', async () => {
     const buffer = await new DocxExporter().render(BOOK, GENERATED_AT);
     const zip = await JSZip.loadAsync(buffer);
 
-    // struttura minima che Word richiede per aprire il file
+    // minimal structure Word requires to open the file
     expect(zip.file('[Content_Types].xml')).not.toBeNull();
     expect(zip.file('word/document.xml')).not.toBeNull();
 
@@ -86,7 +87,7 @@ describe('DocxExporter', () => {
     expect(document).toContain('Capitolo I — Il ritorno');
     expect(document).toContain('Nora scese sulla banchina.');
     expect(document).toContain('Indice');
-    // l'XML fa il proprio escape dei metacaratteri del titolo
+    // the XML escapes the title's metacharacters on its own
     expect(document).toContain('Tom &amp; Jerry &lt;segreti&gt;');
 
     const core = (await zip.file('docProps/core.xml')?.async('string')) as string;

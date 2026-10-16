@@ -1,8 +1,8 @@
-// Controller condiviso da Editor capitolo e Review: tiene
-// la ReviewSession (dominio puro), la persistenza del testo (ChapterRepository,
-// offline-first: ogni patch accettata è subito su disco) e lo storico su
-// `revisions` (RevisionRepository). Le schermate ricevono solo questo
-// controller: mai SDK o session direttamente.
+// Controller shared by the Chapter editor and Review: holds
+// the ReviewSession (pure domain), text persistence (ChapterRepository,
+// offline-first: every accepted patch is on disk immediately) and the history
+// on `revisions` (RevisionRepository). The screens receive only this
+// controller: never the SDK or the session directly.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -22,7 +22,7 @@ export interface ChapterReviewOptions {
   chapterRepository: ChapterTextRepository;
   revisionRepository: RevisionRepository;
   provider: SuggestionsProvider;
-  /** Iniettabile nei test; default id progressivo su Date.now. */
+  /** Injectable in tests; defaults to a sequential id on Date.now. */
   newRequestId?: () => string;
 }
 
@@ -35,9 +35,9 @@ export interface ChapterReviewController {
   staleCount: number;
   canUndo: boolean;
   refining: boolean;
-  /** L'ultima rifinitura è fallita (provider irraggiungibile o output non valido). */
+  /** The last refinement failed (provider unreachable or invalid output). */
   refineFailed: boolean;
-  /** L'ultimo lotto è nato stale: il testo è cambiato durante la rifinitura. */
+  /** The last batch was born stale: the text changed during refinement. */
   refineBornStale: boolean;
   saveStatus: ReviewSaveStatus;
   refine(): Promise<void>;
@@ -48,7 +48,7 @@ export interface ChapterReviewController {
   applyManualEdit(newText: string): Promise<void>;
 }
 
-// stesso generatore delle altre callable (idempotenza, charset id Firestore)
+// same generator as the other callables (idempotency, Firestore id charset)
 const defaultRequestId = () => makeRequestId('ref');
 
 export function useChapterReview(options: ChapterReviewOptions): ChapterReviewController {
@@ -65,8 +65,8 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const [refineBornStale, setRefineBornStale] = useState(false);
   const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>('saved');
 
-  // caricamento iniziale del capitolo (come la Dettatura); lo stato parte
-  // già da 'loading', quindi l'effetto non deve resettare nulla in sincrono
+  // initial chapter load (like Dictation); the state already starts at
+  // 'loading', so the effect must not reset anything synchronously
   useEffect(() => {
     let cancelled = false;
     chapterRepository
@@ -103,7 +103,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
       await chapterRepository.saveRawText(chapter, session.text);
       setSaveStatus('saved');
     } catch {
-      // il testo resta in sessione: si riprova alla prossima modifica
+      // the text stays in the session: retry on the next change
       setSaveStatus('error');
     }
   }, [chapter, chapterRepository]);
@@ -122,8 +122,8 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         textHash: textHash(session.text),
         requestId: newRequestId(),
       });
-      // output del provider validato al confine (standard tecnici), anche
-      // quando il provider è il finto: il contratto è lo stesso della callable refineChapter
+      // provider output validated at the boundary, even when the
+      // provider is the fake: the contract is the same as the refineChapter callable's
       const result = refineResultSchema.parse(raw);
       const outcome = session.ingest(result);
       setRefineBornStale(outcome.bornStale);

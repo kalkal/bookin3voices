@@ -1,55 +1,55 @@
 import { TranscriptComposer } from '../voiceCommands';
 
-describe('TranscriptComposer — comandi vocali (il motore non dà punteggiatura)', () => {
-  it('mappa «punto» e mette la maiuscola alla frase successiva', () => {
+describe('TranscriptComposer — voice commands (the engine gives no punctuation)', () => {
+  it('maps «punto» and capitalizes the next sentence', () => {
     const c = new TranscriptComposer();
     c.append('oggi piove punto domani vedremo');
     expect(c.value).toBe('Oggi piove. Domani vedremo');
   });
 
-  it('mappa «virgola» senza maiuscola dopo', () => {
+  it('maps «virgola» without capitalizing afterwards', () => {
     const c = new TranscriptComposer();
     c.append('pane virgola latte e uova');
     expect(c.value).toBe('Pane, latte e uova');
   });
 
-  it('mappa «a capo» e «nuovo paragrafo»', () => {
+  it('maps «a capo» and «nuovo paragrafo»', () => {
     const c = new TranscriptComposer();
     c.append('primo rigo a capo secondo rigo nuovo paragrafo altro paragrafo');
     expect(c.value).toBe('Primo rigo\nSecondo rigo\n\nAltro paragrafo');
   });
 
-  it('privilegia la frase più lunga: «punto e virgola» non è «punto» + parole', () => {
+  it('prefers the longest phrase: «punto e virgola» is not «punto» + words', () => {
     const c = new TranscriptComposer();
     c.append('prima parte punto e virgola seconda parte');
     expect(c.value).toBe('Prima parte; seconda parte');
   });
 
-  it('mappa punto interrogativo ed esclamativo come fine frase', () => {
+  it('maps question and exclamation marks as sentence ends', () => {
     const c = new TranscriptComposer();
     c.append('davvero punto interrogativo incredibile punto esclamativo sì');
     expect(c.value).toBe('Davvero? Incredibile! Sì');
   });
 
-  it('è case-insensitive sui comandi', () => {
+  it('is case-insensitive on commands', () => {
     const c = new TranscriptComposer();
     c.append('ciao Punto Nuovo Paragrafo ecco');
     expect(c.value).toBe('Ciao.\n\nEcco');
   });
 
-  it('scarta la punteggiatura senza una parola davanti', () => {
+  it('discards punctuation with no word before it', () => {
     const c = new TranscriptComposer();
     c.append('punto virgola ciao');
     expect(c.value).toBe('Ciao');
   });
 
-  it('scarta «a capo» a inizio testo e collassa gli «a capo» ripetuti', () => {
+  it('discards «a capo» at text start and collapses repeated «a capo»', () => {
     const c = new TranscriptComposer();
     c.append('a capo ciao a capo a capo a capo mondo');
     expect(c.value).toBe('Ciao\nMondo');
   });
 
-  it('mantiene il contesto di frase tra finali successivi', () => {
+  it('keeps sentence context across successive finals', () => {
     const c = new TranscriptComposer();
     c.append('prima frase punto');
     c.append('seconda frase');
@@ -57,14 +57,14 @@ describe('TranscriptComposer — comandi vocali (il motore non dà punteggiatura
     expect(c.value).toBe('Prima frase. Seconda frase, che continua');
   });
 
-  it('ignora input vuoti o di soli spazi', () => {
+  it('ignores empty or whitespace-only input', () => {
     const c = new TranscriptComposer();
     c.append('   ');
     c.append('');
     expect(c.value).toBe('');
   });
 
-  it('riparte da capo con reset()', () => {
+  it('starts over with reset()', () => {
     const c = new TranscriptComposer();
     c.append('qualcosa');
     c.reset();
@@ -73,7 +73,7 @@ describe('TranscriptComposer — comandi vocali (il motore non dà punteggiatura
     expect(c.value).toBe('Nuovo testo');
   });
 
-  it('riparte da un testo esistente rispettandone il contesto di frase', () => {
+  it('starts from existing text, respecting its sentence context', () => {
     const inFrase = new TranscriptComposer('Testo già dettato');
     inFrase.append('che prosegue');
     expect(inFrase.value).toBe('Testo già dettato che prosegue');
@@ -83,7 +83,7 @@ describe('TranscriptComposer — comandi vocali (il motore non dà punteggiatura
     expect(dopoPunto.value).toBe('Frase chiusa. Nuova frase');
   });
 
-  it('appendVerbatim non applica comandi né maiuscole', () => {
+  it('appendVerbatim applies neither commands nor capitalization', () => {
     const c = new TranscriptComposer();
     c.appendVerbatim('testo con punto dentro');
     c.appendVerbatim('secondo blocco');

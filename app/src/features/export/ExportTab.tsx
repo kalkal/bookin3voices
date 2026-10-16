@@ -1,9 +1,9 @@
 /**
- * Tab Export del Libro (mockup "Export/Condividi"): metadati KDP
- * modificabili (titolo, autore, lingua, descrizione), scelta formato
- * EPUB/DOCX, avviso se ci sono suggerimenti pending e "Genera"
- * che chiama la callable, salva in locale e apre lo share sheet.
- * Stato di avanzamento e errori sempre visibili, mai spinner muti.
+ * Export tab of the Book ("Export/Share" mockup): editable KDP metadata
+ * (title, author, language, description), EPUB/DOCX format choice,
+ * warning if there are pending suggestions and "Genera"
+ * which calls the callable, saves locally and opens the share sheet.
+ * Progress and errors always visible, never mute spinners.
  */
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
@@ -51,8 +51,8 @@ export function ExportTab({
 }: ExportTabProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
 
-  // I campi partono dal libro e restano dell'utente finché non salva: gli
-  // aggiornamenti remoti (observeBook) non sovrascrivono ciò che sta digitando.
+  // The fields start from the book and stay the user's until they save: remote
+  // updates (observeBook) do not overwrite what they are typing.
   const [title, setTitle] = useState(book.title);
   const [author, setAuthor] = useState(book.author);
   const [language, setLanguage] = useState(book.language);
@@ -71,7 +71,7 @@ export function ExportTab({
         if (!cancelled) setPendingCount(count);
       })
       .catch(() => {
-        // senza conteggio niente avviso: l'export resta comunque possibile
+        // without a count, no warning: export remains possible anyway
         if (!cancelled) setPendingCount(null);
       });
     return () => {

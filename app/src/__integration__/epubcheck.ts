@@ -1,9 +1,9 @@
-// Esecuzione di EPUBCheck (lo stesso motore usato da Amazon KDP) nel test
-// end-to-end dell'export. Gemello di functions/src/__integration__/epubcheck.ts
-// (utility di test, duplicata di proposito tra i due package):
-//  - EPUBCHECK_JAR: percorso del jar (in CI lo scarica il workflow);
+// Running EPUBCheck (the same engine used by Amazon KDP) in the export
+// end-to-end test. Twin of functions/src/__integration__/epubcheck.ts
+// (test utility, deliberately duplicated between the two packages):
+//  - EPUBCHECK_JAR: path of the jar (in CI the workflow downloads it);
 //    default: ./tools/epubcheck/epubcheck.jar (not committed);
-//  - JAVA_BIN: eseguibile java; default: JAVA_HOME/bin/java, poi `java` in PATH.
+//  - JAVA_BIN: java executable; default: JAVA_HOME/bin/java, then `java` on PATH.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -21,7 +21,7 @@ function resolveJar(): string {
   if (fromEnv !== undefined && fromEnv !== '') return fromEnv;
   if (existsSync(DEFAULT_JAR)) return DEFAULT_JAR;
   throw new Error(
-    'EPUBCheck non trovato: impostare EPUBCHECK_JAR (jar di https://github.com/w3c/epubcheck/releases).',
+    'EPUBCheck not found: set EPUBCHECK_JAR (jar from https://github.com/w3c/epubcheck/releases).',
   );
 }
 
@@ -36,14 +36,14 @@ function resolveJava(): string {
   return 'java';
 }
 
-/** Valida un EPUB con EPUBCheck: status 0 = nessun errore né warning. */
+/** Validates an EPUB with EPUBCheck: status 0 = no errors or warnings. */
 export function runEpubcheck(epubPath: string): EpubcheckResult {
   const result = spawnSync(resolveJava(), ['-jar', resolveJar(), epubPath], {
     encoding: 'utf8',
     timeout: 90000,
   });
   if (result.error) {
-    throw new Error(`EPUBCheck non eseguibile: ${result.error.message}`);
+    throw new Error(`EPUBCheck cannot be run: ${result.error.message}`);
   }
   return { status: result.status, output: `${result.stdout}\n${result.stderr}` };
 }

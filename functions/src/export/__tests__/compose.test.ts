@@ -1,5 +1,5 @@
-// Unit test della composizione: titoli, paragrafi, escape,
-// nome file e lingua di default. Logica pura: TDD obbligatorio.
+// Unit tests of the composition: titles, paragraphs, escaping, file name and
+// default language. Pure logic.
 
 import {
   chapterDisplayTitle,
@@ -13,46 +13,46 @@ import {
 import type { BookForExport } from '../types';
 
 describe('toRoman', () => {
-  it('converte come nella app (firma visiva dei capitoli)', () => {
+  it('converts as in the app (the visual signature of chapters)', () => {
     expect(toRoman(1)).toBe('I');
     expect(toRoman(4)).toBe('IV');
     expect(toRoman(28)).toBe('XXVIII');
   });
 
-  it('rifiuta valori fuori range', () => {
+  it('rejects out-of-range values', () => {
     expect(() => toRoman(0)).toThrow(RangeError);
     expect(() => toRoman(1.5)).toThrow(RangeError);
   });
 });
 
 describe('chapterDisplayTitle', () => {
-  it('compone "Capitolo <romano> — <titolo>"', () => {
+  it('composes "Capitolo <roman> — <title>"', () => {
     expect(chapterDisplayTitle(1, 'Il ritorno')).toBe('Capitolo I — Il ritorno');
     expect(chapterDisplayTitle(12, ' Il registro ')).toBe('Capitolo XII — Il registro');
   });
 
-  it('senza titolo resta "Capitolo <romano>"', () => {
+  it('without a title stays "Capitolo <roman>"', () => {
     expect(chapterDisplayTitle(3, '')).toBe('Capitolo III');
     expect(chapterDisplayTitle(3, '   ')).toBe('Capitolo III');
   });
 });
 
 describe('splitParagraphs', () => {
-  it('ogni sequenza di newline apre un paragrafo nuovo', () => {
+  it('each run of newlines opens a new paragraph', () => {
     expect(splitParagraphs('Primo.\nSecondo.\n\nTerzo.')).toEqual(['Primo.', 'Secondo.', 'Terzo.']);
   });
 
-  it('ignora righe vuote e spazi ai bordi', () => {
+  it('ignores blank lines and surrounding spaces', () => {
     expect(splitParagraphs('  Solo uno.  \n\n   \n')).toEqual(['Solo uno.']);
   });
 
-  it('capitolo vuoto → zero paragrafi', () => {
+  it('empty chapter -> zero paragraphs', () => {
     expect(splitParagraphs('')).toEqual([]);
   });
 });
 
 describe('composeChapters', () => {
-  it('numera in ordine e compone i paragrafi', () => {
+  it('numbers in order and composes paragraphs', () => {
     const book: BookForExport = {
       title: 'Prova',
       author: 'A',
@@ -72,7 +72,7 @@ describe('composeChapters', () => {
 });
 
 describe('escapeHtml', () => {
-  it('neutralizza i metacaratteri HTML', () => {
+  it('neutralizes HTML metacharacters', () => {
     expect(escapeHtml(`Tom & Jerry <b> "ciao" 'l'una'`)).toBe(
       'Tom &amp; Jerry &lt;b&gt; &quot;ciao&quot; &#39;l&#39;una&#39;',
     );
@@ -80,18 +80,18 @@ describe('escapeHtml', () => {
 });
 
 describe('exportFileName', () => {
-  it('slug ASCII del titolo con accenti ridotti alla base', () => {
+  it('ASCII title slug with accents reduced to the base letter', () => {
     expect(exportFileName('Il faro di Levante', 'epub')).toBe('il-faro-di-levante.epub');
     expect(exportFileName('Perché no? È così!', 'docx')).toBe('perche-no-e-cosi.docx');
   });
 
-  it('titolo senza caratteri utili → "libro"', () => {
+  it('title with no usable characters -> "libro"', () => {
     expect(exportFileName('!!!', 'epub')).toBe('libro.epub');
   });
 });
 
 describe('exportLanguage', () => {
-  it('usa la lingua del libro, con default it se vuota', () => {
+  it('uses the book language, defaulting to it when empty', () => {
     expect(exportLanguage('en')).toBe('en');
     expect(exportLanguage('  ')).toBe('it');
   });

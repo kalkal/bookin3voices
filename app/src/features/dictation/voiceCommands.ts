@@ -1,19 +1,19 @@
-// Comandi vocali di punteggiatura (il motore cloud Android
-// non aggiunge punteggiatura). Scelta dichiarata: la mappatura
-// è un POST-PROCESSORE dedicato e puro, applicato dai livelli superiori ai soli
-// trascritti FINALI prima dell'accumulo; i parziali restano grezzi (effimeri).
+// Spoken punctuation commands (the Android cloud engine does not add
+// punctuation). Design choice: the mapping is a dedicated, pure
+// POST-PROCESSOR, applied by the higher layers to FINAL transcripts only,
+// before accumulation; interim results stay raw (ephemeral).
 //
-// Limite noto e accettato (stile Dragon): una parola-comando pronunciata come
-// parola normale («il punto di vista») viene comunque convertita — la revisione
-// manuale resta il rimedio, come nelle app di dettatura di riferimento.
+// Known, accepted limitation (Dragon style): a command word spoken as a
+// normal word («il punto di vista») is still converted; manual review is the
+// remedy, as in reference dictation apps.
 
 type PunctuationCommand = { kind: 'punctuation'; char: string; endsSentence: boolean };
 type BreakCommand = { kind: 'break'; text: string };
 export type VoiceCommand = PunctuationCommand | BreakCommand;
 
 /**
- * Mappa frase → comando. Il matching è case-insensitive e privilegia la frase
- * più lunga («punto e virgola» prima di «punto»). Estensibile: basta una riga.
+ * Phrase → command map. Matching is case-insensitive and prefers the longest
+ * phrase («punto e virgola» before «punto»). Extensible: one line is enough.
  */
 const COMMAND_PHRASES: readonly { phrase: string; command: VoiceCommand }[] = [
   { phrase: 'punto e virgola', command: { kind: 'punctuation', char: ';', endsSentence: false } },
@@ -36,9 +36,9 @@ const VOICE_COMMANDS: readonly { tokens: string[]; command: VoiceCommand }[] = C
 const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
 
 /**
- * Accumula i trascritti finali applicando i comandi vocali, la spaziatura
- * (niente spazio prima della punteggiatura) e la maiuscola a inizio frase.
- * Non è thread-safe né condiviso: un composer per sessione di dettatura.
+ * Accumulates final transcripts, applying voice commands, spacing
+ * (no space before punctuation) and capitalization at sentence start.
+ * Not thread-safe nor shared: one composer per dictation session.
  */
 export class TranscriptComposer {
   private text: string;
@@ -55,7 +55,7 @@ export class TranscriptComposer {
     return this.text;
   }
 
-  /** Aggiunge un trascritto finale grezzo; ritorna il testo aggiornato. */
+  /** Appends a raw final transcript; returns the updated text. */
   append(finalTranscript: string): string {
     const tokens = finalTranscript.trim().split(/\s+/).filter(Boolean);
     let i = 0;
@@ -72,7 +72,7 @@ export class TranscriptComposer {
     return this.text;
   }
 
-  /** Aggiunta letterale (comandi vocali disattivati): sola giunzione con spazio. */
+  /** Literal append (voice commands off): joins with a single space only. */
   appendVerbatim(finalTranscript: string): string {
     const clean = finalTranscript.trim();
     if (clean) this.text += (this.text === '' ? '' : ' ') + clean;
@@ -100,13 +100,13 @@ export class TranscriptComposer {
 
   private applyCommand(command: VoiceCommand): void {
     if (command.kind === 'punctuation') {
-      // punteggiatura senza una parola davanti (inizio testo/riga): la si scarta
+      // punctuation with no word before it (start of text/line): discard it
       if (!endsWithWordChar(this.text)) return;
       this.text = this.text.replace(/\s+$/, '') + command.char;
       if (command.endsSentence) this.capitalizeNext = true;
     } else {
       if (this.text === '') return;
-      // gli "a capo" ripetuti non accumulano più di una riga vuota
+      // repeated line breaks never accumulate more than one blank line
       this.text = (this.text.replace(/\s+$/, '') + command.text).replace(/\n{3,}$/, '\n\n');
       this.capitalizeNext = true;
     }

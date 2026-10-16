@@ -1,14 +1,13 @@
 /**
- * Schermata Progressi: la versione
- * ESTESA della spinta motivazionale alla Werdsmith. Numeri e abitudine, non
- * contenuto: anello dell'obiettivo di oggi, card della SERIE (giorni di fila
- * sopra l'obiettivo, computeStreak), striscia della settimana con le spunte,
- * grafico a barre degli ultimi 7 giorni e riga del libro più recente.
+ * Progress screen: the EXTENDED version of the motivational nudge. Numbers
+ * and habit, not content: today's goal ring, STREAK card (consecutive days
+ * above the goal, computeStreak), week strip with checkmarks, bar chart of
+ * the last 7 days and the most recent book row.
  *
- * Ci si arriva dalla card "Obiettivo di oggi" in Libreria (che resta lì, in
- * piccolo). Regole di dominio: la UI dipende SOLO dai repository via
- * props, mai dall'SDK Firebase; usa solo i token del tema e i componenti in
- * components/. Nessun nuovo servizio: si riusano progressi/impostazioni/libri.
+ * It is reached from the "Today's goal" card in the Library (which stays
+ * there, smaller). Domain rules: the UI depends ONLY on repositories via
+ * props, never on the Firebase SDK; it uses only theme tokens and the
+ * components in components/. No new service: progress/settings/books are reused.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -26,7 +25,7 @@ import { MAX_HISTORY_DAYS } from './dailyProgress';
 import type { DailyProgress, DailyProgressRepository } from './dailyProgress';
 import type { Book, BookRepository } from './types';
 
-/** Giorni mostrati nella settimana e nel grafico a barre. */
+/** Days shown in the week strip and the bar chart. */
 const WEEK_DAYS = 7;
 
 export interface ProgressScreenProps {
@@ -36,18 +35,18 @@ export interface ProgressScreenProps {
   onBack: () => void;
 }
 
-/** Iniziale del giorno della settimana (D L M M G V S) dalla chiave YYYY-MM-DD. */
+/** Initial of the weekday (S M T W T F S, in the UI language) from the YYYY-MM-DD key. */
 function weekdayInitial(dateKey: string): string {
   const [year, month, day] = dateKey.split('-').map(Number);
   return t('books.weekdayInitials')[new Date(year, month - 1, day).getDay()];
 }
 
 /**
- * Anello di avanzamento senza dipendenze grafiche (niente SVG nel progetto):
- * due semicerchi pieni che ruotano attorno al centro rivelano la parte
- * raggiunta; un cerchio "buco" al centro scava la ciambella e ospita i numeri.
- * Fedeltà pixel secondaria: conta che l'anello si riempia salendo verso
- * l'obiettivo.
+ * Progress ring without graphics dependencies (no SVG in the project):
+ * two filled half-circles rotating around the center reveal the reached
+ * portion; a "hole" circle in the middle carves out the donut and hosts the numbers.
+ * Pixel fidelity is secondary: what matters is that the ring fills as it
+ * approaches the goal.
  */
 function GoalRing({
   size,
@@ -68,8 +67,8 @@ function GoalRing({
 }) {
   const p = Math.max(0, Math.min(1, progress));
   const half = size / 2;
-  const firstDeg = Math.min(p, 0.5) * 360; // metà destra: 0..180
-  const secondDeg = Math.max(p - 0.5, 0) * 360; // metà sinistra: 0..180
+  const firstDeg = Math.min(p, 0.5) * 360; // right half: 0..180
+  const secondDeg = Math.max(p - 0.5, 0) * 360; // left half: 0..180
 
   const sweep = (side: 'right' | 'left', deg: number) => {
     const bulgeRight = side === 'right';
@@ -80,7 +79,7 @@ function GoalRing({
       width: half,
       height: size,
       backgroundColor: fillColor,
-      // lato piatto verso il centro dell'anello, bulge verso l'esterno
+      // flat side toward the ring center, bulge toward the outside
       borderTopRightRadius: bulgeRight ? half : 0,
       borderBottomRightRadius: bulgeRight ? half : 0,
       borderTopLeftRadius: bulgeRight ? 0 : half,
@@ -159,8 +158,8 @@ export function ProgressScreen({
 
   useEffect(() => {
     let cancelled = false;
-    // la serie dipende dall'obiettivo (Impostazioni): caricato quello, la si
-    // riconcilia e persiste col contatore non potato (può superare i 35 giorni)
+    // the streak depends on the goal (Settings): once loaded, it is
+    // reconciled and persisted with the unpruned counter (can exceed 35 days)
     settingsRepository
       .load()
       .then((settings) => {
@@ -174,7 +173,7 @@ export function ProgressScreen({
       .catch(() => {
         if (!cancelled) setGoal(null);
       });
-    // storico per settimana e grafico: potato agli ultimi MAX_HISTORY_DAYS
+    // history for week and chart: pruned to the last MAX_HISTORY_DAYS
     dailyProgressRepository
       .getHistory(MAX_HISTORY_DAYS)
       .then((days) => {
@@ -186,9 +185,9 @@ export function ProgressScreen({
     };
   }, [settingsRepository, dailyProgressRepository]);
 
-  // buildHistory torna sempre MAX_HISTORY_DAYS voci: qui basta escludere il
-  // caricamento in corso (history === null); l'empty-state vero (zero libri) è
-  // gestito dalla riga libro, che compare solo se c'è un libro.
+  // buildHistory always returns MAX_HISTORY_DAYS entries: here it is enough to exclude the
+  // loading state (history === null); the real empty state (zero books) is
+  // handled by the book row, which appears only if there is a book.
   const view = useMemo(() => {
     if (history === null) return null;
     const today = history[history.length - 1];
@@ -238,7 +237,7 @@ export function ProgressScreen({
 
       {view !== null && (
         <View style={{ paddingHorizontal: spacing.xl, gap: spacing.xl, paddingTop: spacing.md }}>
-          {/* Anello obiettivo di oggi */}
+          {/* Today's goal ring */}
           <View style={{ alignItems: 'center', gap: spacing.sm }} testID="progress-ring">
             <GoalRing
               size={188}
@@ -271,7 +270,7 @@ export function ProgressScreen({
             </GoalRing>
           </View>
 
-          {/* Serie (streak) */}
+          {/* Streak */}
           <Card
             style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}
             testID="progress-streak"
@@ -299,7 +298,7 @@ export function ProgressScreen({
             </View>
           </Card>
 
-          {/* Striscia della settimana: spunta se raggiunto, oggi cerchiato oro */}
+          {/* Week strip: checkmark if the goal is met, today circled in gold */}
           <View style={{ gap: spacing.sm }}>
             <Text style={sectionLabelStyle}>{t('books.thisWeek')}</Text>
             <View style={styles.weekRow} testID="progress-week">
@@ -350,7 +349,7 @@ export function ProgressScreen({
             </View>
           </View>
 
-          {/* Grafico a barre degli ultimi 7 giorni */}
+          {/* Bar chart of the last 7 days */}
           <View style={{ gap: spacing.sm }}>
             <Text style={sectionLabelStyle}>{t('books.last7Days')}</Text>
             <View style={styles.barsRow}>
@@ -388,7 +387,7 @@ export function ProgressScreen({
             </View>
           </View>
 
-          {/* Riga del libro più recente */}
+          {/* Most recent book row */}
           {book !== null && (
             <Card style={{ gap: spacing.sm }} testID="progress-book">
               <Text style={sectionLabelStyle}>{t('books.yourBook')}</Text>

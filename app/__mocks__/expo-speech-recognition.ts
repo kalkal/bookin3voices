@@ -1,8 +1,8 @@
-// Mock automatico di expo-speech-recognition per Jest (il modulo nativo non
-// esiste in ambiente di test). Scenario di default: tutto disponibile, permessi
-// concessi, italiano installato per l'offline. I test che vogliono altri
-// scenari iniettano i propri fake (SpeechModule, PreflightChecks) — questo
-// mock serve solo a far montare l'albero senza motore nativo.
+// Automatic expo-speech-recognition mock for Jest (the native module does not
+// exist in the test environment). Default scenario: everything available, permissions
+// granted, Italian installed for offline. Tests that want other
+// scenarios inject their own fakes (SpeechModule, PreflightChecks) — this
+// mock only serves to mount the tree without a native engine.
 
 export const ExpoSpeechRecognitionModule = {
   addListener: jest.fn(() => ({ remove: jest.fn() })),

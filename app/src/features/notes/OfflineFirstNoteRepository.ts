@@ -1,13 +1,13 @@
-// Composito offline-first delle note (feature Taccuino). Stessa rete
-// di sicurezza dei capitoli (OfflineFirstChapterRepository): la cache del JS SDK
-// di Firestore su React Native è solo in memoria, quindi una nota creata offline
-// morirebbe con l'app prima del sync. Qui ogni creazione tocca PRIMA l'outbox
-// durabile (LocalNoteRepository su AsyncStorage) e POI Firestore in modo
-// ottimistico; se il remoto rifiuta/è offline la nota resta nell'outbox e viene
-// ri-sincronizzata (recovery) alla prossima apertura/observe. Le note già
-// sincronizzate arrivano da Firestore via observe; la vista è l'unione delle due
-// sorgenti, deduplicata per id (il remoto vince). Obiettivo: una nota salvata non
-// si perde mai, nemmeno offline con l'app uccisa.
+// Offline-first composite for notes (Notebook feature). Same safety net
+// as chapters (OfflineFirstChapterRepository): the cache of the Firestore JS SDK
+// on React Native is memory-only, so a note created offline
+// would die with the app before syncing. Here every creation touches the durable
+// outbox FIRST (LocalNoteRepository on AsyncStorage) and THEN Firestore,
+// optimistically; if the remote rejects/is offline the note stays in the outbox and is
+// re-synced (recovery) at the next open/observe. Notes already
+// synced come from Firestore via observe; the view is the union of the two
+// sources, deduplicated by id (the remote wins). Goal: a saved note is
+// never lost, not even offline with the app killed.
 
 import { toError } from '../../lib/firestoreCodec';
 import type { LocalNoteRepository } from './LocalNoteRepository';
@@ -24,9 +24,9 @@ import type {
 export interface OfflineFirstNoteRepositoryOptions {
   remote: SyncableNoteRepository;
   mirror: LocalNoteRepository;
-  /** Errori consolidati (es. permessi) dal tentativo di sync ottimistico. */
+  /** Settled errors (e.g. permissions) from the optimistic sync attempt. */
   onError?: (error: Error) => void;
-  /** Orologio iniettabile per test deterministici. */
+  /** Injectable clock for deterministic tests. */
   now?: () => number;
 }
 
@@ -36,13 +36,13 @@ export class OfflineFirstNoteRepository implements NoteRepository {
   private readonly onError?: (error: Error) => void;
   private readonly now: () => number;
 
-  /** Note in attesa in memoria, per libro (specchio dell'outbox su disco). */
+  /** Pending notes in memory, per book (mirror of the on-disk outbox). */
   private readonly pending = new Map<string, Map<string, Note>>();
-  /** Outbox già caricato da disco per questo libro (una sola lettura). */
+  /** Outbox already loaded from disk for this book (read only once). */
   private readonly loaded = new Set<string>();
-  /** Ultima emissione del remoto, per libro (base della fusione). */
+  /** Last remote emission, per book (basis of the merge). */
   private readonly lastRemote = new Map<string, Note[]>();
-  /** Ri-emissioni attive, per libro: le chiama chi cambia lo stato. */
+  /** Active re-emitters, per book: called by whoever changes the state. */
   private readonly refreshers = new Map<string, Set<() => void>>();
 
   constructor(options: OfflineFirstNoteRepositoryOptions) {
@@ -65,7 +65,7 @@ export class OfflineFirstNoteRepository implements NoteRepository {
     return map;
   }
 
-  /** Vista fusa: remoto ∪ outbox, deduplicata per id (remoto vince), desc. */
+  /** Merged view: remote ∪ outbox, deduplicated by id (remote wins), desc. */
   private merge(bookId: string): Note[] {
     const byId = new Map<string, Note>();
     for (const note of this.lastRemote.get(bookId) ?? []) byId.set(note.id, note);
@@ -79,17 +79,17 @@ export class OfflineFirstNoteRepository implements NoteRepository {
     for (const r of this.refreshers.get(bookId) ?? []) r();
   }
 
-  /** Ri-spinge verso il remoto le note in attesa (recovery della sessione morta). */
+  /** Re-pushes pending notes to the remote (recovery of a dead session). */
   private async recover(bookId: string): Promise<void> {
     const map = await this.ensurePending(bookId);
     for (const note of [...map.values()]) {
-      // putNote risolve solo all'ack del server: offline resta pending (durabile),
-      // online conferma e sfila dall'outbox. Idempotente (stesso id): niente doppioni.
+      // putNote resolves only on the server ack: offline it stays pending (durable),
+      // online it confirms and removes from the outbox. Idempotent (same id): no duplicates.
       this.remote
         .putNote(note)
         .then(() => this.confirm(note))
         .catch(() => {
-          // ancora irraggiungibile: la nota resta nell'outbox per il prossimo giro
+          // still unreachable: the note stays in the outbox for the next round
         });
     }
   }
@@ -113,7 +113,7 @@ export class OfflineFirstNoteRepository implements NoteRepository {
     set.add(refresher);
     this.refreshers.set(bookId, set);
 
-    // outbox su disco → prima emissione (anche offline) → recovery
+    // on-disk outbox → first emission (even offline) → recovery
     this.ensurePending(bookId)
       .then(() => {
         refresher();
@@ -142,7 +142,7 @@ export class OfflineFirstNoteRepository implements NoteRepository {
       const remote = await this.remote.getNote(ref);
       if (remote !== null) return remote;
     } catch {
-      // remoto irraggiungibile: si ripiega sull'outbox
+      // remote unreachable: fall back to the outbox
     }
     const map = await this.ensurePending(ref.bookId);
     return map.get(ref.noteId) ?? null;
@@ -159,13 +159,13 @@ export class OfflineFirstNoteRepository implements NoteRepository {
       createdAt: at,
       updatedAt: at,
     };
-    // durabilità prima di tutto: l'outbox su disco è il salvataggio "vero"
+    // durability first: the on-disk outbox is the "real" save
     const map = await this.ensurePending(bookId);
     map.set(note.id, note);
     await this.mirror.savePending(note);
-    this.refresh(bookId); // compare subito, anche offline
+    this.refresh(bookId); // shows up immediately, even offline
 
-    // sync ottimistico: on ack sfila dall'outbox; su rifiuto resta per la recovery
+    // optimistic sync: on ack removes from the outbox; on rejection stays for recovery
     this.remote
       .putNote(note)
       .then(() => this.confirm(note))
@@ -178,8 +178,8 @@ export class OfflineFirstNoteRepository implements NoteRepository {
     const map = await this.ensurePending(ref.bookId);
     const existing = map.get(ref.noteId);
     if (existing !== undefined) {
-      // nota ancora non sincronizzata: si aggiorna la copia nell'outbox così la
-      // recovery ri-spinge la versione corretta
+      // note not yet synced: update the copy in the outbox so that
+      // recovery re-pushes the corrected version
       const updated: Note = { ...existing, ...patch, updatedAt: this.now() };
       map.set(ref.noteId, updated);
       await this.mirror.savePending(updated);

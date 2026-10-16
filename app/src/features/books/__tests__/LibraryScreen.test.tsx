@@ -53,7 +53,7 @@ function renderLibrary(overrides?: {
 }
 
 describe('LibraryScreen', () => {
-  it('mostra obiettivo del giorno e libri con i contatori denormalizzati', async () => {
+  it('shows the daily goal and books with the denormalized counters', async () => {
     const books = new InMemoryBookRepository();
     books.seed({
       id: 'faro',
@@ -80,14 +80,14 @@ describe('LibraryScreen', () => {
     await screen.unmount();
   });
 
-  it('senza libri invita a crearne uno', async () => {
+  it('with no books, prompts to create one', async () => {
     const { result } = renderLibrary();
     const screen = await result;
     expect(await screen.findByText('Nessun libro, per ora')).toBeOnTheScreen();
     await screen.unmount();
   });
 
-  it('il FAB crea un libro dal titolo digitato e lo apre', async () => {
+  it('the FAB creates a book from the typed title and opens it', async () => {
     const onOpenBook = jest.fn();
     const { result, books } = renderLibrary({ onOpenBook });
     const screen = await result;
@@ -108,7 +108,7 @@ describe('LibraryScreen', () => {
     await screen.unmount();
   });
 
-  it('il tap su una card apre il libro e l’ingranaggio apre le Impostazioni', async () => {
+  it('tapping a card opens the book and the gear opens Settings', async () => {
     const books = new InMemoryBookRepository();
     books.seed({ id: 'faro', title: 'Il custode del faro' });
     const onOpenBook = jest.fn();
@@ -123,7 +123,7 @@ describe('LibraryScreen', () => {
     await screen.unmount();
   });
 
-  it('il tap sulla card "Obiettivo di oggi" apre il diario dei progressi', async () => {
+  it('tapping the "Obiettivo di oggi" card opens the progress diary', async () => {
     const onOpenProgress = jest.fn();
     const { result } = renderLibrary({ onOpenProgress });
     const screen = await result;

@@ -1,14 +1,14 @@
-// Test d'integrazione della callable generateOutline contro
-// l'emulatore Firestore (MAI progetti reali). Il modello è un fake
-// iniettato (Strategy OutlineModel): le chiamate vere a Gemini stanno nel
-// fumo opzionale geminiOutline.smoke.test.ts. Si verificano:
-//  - percorso felice: outline validato e registro users/{uid}/outlines/{requestId};
-//  - contesto: i capitoli con testo entrano nel prompt come "già scritti",
-//    quelli vuoti no;
-//  - idempotenza sul requestId: retry → stessa risposta, UNA sola chiamata al
-//    modello; stesso requestId su altro libro → already-exists;
-//  - retry sull'output non conforme (1 tentativo in più, poi 'unavailable');
-//  - errori chiari (auth, input, libro mancante).
+// Integration test of the generateOutline callable against the
+// Firestore emulator (NEVER real projects). The model is an injected fake
+// (OutlineModel Strategy): real Gemini calls live in the optional smoke test
+// geminiOutline.smoke.test.ts. The following is verified:
+//  - happy path: validated outline and users/{uid}/outlines/{requestId} registry entry;
+//  - context: chapters with text enter the prompt as "already written",
+//    empty ones do not;
+//  - idempotency on requestId: retry → same response, ONE single model
+//    call; same requestId on another book → already-exists;
+//  - retry on non-conforming output (1 extra attempt, then 'unavailable');
+//  - clear errors (auth, input, missing book).
 
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
@@ -20,9 +20,7 @@ import { OUTLINE_PROMPT_VERSION } from '../ai/outlinePrompt';
 import type { GenerateOutlineResponse, OutlineModel } from '../ai/types';
 
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
-  throw new Error(
-    'Questi test girano SOLO contro l’emulatore Firestore (firebase emulators:exec).',
-  );
+  throw new Error('These tests run ONLY against the Firestore emulator (firebase emulators:exec).');
 }
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'demo-bookvoice-functions';
@@ -43,7 +41,7 @@ const OUTLINE_FINTO = {
   ],
 };
 
-/** Fake OutlineModel: registra i prompt ricevuti e risponde a copione. */
+/** Fake OutlineModel: records the prompts it receives and answers from a script. */
 class FakeOutlineModel implements OutlineModel {
   readonly modelName = 'fake-pro';
   readonly prompts: OutlinePrompt[] = [];
@@ -63,7 +61,7 @@ class FakeOutlineModel implements OutlineModel {
 
 let db: Firestore;
 
-/** Semina un libro con capitoli misti: due con testo, uno vuoto (slot per il merge). */
+/** Seeds a book with mixed chapters: two with text, one empty (slot for the merge). */
 async function seedBook(uid: string, bookId = 'libro-di-prova'): Promise<string> {
   const bookRef = db.doc(`users/${uid}/books/${bookId}`);
   await bookRef.set({
@@ -136,8 +134,8 @@ beforeAll(() => {
   db = getFirestore();
 });
 
-describe('generateOutline (emulatore Firestore, modello finto)', () => {
-  it('percorso felice: outline validato, registro scritto, capitoli scritti nel prompt', async () => {
+describe('generateOutline (Firestore emulator, fake model)', () => {
+  it('happy path: outline validated, registry entry written, written chapters in the prompt', async () => {
     const uid = 'utente-outline-felice';
     const bookId = await seedBook(uid);
     const model = new FakeOutlineModel();
@@ -149,7 +147,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     expect(response.promptVersion).toBe(OUTLINE_PROMPT_VERSION);
     expect(response.createdAt).toBe(NOW);
 
-    // contesto: solo i capitoli CON testo entrano come "già scritti"
+    // context: only chapters WITH text enter as "already written"
     expect(model.prompts).toHaveLength(1);
     expect(model.prompts[0]?.userText).toContain('1. Il ritorno');
     expect(model.prompts[0]?.userText).toContain('2. Il registro');
@@ -167,7 +165,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     });
   });
 
-  it('idempotenza: retry con lo stesso requestId → stessa risposta, UNA chiamata al modello', async () => {
+  it('idempotency: retry with the same requestId → same response, ONE model call', async () => {
     const uid = 'utente-outline-idempotente';
     const bookId = await seedBook(uid);
     const model = new FakeOutlineModel();
@@ -179,7 +177,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     expect(model.prompts).toHaveLength(1);
   });
 
-  it('stesso requestId su un ALTRO libro → already-exists', async () => {
+  it('same requestId on ANOTHER book → already-exists', async () => {
     const uid = 'utente-outline-conflitto';
     const bookId = await seedBook(uid);
     const altroLibro = await seedBook(uid, 'altro-libro');
@@ -191,7 +189,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     });
   });
 
-  it('output non conforme al primo colpo → retry riuscito (2 chiamate)', async () => {
+  it('non-conforming output on the first try → retry succeeds (2 calls)', async () => {
     const uid = 'utente-outline-retry';
     const bookId = await seedBook(uid);
     const model = new FakeOutlineModel([{ chapters: 'spazzatura' }, OUTLINE_FINTO]);
@@ -201,7 +199,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     expect(model.prompts).toHaveLength(2);
   });
 
-  it('output non conforme anche al retry → unavailable e NESSUN registro', async () => {
+  it('non-conforming output on the retry too → unavailable and NO registry entry', async () => {
     const uid = 'utente-outline-kaputt';
     const bookId = await seedBook(uid);
     const model = new FakeOutlineModel([{ chapters: [] }]);
@@ -214,7 +212,7 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     expect(registry.exists).toBe(false);
   });
 
-  it('tetto d’uso: blocca oltre il limite, il retry idempotente non conta', async () => {
+  it('usage cap: blocks above the limit, the idempotent retry does not count', async () => {
     const uid = 'utente-outline-tetto';
     const bookId = await seedBook(uid);
     const handler = createGenerateOutlineHandler({
@@ -228,26 +226,26 @@ describe('generateOutline (emulatore Firestore, modello finto)', () => {
     });
 
     await handler(callableRequest(uid, input(bookId, 'req-tetto-1')));
-    // retry idempotente: riusa l'outline salvato, non consuma lo slot
+    // idempotent retry: reuses the saved outline, does not consume the slot
     await handler(callableRequest(uid, input(bookId, 'req-tetto-1')));
     await expect(handler(callableRequest(uid, input(bookId, 'req-tetto-2')))).rejects.toMatchObject(
       { code: 'resource-exhausted' },
     );
   });
 
-  it('senza auth → unauthenticated', async () => {
+  it('without auth → unauthenticated', async () => {
     await expect(run(new FakeOutlineModel(), undefined, input('x', 'req-4'))).rejects.toMatchObject(
       { code: 'unauthenticated' },
     );
   });
 
-  it('input non valido → invalid-argument', async () => {
+  it('invalid input → invalid-argument', async () => {
     await expect(
       run(new FakeOutlineModel(), 'utente-x', { bookId: 'x', synopsis: '  ', requestId: 'r' }),
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 
-  it('libro inesistente → not-found', async () => {
+  it('nonexistent book → not-found', async () => {
     await expect(
       run(new FakeOutlineModel(), 'utente-senza-libri', input('non-esiste', 'req-5')),
     ).rejects.toMatchObject({ code: 'not-found' });

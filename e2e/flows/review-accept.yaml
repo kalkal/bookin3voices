@@ -1,16 +1,16 @@
-# Flusso E2E — review dei suggerimenti (EXPO_PUBLIC_E2E=1).
-# Percorso: Libreria → Libro → capitolo seminato «La tazza» (App.tsx, modalità
-# E2E) → «Rifinisci con AI» col FakeSuggestionsProvider → in Review si
-# sceglie la variante B dello stile e si accetta, si rifiuta la grammatica →
-# testo aggiornato, contatore pending a zero. I testID sono quelli della schermata Editor;
-# gli id dei suggerimenti del provider finto sono deterministici
-# (fake-<hash>-<indice>) e si matchano via regex sull'hash.
+# E2E flow — suggestion review (EXPO_PUBLIC_E2E=1).
+# Path: Library → Book → seeded chapter «La tazza» (App.tsx, E2E mode)
+# → «Rifinisci con AI» with the FakeSuggestionsProvider → in Review the
+# style variant B is chosen and accepted, the grammar one is rejected →
+# updated text, pending counter at zero. The testIDs are those of the Editor screen;
+# the fake provider's suggestion ids are deterministic
+# (fake-<hash>-<index>) and are matched via regex on the hash.
 appId: dev.kalkal.bookvoice
-name: Review — accetta una variante, rifiuta un suggerimento
+name: Review — accept a variant, reject a suggestion
 ---
 - runFlow: ../helpers/open-e2e-app.yaml
 
-# Dalla Dettatura iniziale si risale alla Libreria e si apre il libro.
+# From the initial Dictation back up to the Library and open the book.
 - back
 - extendedWaitUntil:
     visible:
@@ -23,7 +23,7 @@ name: Review — accetta una variante, rifiuta un suggerimento
       id: "book-screen"
     timeout: 10000
 
-# Il capitolo seminato in modalità E2E: 11 parole, nessuna rifinitura ancora.
+# The chapter seeded in E2E mode: 11 words, no refinement yet.
 - tapOn:
     id: "book-chapter-capitolo-2"
 - extendedWaitUntil:
@@ -33,8 +33,8 @@ name: Review — accetta una variante, rifiuta un suggerimento
 - assertVisible:
     text: '.*Elena posò lentamente la tazza sul tavolo\..*'
 
-# «Rifinisci con AI»: il provider finto trova 2 suggerimenti
-# (stile: «posò lentamente»; grammatica: «un altra»).
+# «Rifinisci con AI»: the fake provider finds 2 suggestions
+# (style: «posò lentamente»; grammar: «un altra»).
 - tapOn:
     id: "editor-refine"
 - extendedWaitUntil:
@@ -52,7 +52,7 @@ name: Review — accetta una variante, rifiuta un suggerimento
 - assertVisible:
     text: ".*2 in attesa"
 
-# Card di stile: 3 varianti, si sceglie la B («posò, piano,») e si accetta.
+# Style card: 3 variants, B («posò, piano,») is chosen and accepted.
 - assertVisible:
     text: "3 varianti — tocca per scegliere"
 - tapOn:
@@ -62,7 +62,7 @@ name: Review — accetta una variante, rifiuta un suggerimento
 - assertVisible:
     text: ".*1 in attesa"
 
-# Card di grammatica («un altra» → «un'altra»): si rifiuta.
+# Grammar card («un altra» → «un'altra»): rejected.
 - tapOn:
     id: "review-reject-fake-.*-1"
 - assertVisible:
@@ -70,8 +70,8 @@ name: Review — accetta una variante, rifiuta un suggerimento
 - assertVisible:
     id: "review-empty"
 
-# Ritorno all'editor: il testo riflette la variante accettata, il tratto
-# rifiutato è intatto e il contatore pending è sparito.
+# Back in the editor: the text reflects the accepted variant, the rejected
+# passage is intact and the pending counter is gone.
 - tapOn:
     id: "review-back"
 - extendedWaitUntil:

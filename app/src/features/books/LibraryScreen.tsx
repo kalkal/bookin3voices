@@ -1,9 +1,9 @@
 /**
- * Schermata Libreria: frontespizio bookin3voice
- * con ornamento, card "Obiettivo di oggi" (dailyGoalWords dalle impostazioni
- * della schermata Impostazioni + parole aggiunte oggi), elenco dei libri come volumi rilegati con
- * progresso dai contatori denormalizzati (si leggono SOLO i documenti
- * libro) e FAB "+ Nuovo libro". L'ingranaggio in alto apre le Impostazioni.
+ * Library screen: bookin3voice title page with an ornament, "Today's goal"
+ * card (dailyGoalWords from the Settings screen + words added today), list of
+ * books as bound volumes with progress from the denormalized counters (ONLY
+ * the book documents are read) and a "+ New book" FAB. The gear icon at the
+ * top opens Settings.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
@@ -19,9 +19,9 @@ import type { DailyProgressRepository } from './dailyProgress';
 import type { Book, BookRepository } from './types';
 
 /**
- * Traguardo indicativo di un libro (romanzo tipico), usato SOLO per la barra
- * di avanzamento della card: un campo targetWords per libro è una scelta di
- * prodotto (per ora non è nello schema).
+ * Indicative target of a book (typical novel), used ONLY for the card's
+ * progress bar: a per-book targetWords field is a product decision (for now
+ * it is not in the schema).
  */
 export const BOOK_TARGET_WORDS = 60_000;
 
@@ -31,11 +31,11 @@ export interface LibraryScreenProps {
   dailyProgressRepository: DailyProgressRepository;
   onOpenBook: (book: Book) => void;
   onOpenSettings: () => void;
-  /** Apre il Diario dei progressi (versione estesa della card obiettivo). */
+  /** Opens the Progress diary (extended version of the goal card). */
   onOpenProgress: () => void;
 }
 
-/** Mese di inizio in italiano per la riga meta ("Romanzo · iniziato a giugno"). */
+/** Start month in Italian for the meta row ("Romanzo · iniziato a giugno"). */
 function startedLabel(createdAtMillis: number): string {
   try {
     const month = new Intl.DateTimeFormat(uiLocale(), { month: 'long' }).format(
@@ -74,7 +74,7 @@ export function LibraryScreen({
     );
   }, [bookRepository]);
 
-  // obiettivo del giorno: impostazioni + contatore locale delle parole
+  // goal of the day: settings + local word counter
   useEffect(() => {
     let cancelled = false;
     settingsRepository
@@ -82,12 +82,12 @@ export function LibraryScreen({
       .then((settings) => {
         if (cancelled) return;
         setDailyGoal(settings.dailyGoalWords);
-        // riconcilia la serie all'apertura della Libreria (qui non si mostra):
-        // tiene fresco il contatore non potato così non riparte aprendo i Progressi
+        // reconciles the streak when the Library opens (not shown here):
+        // keeps the unpruned counter fresh so it does not restart when opening Progress
         dailyProgressRepository.getStreak(settings.dailyGoalWords).catch(() => {});
       })
       .catch(() => {
-        // senza impostazioni leggibili la card obiettivo resta nascosta
+        // without readable settings the goal card stays hidden
       });
     dailyProgressRepository
       .getToday()

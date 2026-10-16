@@ -15,12 +15,12 @@ function checks(overrides: Partial<PreflightChecks> = {}): PreflightChecks {
 }
 
 describe('runPreflight', () => {
-  it('tutto a posto: ok senza problemi', async () => {
+  it('all fine: ok with no issues', async () => {
     const report = await runPreflight(checks());
     expect(report).toEqual({ ok: true, issues: [] });
   });
 
-  it('riconoscimento non disponibile: blocker, senza chiedere permessi', async () => {
+  it('recognition unavailable: blocker, without asking for permissions', async () => {
     const requestPermissions = jest.fn();
     const report = await runPreflight(
       checks({ isRecognitionAvailable: () => false, requestPermissions }),
@@ -32,7 +32,7 @@ describe('runPreflight', () => {
     expect(requestPermissions).not.toHaveBeenCalled();
   });
 
-  it('permesso mancante: lo chiede una volta e se concesso è ok', async () => {
+  it('permission missing: asks once and if granted it is ok', async () => {
     let granted = false;
     const report = await runPreflight(
       checks({
@@ -47,7 +47,7 @@ describe('runPreflight', () => {
     expect(granted).toBe(true);
   });
 
-  it('permesso negato per sempre: blocker con azione "apri impostazioni"', async () => {
+  it('permission denied permanently: blocker with the "open settings" action', async () => {
     const report = await runPreflight(
       checks({
         getPermissions: async () => ({ granted: false, canAskAgain: false }),
@@ -64,7 +64,7 @@ describe('runPreflight', () => {
     ]);
   });
 
-  it('italiano offline non installato (Android): warning ma si può dettare', async () => {
+  it('offline Italian not installed (Android): warning but dictation is possible', async () => {
     const report = await runPreflight(
       checks({
         getSupportedLocales: async () => ({
@@ -83,7 +83,7 @@ describe('runPreflight', () => {
     ]);
   });
 
-  it('confronto lingue robusto su maiuscole e underscore (it_IT)', async () => {
+  it('language comparison robust to case and underscore (it_IT)', async () => {
     const report = await runPreflight(
       checks({
         getSupportedLocales: async () => ({ locales: ['it_IT'], installedLocales: ['it_IT'] }),
@@ -92,7 +92,7 @@ describe('runPreflight', () => {
     expect(report.issues).toEqual([]);
   });
 
-  it('lista lingue vuota (Android ≤12) o servizio muto: nessun falso allarme', async () => {
+  it('empty language list (Android ≤12) or silent service: no false alarm', async () => {
     const vuota = await runPreflight(
       checks({ getSupportedLocales: async () => ({ locales: [], installedLocales: [] }) }),
     );
@@ -107,7 +107,7 @@ describe('runPreflight', () => {
     expect(rotta).toEqual({ ok: true, issues: [] });
   });
 
-  it('su iOS il controllo del pacchetto offline non si applica', async () => {
+  it('on iOS the offline pack check does not apply', async () => {
     const getSupportedLocales = jest.fn();
     const report = await runPreflight(checks({ platform: 'ios', getSupportedLocales }));
     expect(report.ok).toBe(true);

@@ -1,13 +1,13 @@
 /**
- * Schermata Taccuino (feature Taccuino, brief): il contenitore di idee/pensieri
- * di un libro. Intestazione con eyebrow = titolo del libro e "Taccuino", riga
- * di chip per filtrare per tag (Tutte + categorie), lista di schede
- * (data · tag · testo) cronologica (più recenti in cima), FAB "Detta un'idea"
- * che apre la cattura vocale, empty state quando non c'è nulla.
+ * Notebook screen: the container for a book's ideas/thoughts. Header with
+ * eyebrow = book title and "Taccuino", row of chips to filter by tag
+ * (All + categories), chronological list of cards (date · tag · text),
+ * most recent first, "Detta un'idea" FAB that opens voice capture, empty
+ * state when there is nothing.
  *
- * Regole di dominio: la UI dipende SOLO da NoteRepository via props,
- * mai dall'SDK Firebase; usa solo i token del tema e i componenti in
- * components/. Il motore di dettatura è iniettabile (Fake nei test).
+ * Domain rules: the UI depends ONLY on NoteRepository via props,
+ * never on the Firebase SDK; it uses only theme tokens and the components in
+ * components/. The dictation engine is injectable (Fake in tests).
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
@@ -26,10 +26,10 @@ import type { Note, NoteRepository, NoteTag } from './types';
 
 export interface NotesScreenProps {
   bookId: string;
-  /** Titolo del libro, mostrato come eyebrow sopra "Taccuino". */
+  /** Book title, shown as the eyebrow above "Taccuino". */
   bookTitle: string;
   noteRepository: NoteRepository;
-  /** Motore STT; default ExpoDictationEngine. I test passano il Fake. */
+  /** STT engine; default ExpoDictationEngine. Tests pass the Fake. */
   engine?: DictationEngine;
   lang?: string;
   onBack: () => void;
@@ -37,7 +37,7 @@ export interface NotesScreenProps {
 
 const tagLabel = (tag: NoteTag): string => t(`notes.tag.${tag}`);
 
-/** Data breve nella lingua dell'interfaccia ("17 set 2026"); ripiego spoglio se Intl manca. */
+/** Short date in the interface language ("17 set 2026"); bare fallback if Intl is missing. */
 function formatDate(millis: number): string {
   try {
     return new Intl.DateTimeFormat(uiLocale(), {
@@ -64,19 +64,19 @@ export function NotesScreen({
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<NoteFilter>(null);
   const [capturing, setCapturing] = useState(false);
-  // nota in modifica (null = nuova idea); pilota titolo/valori del pannello
+  // note being edited (null = new idea); drives the panel's title/values
   const [editing, setEditing] = useState<Note | null>(null);
-  // nota su cui è aperto il menu azioni (modifica/elimina), null = chiuso
+  // note whose action menu (edit/delete) is open, null = closed
   const [actionsFor, setActionsFor] = useState<Note | null>(null);
-  // secondo passo del menu: conferma leggera prima di eliminare
+  // second step of the menu: light confirmation before deleting
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // rimonta il pannello di cattura a ogni apertura → stato pulito senza effetti
+  // remounts the capture panel on every opening → clean state without effects
   const [captureKey, setCaptureKey] = useState(0);
 
-  // il motore nativo si crea una sola volta, e solo se non è stato iniettato
+  // the native engine is created only once, and only if none was injected
   const resolvedEngine = useMemo<DictationEngine>(
     () => engine ?? new ExpoDictationEngine(),
-    // fisso per la vita della schermata
+    // fixed for the lifetime of the screen
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -89,8 +89,8 @@ export function NotesScreen({
         setError(false);
         setNotes(next);
       },
-      // un listener in errore non deve lasciare la schermata muta per sempre:
-      // si mostra un avviso (coerente con LibraryScreen)
+      // a failing listener must not leave the screen silent forever:
+      // a warning is shown (consistent with LibraryScreen)
       () => setError(true),
     );
   }, [noteRepository, bookId]);

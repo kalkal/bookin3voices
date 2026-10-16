@@ -22,7 +22,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 
 const KEY = 'bookvoice/settings/app';
 
-/** Espone il modo corrente del ThemeProvider accanto alla schermata. */
+/** Exposes the ThemeProvider's current mode next to the screen. */
 function ModeProbe() {
   const { mode } = useTheme();
   return <Text testID="mode-probe">{mode}</Text>;
@@ -48,7 +48,7 @@ async function renderScreen(
 }
 
 describe('SettingsScreen', () => {
-  it('di default il motore attivo è Amazon Nova, con Gemini come alternativa', async () => {
+  it('by default the active engine is Amazon Nova, with Gemini as the alternative', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
     const provider = await screen.findByTestId('provider-bedrock');
@@ -61,7 +61,7 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('il cambio tema si applica al ThemeProvider e persiste al riavvio', async () => {
+  it('changing the theme applies to the ThemeProvider and persists across restart', async () => {
     const { storage, data } = memoryStorage();
     const prima = await renderScreen(storage);
     expect(await prima.findByTestId('mode-probe')).toHaveTextContent('paper');
@@ -73,14 +73,14 @@ describe('SettingsScreen', () => {
     );
     await prima.unmount();
 
-    // "riavvio": nuova schermata sulla stessa persistenza
+    // "restart": new screen on the same persistence
     const dopo = await renderScreen(storage);
     await waitFor(() => expect(dopo.getByTestId('mode-probe')).toHaveTextContent('candlelight'));
     expect(dopo.getByTestId('theme-candlelight')).toHaveTextContent('A lume di candela');
     await dopo.unmount();
   });
 
-  it('il cambio di obiettivo giornaliero persiste al riavvio', async () => {
+  it('changing the daily goal persists across restart', async () => {
     const { storage, data } = memoryStorage();
     const prima = await renderScreen(storage);
     await fireEvent.press(await prima.findByTestId('goal-increase'));
@@ -95,7 +95,7 @@ describe('SettingsScreen', () => {
     await dopo.unmount();
   });
 
-  it("l'obiettivo non scende sotto il minimo", async () => {
+  it('the goal does not go below the minimum', async () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
@@ -111,7 +111,7 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('la frequenza di backup si cambia e persiste', async () => {
+  it('the backup frequency can be changed and persists', async () => {
     const { storage, data } = memoryStorage();
     const screen = await renderScreen(storage);
     await fireEvent.press(await screen.findByTestId('backup-daily'));
@@ -121,11 +121,11 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('"Scarica backup ora": condivide lo zip e registra l\'ultimo backup', async () => {
+  it('"Scarica backup ora": shares the zip and records the last backup', async () => {
     const { storage, data } = memoryStorage();
     const screen = await renderScreen(storage);
 
-    // prima del primo backup: sollecito visivo
+    // before the first backup: visual nudge
     const status = await screen.findByTestId('backup-status');
     expect(status).toHaveTextContent(/Nessun backup ancora/);
     expect(status).toHaveTextContent(/consigliato un nuovo backup/);
@@ -138,7 +138,7 @@ describe('SettingsScreen', () => {
     expect(screen.fileSink.shared).toHaveLength(1);
     expect(screen.fileSink.shared[0]?.mimeType).toBe('application/zip');
 
-    // il promemoria riparte da oggi e la data persiste
+    // the reminder restarts from today and the date persists
     expect(screen.getByTestId('backup-status')).toHaveTextContent(/Ultimo backup: oggi/);
     await waitFor(() =>
       expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({
@@ -148,7 +148,7 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('backup fallito: messaggio di errore visibile, nessun "ultimo backup" registrato', async () => {
+  it('failed backup: visible error message, no "last backup" recorded', async () => {
     const { storage, data } = memoryStorage();
     const rotto: BackupService = {
       exportBackup: async () => {
@@ -165,7 +165,7 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('backup più vecchio della frequenza scelta: sollecito visivo', async () => {
+  it('backup older than the chosen frequency: visual nudge', async () => {
     const dieciGiorniFa = Date.now() - 10 * 86_400_000;
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
@@ -184,7 +184,7 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('i profili di stile elencano suspense, mystery e thriller (suspense predefinito)', async () => {
+  it('style profiles list suspense, mystery and thriller (suspense is the default)', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
     expect(await screen.findByTestId('style-profile-suspense')).toHaveTextContent(/Predefinito/);

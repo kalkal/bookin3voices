@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`buildRefinePrompt snapshot: prompt con sinossi e outline (seconda metà dell’outline) 1`] = `
+exports[`buildRefinePrompt snapshot: prompt with synopsis and outline 1`] = `
 {
   "responseSchema": {
     "properties": {
@@ -106,7 +106,7 @@ Elena posò lentamente la tazza sul tavolo.
 }
 `;
 
-exports[`buildRefinePrompt snapshot: prompt minimo senza sinossi né outline 1`] = `
+exports[`buildRefinePrompt snapshot: minimal prompt without synopsis or outline 1`] = `
 {
   "responseSchema": {
     "properties": {

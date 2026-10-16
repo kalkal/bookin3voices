@@ -42,10 +42,10 @@ jobs:
       - name: Test
         run: npm test -- --ci
 
-  # Test d'integrazione dei repository: SOLO contro l'emulatore
-  # Firestore, con projectId demo-* (nessuna chiamata può raggiungere il cloud).
+  # Repository integration tests: ONLY against the Firestore
+  # emulator, with a demo-* projectId (no call can reach the cloud).
   app-integration:
-    name: App — repository su emulatore Firestore
+    name: App — repositories on Firestore emulator
     runs-on: ubuntu-latest
     env:
       HUSKY: 0
@@ -58,7 +58,7 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      # firebase-tools >= 14 richiede Java 21+
+      # firebase-tools >= 14 requires Java 21+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -68,15 +68,15 @@ jobs:
         run: npm ci
         working-directory: app
 
-      # le functions servono all'end-to-end dell'export: l'emulatore
-      # functions carica il codice compilato in lib/
-      - name: Install e build (functions)
+      # the functions are needed by the export end-to-end: the functions
+      # emulator loads the compiled code in lib/
+      - name: Install and build (functions)
         run: npm ci && npm run build
         working-directory: functions
 
-      # parametri non segreti delle functions (nomi dei modelli): senza .env
-      # l'emulatore chiede i valori e resta in attesa
-      - name: Config functions dall'esempio
+      # non-secret functions parameters (model names): without .env
+      # the emulator asks for the values and waits
+      - name: Functions config from the example
         run: cp functions/.env.example functions/.env
 
       - name: EPUBCheck (cache)
@@ -93,17 +93,17 @@ jobs:
             https://github.com/w3c/epubcheck/releases/download/v5.3.0/epubcheck-5.3.0.zip
           mkdir -p ~/epubcheck && unzip -q /tmp/epubcheck.zip -d ~/epubcheck
 
-      - name: Test su emulatore (mai contro progetti Firebase reali)
+      - name: Test on emulator (never against real Firebase projects)
         run: >-
           EPUBCHECK_JAR="$HOME/epubcheck/epubcheck-5.3.0/epubcheck.jar"
           npx --yes firebase-tools@14 emulators:exec --only auth,firestore,functions
           --project demo-bookvoice-app
           "npm --prefix app run test:integration"
 
-  # Test delle Cloud Functions: unit + integrazione su emulatore
-  # Firestore, con EPUBCheck sul file generato.
+  # Cloud Functions tests: unit + integration on the Firestore
+  # emulator, with EPUBCheck on the generated file.
   functions:
-    name: Functions — typecheck, lint, test su emulatore
+    name: Functions — typecheck, lint, test on emulator
     runs-on: ubuntu-latest
     env:
       HUSKY: 0
@@ -116,7 +116,7 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
-      # firebase-tools >= 14 richiede Java 21+ (basta anche per EPUBCheck)
+      # firebase-tools >= 14 requires Java 21+ (also enough for EPUBCheck)
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -152,16 +152,16 @@ jobs:
             https://github.com/w3c/epubcheck/releases/download/v5.3.0/epubcheck-5.3.0.zip
           mkdir -p ~/epubcheck && unzip -q /tmp/epubcheck.zip -d ~/epubcheck
 
-      - name: Test su emulatore (mai contro progetti Firebase reali)
+      - name: Test on emulator (never against real Firebase projects)
         run: >-
           EPUBCHECK_JAR="$HOME/epubcheck/epubcheck-5.3.0/epubcheck.jar"
           npx --yes firebase-tools@14 emulators:exec --only firestore
           --project demo-bookvoice-functions
           "npm --prefix functions run test:integration"
 
-  # Security rules Firestore (firestore.rules) con @firebase/rules-unit-testing.
+  # Firestore security rules (firestore.rules) with @firebase/rules-unit-testing.
   rules:
-    name: Security rules Firestore su emulatore
+    name: Firestore security rules on emulator
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -172,7 +172,7 @@ jobs:
           cache: npm
           cache-dependency-path: rules-tests/package-lock.json
 
-      # firebase-tools >= 14 richiede Java 21+
+      # firebase-tools >= 14 requires Java 21+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -186,11 +186,11 @@ jobs:
         run: npm run typecheck
         working-directory: rules-tests
 
-      - name: Test su emulatore (mai contro progetti Firebase reali)
+      - name: Test on emulator (never against real Firebase projects)
         run: >-
           npx --yes firebase-tools@14 emulators:exec --only firestore
           --project demo-bookvoice
           "npm --prefix rules-tests run test:jest"
 
-  # Non incluso: build EAS su tag — richiede un account Expo/EAS
-  # e il secret EAS_TOKEN nel repo.
+  # Not included: EAS build on tag — requires an Expo/EAS account
+  # and the EAS_TOKEN secret in the repo.

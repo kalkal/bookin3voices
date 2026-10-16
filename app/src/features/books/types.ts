@@ -1,24 +1,24 @@
-// Contratto di accesso ai libri (Repository pattern): la UI non
-// importa mai l'SDK di persistenza. Il documento libro porta i contatori
-// denormalizzati (wordCount, chapterCount): la Libreria mostra i progressi
-// leggendo SOLO i documenti libro, senza scaricare i capitoli.
+// Book access contract (Repository pattern): the UI never
+// imports the persistence SDK. The book document carries the denormalized
+// counters (wordCount, chapterCount): the Library shows progress by
+// reading ONLY the book documents, without downloading the chapters.
 
 import { z } from 'zod';
 
 import type { Unsubscribe } from '../chapters';
 
 /**
- * Stato del libro. Il campo non fissa i valori:
- * si riusa la scala dei capitoli (bozza → rifinito → finale), che copre il
- * ciclo di vita che serve alla Libreria.
+ * Book status. The field does not fix the values:
+ * the chapter scale (draft → refined → final) is reused, which covers the
+ * lifecycle the Library needs.
  */
 export const BOOK_STATUSES = ['draft', 'refined', 'final'] as const;
 export type BookStatus = (typeof BOOK_STATUSES)[number];
 
 /**
- * Documento libro come vive su Firestore, validato al confine.
- * Le date viaggiano nel dominio come millisecondi epoch: i tipi dell'SDK
- * (Timestamp) non escono mai dal repository.
+ * Book document as it lives on Firestore, validated at the boundary.
+ * Dates travel through the domain as epoch milliseconds: SDK types
+ * (Timestamp) never leave the repository.
  */
 export const bookDocSchema = z.object({
   schemaVersion: z.literal(1),
@@ -29,7 +29,7 @@ export const bookDocSchema = z.object({
   genre: z.string(),
   language: z.string(),
   status: z.enum(BOOK_STATUSES),
-  /** Profilo di stile attivo; null finché non esiste. */
+  /** Active style profile; null until one exists. */
   styleProfileId: z.string().nullable(),
   wordCount: z.number().int().min(0),
   chapterCount: z.number().int().min(0),
@@ -39,7 +39,7 @@ export const bookDocSchema = z.object({
 
 export type BookDoc = z.infer<typeof bookDocSchema>;
 
-/** Libro completo (documento + id), per Libreria e schermata Libro. */
+/** Full book (document + id), for the Library and Book screens. */
 export interface Book extends BookDoc {
   id: string;
 }
@@ -51,7 +51,7 @@ export interface CreateBookInput {
   language?: string;
 }
 
-/** Campi modificabili di un libro (i contatori li gestisce il repository). */
+/** Editable fields of a book (counters are managed by the repository). */
 export interface BookPatch {
   title?: string;
   author?: string;
@@ -64,12 +64,12 @@ export interface BookPatch {
 }
 
 /**
- * Contratto completo. Le scritture sono ottimistiche (Optimistic UI):
- * risolvono appena la mutazione è presa in carico dal layer di persistenza;
- * l'esito consolidato arriva dagli observe*.
+ * Full contract. Writes are optimistic (Optimistic UI): they resolve as soon
+ * as the mutation is accepted by the persistence layer; the settled outcome
+ * arrives through the observe* subscriptions.
  */
 export interface BookRepository {
-  /** Tutti i libri, dal più recente aggiornato; si riemette a ogni cambiamento. */
+  /** All books, most recently updated first; re-emitted on every change. */
   observeBooks(onChange: (books: Book[]) => void, onError?: (error: Error) => void): Unsubscribe;
   observeBook(
     bookId: string,
@@ -79,12 +79,12 @@ export interface BookRepository {
   getBook(bookId: string): Promise<Book | null>;
   createBook(input: CreateBookInput): Promise<Book>;
   updateBook(bookId: string, patch: BookPatch): Promise<void>;
-  /** Elimina il libro E i suoi capitoli (le sottocollezioni non si eliminano da sole). */
+  /** Deletes the book AND its chapters (subcollections are not deleted automatically). */
   deleteBook(bookId: string): Promise<void>;
   /**
-   * Ricalcola i contatori denormalizzati dai capitoli e corregge il documento
-   * libro se derivano (self-healing: gli increment fatti offline possono
-   * saltare quando la sessione muore prima di conoscere lo stato remoto).
+   * Recomputes the denormalized counters from the chapters and fixes the book
+   * document if they drift (self-healing: increments made offline can be
+   * skipped when the session dies before the remote state is known).
    */
   reconcileCounters(bookId: string): Promise<void>;
 }

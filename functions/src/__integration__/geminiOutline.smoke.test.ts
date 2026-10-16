@@ -1,8 +1,8 @@
-// Fumo OPZIONALE con chiamata VERA a Gemini: gira solo se
-// GEMINI_API_KEY è nell'ambiente, altrimenti si salta (in CI non c'è chiave).
-// Regola di commutazione: la chiave free si usa SOLO con testi
-// fittizi — la sinossi qui sotto è inventata. Il modello di default è quello
-// del tier FLASH: sulla chiave free il tier Pro ha quota 0 (verificato), il nome resta comunque da config/override.
+// OPTIONAL smoke test with a REAL Gemini call: runs only if GEMINI_API_KEY
+// is in the environment, otherwise it is skipped (CI has no key).
+// Switching rule: the free key is used ONLY with fictitious texts
+// — the synopsis below is made up. The default model is the FLASH tier:
+// on the free key the Pro tier has quota 0 (verified); the name still comes from config/override.
 
 import { GeminiProvider } from '../ai/provider/GeminiProvider';
 import { ProviderModel } from '../ai/provider/ProviderModel';
@@ -22,10 +22,10 @@ const SINOSSI_FITTIZIA = [
   'l’isola nasconde un patto antico tra i pescatori e qualcosa che vive nella secca.',
 ].join(' ');
 
-maybeDescribe('Gemini structured output (chiamata reale, sinossi fittizia)', () => {
+maybeDescribe('Gemini structured output (real call, fictitious synopsis)', () => {
   jest.setTimeout(120000);
 
-  it('restituisce una scaletta conforme allo schema Zod', async () => {
+  it('returns an outline that conforms to the Zod schema', async () => {
     const model = new ProviderModel(
       () => new GeminiProvider({ model: () => MODEL, apiKey: () => API_KEY as string }),
       0.7,
@@ -39,12 +39,12 @@ maybeDescribe('Gemini structured output (chiamata reale, sinossi fittizia)', () 
     const candidate = await model.generate(prompt);
     const parsed = outlineSchema.safeParse(sanitizeOutlineCandidate(candidate));
     if (!parsed.success) {
-      throw new Error(`Outline non conforme: ${parsed.error.issues[0]?.message ?? '?'}`);
+      throw new Error(`Outline does not conform: ${parsed.error.issues[0]?.message ?? '?'}`);
     }
     expect(parsed.data.chapters.length).toBeGreaterThanOrEqual(2);
-    // nei log niente contenuti: solo numeri
+    // no content in logs: numbers only
     console.info(
-      `Fumo Gemini ok: ${parsed.data.chapters.length} capitoli, modello ${model.modelName}`,
+      `Gemini smoke ok: ${parsed.data.chapters.length} chapters, model ${model.modelName}`,
     );
   });
 });

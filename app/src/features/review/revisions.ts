@@ -1,8 +1,8 @@
-// Sottocollezione `revisions` : patch accettate/rifiutate
-// {span, before, after, decision, at} — storico consultabile e dataset per il
-// tuning. Repository pattern come per i capitoli: implementazione
-// LOCALE e PROVVISORIA su AsyncStorage, l'integrazione Firestore la sostituirà con
-// Firestore senza toccare la UI.
+// `revisions` subcollection: accepted/rejected patches
+// {span, before, after, decision, at}: a browsable history and a dataset for
+// tuning. Repository pattern as for chapters: a LOCAL and PROVISIONAL
+// implementation on AsyncStorage; the Firestore integration will replace it
+// without touching the UI.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import type { ChapterRef, KeyValueStorage } from '../chapters';
 import type { RevisionRecord } from './ReviewSession';
 import { spanSchema } from './types';
 
-// dati esterni (disco oggi, Firestore domani) validati al confine con Zod
+// external data (disk today, Firestore tomorrow) validated at the boundary with Zod
 const revisionRecordSchema = z.object({
   id: z.string().min(1),
   span: spanSchema,
@@ -27,10 +27,10 @@ const storedRevisionsSchema = z.object({
 });
 
 export interface RevisionRepository {
-  /** Revisioni del capitolo in ordine di registrazione. */
+  /** Chapter revisions in order of recording. */
   list(ref: ChapterRef): Promise<RevisionRecord[]>;
   append(ref: ChapterRef, revision: RevisionRecord): Promise<void>;
-  /** Toglie una revisione annullata con l'undo. */
+  /** Removes a revision cancelled by undo. */
   remove(ref: ChapterRef, revisionId: string): Promise<void>;
 }
 
@@ -67,8 +67,8 @@ export class LocalRevisionRepository implements RevisionRepository {
     try {
       return storedRevisionsSchema.parse(JSON.parse(raw)).revisions;
     } catch {
-      // corrotto o schema futuro: lo storico è dataset di tuning, non si
-      // butta — quarantena col timestamp come per i capitoli
+      // corrupt or future schema: the history is a tuning dataset, so it is
+      // not thrown away; quarantine it with a timestamp, as for chapters
       await this.storage.setItem(`${keyFor(ref)}:quarantena-${Date.now()}`, raw);
       return [];
     }
@@ -79,7 +79,7 @@ export class LocalRevisionRepository implements RevisionRepository {
   }
 }
 
-/** Repository in memoria per test e sviluppo, come InMemoryChapterRepository. */
+/** In-memory repository for tests and development, like InMemoryChapterRepository. */
 export class InMemoryRevisionRepository implements RevisionRepository {
   private readonly byChapter = new Map<string, RevisionRecord[]>();
 

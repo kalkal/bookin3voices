@@ -1,6 +1,6 @@
-// ESLint flat config per le Cloud Functions: typescript-eslint
-// + disattivazione dei conflitti di formattazione (la formattazione è di Prettier),
-// stesso impianto di app/eslint.config.js.
+// ESLint flat config for the Cloud Functions: typescript-eslint
+// + disabling of formatting conflicts (formatting belongs to Prettier),
+// same setup as app/eslint.config.js.
 const { defineConfig } = require('eslint/config');
 const tseslint = require('typescript-eslint');
 const prettierConfig = require('eslint-config-prettier');
@@ -9,7 +9,7 @@ module.exports = defineConfig([
   tseslint.configs.recommended,
   prettierConfig,
   {
-    // I file .js qui sono config CommonJS (questo file stesso): il require è voluto.
+    // The .js files here are CommonJS configs (this file itself): require is intended.
     files: ['**/*.js'],
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },

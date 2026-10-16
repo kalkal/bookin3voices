@@ -1,9 +1,9 @@
-// Adapter DictationEngine su expo-speech-recognition: mapper SOTTILE
-// degli eventi nativi verso il contratto DictationEngine. Qui NIENTE politiche:
-// il doppio `end` osservato sul motore reale viene inoltrato tale e quale (la
-// dedup è di DictationSession), il riavvio ai giunti pure. Opzioni di start
-// identiche a quelle collaudate (continuous + parziali, cloud).
-// NB: modulo nativo → ogni modifica qui richiede una build EAS, non basta l'OTA.
+// DictationEngine adapter over expo-speech-recognition: a THIN mapper from
+// native events to the DictationEngine contract. NO policies here: the double
+// `end` observed on the real engine is forwarded as-is (dedup belongs to
+// DictationSession), and so is the restart at seams. Start options are
+// identical to the proven ones (continuous + interim results, cloud).
+// NB: native module → any change here requires an EAS build; OTA is not enough.
 
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 import type {
@@ -19,26 +19,26 @@ import type {
   DictationStartOptions,
 } from '../types';
 
-/** Sottoinsieme del modulo nativo usato dall'adapter, iniettabile nei test. */
+/** Subset of the native module used by the adapter, injectable in tests. */
 export type SpeechModule = Pick<
   typeof ExpoSpeechRecognitionModule,
   'start' | 'stop' | 'requestPermissionsAsync' | 'addListener'
 >;
 
-// mappa codice nativo → errore del dominio dettatura
+// maps native code → dictation-domain error
 const ERROR_MAP: Partial<Record<string, { code: DictationErrorCode; recoverable: boolean }>> = {
-  // il microfono/audio è stato perso o preso da altri: la sessione va in pausa
+  // the mic/audio was lost or taken by others: the session pauses
   'audio-capture': { code: 'audio-interruption', recoverable: true },
   interrupted: { code: 'audio-interruption', recoverable: true },
   busy: { code: 'audio-interruption', recoverable: true },
-  // rete assente per il riconoscimento cloud: pausa, non loop di riavvii
+  // no network for cloud recognition: pause, not a restart loop
   network: { code: 'network', recoverable: true },
-  // benigni: il motore termina da solo e la sessione lo riavvia
+  // benign: the engine ends on its own and the session restarts it
   'no-speech': { code: 'no-speech', recoverable: true },
   'speech-timeout': { code: 'no-speech', recoverable: true },
   aborted: { code: 'no-speech', recoverable: true },
   client: { code: 'no-speech', recoverable: true },
-  // fatali
+  // fatal
   'not-allowed': { code: 'permission-denied', recoverable: false },
   'service-not-allowed': { code: 'permission-denied', recoverable: false },
 };
@@ -74,13 +74,13 @@ export class ExpoDictationEngine implements DictationEngine {
     if (!permission.granted) {
       this.events.onError?.({
         code: 'permission-denied',
-        message: 'permesso microfono/riconoscimento negato',
+        message: 'microphone/recognition permission denied',
         recoverable: false,
       });
       return;
     }
-    // stesse opzioni validate in prova (addsPunctuation è on-device only:
-    // innocuo sul cloud, utile dove supportato)
+    // same options validated in testing (addsPunctuation is on-device only:
+    // harmless on cloud, useful where supported)
     this.module.start({
       lang: options.lang,
       interimResults: true,
@@ -95,7 +95,7 @@ export class ExpoDictationEngine implements DictationEngine {
   }
 
   async pause(): Promise<void> {
-    // i motori nativi non hanno pausa: stop "gentile" che consolida i finali
+    // native engines have no pause: a "gentle" stop that finalizes the results
     this.module.stop();
   }
 

@@ -11,27 +11,27 @@ const validDoc = {
 };
 
 describe('chapterCodec', () => {
-  it('decodifica un documento conforme (outline assente → null, campo additivo della sinossi)', () => {
+  it('decodes a conforming document (outline absent → null, additive synopsis field)', () => {
     expect(decodeChapterDoc(validDoc)).toEqual({ ...validDoc, outline: null });
   });
 
-  it('decodifica un documento con outline', () => {
+  it('decodes a document with an outline', () => {
     const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'] };
     expect(decodeChapterDoc({ ...validDoc, outline })).toEqual({
       ...validDoc,
-      // beatsDone assente (documenti precedenti all'outline) → normalizzato a [] senza bump
+      // beatsDone absent (documents predating the outline) → normalized to [] without a bump
       outline: { ...outline, beatsDone: [] },
     });
     expect(decodeChapterDoc({ ...validDoc, outline: { summary: 1 } })).toBeNull();
   });
 
-  it('conserva i beat spuntati in dettatura e rifiuta indici non validi', () => {
+  it('keeps the beats ticked in dictation and rejects invalid indices', () => {
     const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'], beatsDone: [1] };
     expect(decodeChapterDoc({ ...validDoc, outline })).toEqual({ ...validDoc, outline });
     expect(decodeChapterDoc({ ...validDoc, outline: { ...outline, beatsDone: [-1] } })).toBeNull();
   });
 
-  it('rifiuta payload non conformi senza lanciare (decide il chiamante)', () => {
+  it('rejects non-conforming payloads without throwing (the caller decides)', () => {
     expect(decodeChapterDoc({})).toBeNull();
     expect(decodeChapterDoc({ ...validDoc, schemaVersion: 99 })).toBeNull();
     expect(decodeChapterDoc({ ...validDoc, status: 'pubblicato' })).toBeNull();
@@ -39,7 +39,7 @@ describe('chapterCodec', () => {
     expect(decodeChapterDoc({ ...validDoc, updatedAt: 'ieri' })).toBeNull();
   });
 
-  it('toChapter/toChapterSummary aggiungono le coordinate e tolgono il testo', () => {
+  it('toChapter/toChapterSummary add the coordinates and drop the text', () => {
     const doc = decodeChapterDoc(validDoc);
     expect(doc).not.toBeNull();
     const chapter = toChapter('cap-1', 'libro-1', doc!);

@@ -9,7 +9,7 @@ function renderWithTheme(ui: ReactElement) {
 }
 
 describe('PrimaryButton', () => {
-  it('è una pillola verde biblioteca con testo carta', async () => {
+  it('is a library-green pill with paper text', async () => {
     const onPress = jest.fn();
     const { getByTestId, getByText } = await renderWithTheme(
       <PrimaryButton label="Rifinisci con AI" onPress={onPress} testID="btn" />,
@@ -20,7 +20,7 @@ describe('PrimaryButton', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('da disabilitato non chiama onPress', async () => {
+  it('when disabled does not call onPress', async () => {
     const onPress = jest.fn();
     const { getByTestId } = await renderWithTheme(
       <PrimaryButton label="Rifinisci" onPress={onPress} disabled testID="btn" />,
@@ -31,7 +31,7 @@ describe('PrimaryButton', () => {
 });
 
 describe('Chip', () => {
-  it('selezionata è verde piena con testo carta', async () => {
+  it('selected is solid green with paper text', async () => {
     const { getByTestId, getByText } = await renderWithTheme(
       <Chip label="Tutti" selected testID="chip" />,
     );
@@ -39,7 +39,7 @@ describe('Chip', () => {
     expect(getByText('Tutti')).toHaveStyle({ color: paperPalette.onPrimary });
   });
 
-  it('non selezionata ha bordo oro attenuato', async () => {
+  it('unselected has a muted gold border', async () => {
     const { getByTestId } = await renderWithTheme(<Chip label="Stile" testID="chip" />);
     expect(getByTestId('chip')).toHaveStyle({
       borderWidth: 1,
@@ -47,7 +47,7 @@ describe('Chip', () => {
     });
   });
 
-  it('come tag oro è maiuscola con testo oro leggibile', async () => {
+  it('as a gold tag is uppercase with readable gold text', async () => {
     const { getByTestId, getByText } = await renderWithTheme(
       <Chip label="Stile" tone="gold" uppercase testID="chip" />,
     );
@@ -60,7 +60,7 @@ describe('Chip', () => {
 });
 
 describe('Card', () => {
-  it('è carta card con filetto e angoli quasi vivi', async () => {
+  it('is card paper with a hairline and nearly sharp corners', async () => {
     const { getByTestId } = await renderWithTheme(<Card testID="card" />);
     expect(getByTestId('card')).toHaveStyle({
       backgroundColor: paperPalette.surface,
@@ -71,7 +71,7 @@ describe('Card', () => {
 });
 
 describe('OrnamentDivider', () => {
-  it('in variante prominente il rombo è oro antico', async () => {
+  it('in prominent variant the diamond is antique gold', async () => {
     const { getByTestId } = await renderWithTheme(<OrnamentDivider prominent testID="div" />);
     expect(getByTestId('div-diamond')).toHaveStyle({
       backgroundColor: paperPalette.accent,
@@ -79,7 +79,7 @@ describe('OrnamentDivider', () => {
     });
   });
 
-  it('in variante normale il rombo è oro attenuato', async () => {
+  it('in normal variant the diamond is muted gold', async () => {
     const { getByTestId } = await renderWithTheme(<OrnamentDivider testID="div" />);
     expect(getByTestId('div-diamond')).toHaveStyle({
       backgroundColor: paperPalette.hairlineGold,
@@ -88,12 +88,12 @@ describe('OrnamentDivider', () => {
 });
 
 describe('RomanNumeral', () => {
-  it('rende il numerale romano in oro antico', async () => {
+  it('renders the Roman numeral in antique gold', async () => {
     const { getByText } = await renderWithTheme(<RomanNumeral value={7} />);
     expect(getByText('VII')).toHaveStyle({ color: paperPalette.accent });
   });
 
-  it('accetta colore e dimensione alternativi', async () => {
+  it('accepts alternative color and size', async () => {
     const { getByText } = await renderWithTheme(
       <RomanNumeral value={12} size={24} color={paperPalette.text} />,
     );
@@ -102,7 +102,7 @@ describe('RomanNumeral', () => {
 });
 
 describe('DropCap', () => {
-  it('stacca la prima lettera come capolettera verde', async () => {
+  it('splits the first letter off as a green drop cap', async () => {
     const { getByTestId } = await renderWithTheme(
       <DropCap text="Il caffè era ancora caldo." testID="dc" />,
     );

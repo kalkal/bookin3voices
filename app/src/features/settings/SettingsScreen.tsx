@@ -1,12 +1,12 @@
 /**
- * Schermata Impostazioni (schermata 6 — versione FONDAMENTA):
- * Motore AI (selettore provider, oggi solo Gemini con tier Flash/Pro mostrati
- * come informazione), Scrittura (obiettivo parole giornaliero), Aspetto (tema
- * carta / a lume di candela / automatico, collegato al ThemeProvider),
- * Dati (frequenza backup con promemoria visivo e "Scarica backup ora")
- * e Profili di stile (lista statica, "Suspense/Horror" attivo — l'editing
- * è futuro). La logica vive in useSettingsController/useBackupDownload; qui solo
- * la resa.
+ * Settings screen (foundations version):
+ * AI engine (provider selector, today only Gemini with Flash/Pro tiers shown
+ * as information), Writing (daily word goal), Appearance (theme
+ * paper / candlelight / automatic, wired to the ThemeProvider),
+ * Data (backup frequency with visual reminder and "Scarica backup ora")
+ * and Style profiles (static list, "Suspense/Horror" active — editing
+ * is future work). Logic lives in useSettingsController/useBackupDownload; here only
+ * the rendering.
  */
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -27,10 +27,10 @@ import { useSettingsController } from './useSettingsController';
 
 export interface SettingsScreenProps {
   repository: SettingsRepository;
-  /** Backup Markdown: callable exportBackup + salvataggio/share sheet. */
+  /** Markdown backup: exportBackup callable + save/share sheet. */
   backupService: BackupService;
   backupFileSink: ExportFileSink;
-  /** Se presente, mostra il chevron di ritorno (ingranaggio in Libreria). */
+  /** If present, shows the back chevron (gear icon in the Library). */
   onBack?: () => void;
 }
 
@@ -69,7 +69,7 @@ export function SettingsScreen({
   };
 
   if (!controller.ready) {
-    // niente flash dei default: la schermata appare solo a documento letto
+    // no flash of defaults: the screen appears only once the document is read
     return (
       <SafeAreaView
         testID="settings-screen"
@@ -271,14 +271,14 @@ interface BackupStatusLineProps {
 }
 
 /**
- * Promemoria visivo del backup (scelta dichiarata al posto delle
- * notifiche locali): età dell'ultimo backup, evidenziata quando supera la
- * frequenza scelta.
+ * Visual backup reminder (declared choice instead of
+ * local notifications): age of the last backup, highlighted when it exceeds the
+ * chosen frequency.
  */
 function BackupStatusLine({ lastBackupAt, frequency }: BackupStatusLineProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
-  // l'orologio si legge una volta al mount (regola di purezza del compiler):
-  // per un'età espressa in giorni non serve un ticker
+  // the clock is read once at mount (compiler purity rule):
+  // for an age expressed in days no ticker is needed
   const [now] = useState(() => Date.now());
   const status = backupStatus(lastBackupAt, frequency, now);
   return (

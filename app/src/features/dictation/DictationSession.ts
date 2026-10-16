@@ -1,13 +1,12 @@
-// Controller della sessione di dettatura: lega un DictationEngine qualsiasi
-// alla state machine pura (sessionMachine) e vi concentra le politiche emerse
-// dalle regole di robustezza della dettatura:
-//  - riavvio automatico della sessione motore ai giunti (end mentre si ascolta);
-//  - DEDUP del doppio evento `end` (rischio doppio riavvio);
-//  - pausa automatica + flush su interruzione audio; la ripresa è solo esplicita;
-//  - flush su pausa/stop/errore e su richiesta (background): il testo dettato
-//    non vive mai solo in RAM (regola di convivenza 3);
-//  - guardia anti-tempesta di riavvii (motore che muore in loop → errore).
-// La persistenza è del chiamante (onFlush → repository).
+// Dictation session controller: binds any DictationEngine to the pure state
+// machine (sessionMachine) and concentrates the dictation robustness policies:
+//  - automatic restart of the engine session at seams (end while listening);
+//  - DEDUP of the double `end` event (risk of a double restart);
+//  - automatic pause + flush on audio interruption; resuming is explicit only;
+//  - flush on pause/stop/error and on request (background): dictated text
+//    never lives only in RAM;
+//  - restart-storm guard (an engine dying in a loop → error).
+// Persistence is the caller's job (onFlush → repository).
 
 import type { DictationEngine, DictationError } from './types';
 import {
@@ -27,23 +26,23 @@ export type DictationSessionEvent =
 
 export interface DictationSessionOptions {
   engine: DictationEngine;
-  /** Persistenza del testo accumulato: chiamata su pausa/stop/errore/flush(). */
+  /** Persists the accumulated text: called on pause/stop/error/flush(). */
   onFlush: (text: string) => void;
-  /** Lingua del riconoscimento; default it-IT. */
+  /** Recognition language; defaults to it-IT. */
   lang?: string;
-  /** Applicare i comandi vocali di punteggiatura ai finali (default true). */
+  /** Apply spoken punctuation commands to final results (default true). */
   voiceCommands?: boolean;
   onStateChange?: (state: SessionState) => void;
-  /** Parziale grezzo, solo per la UI (effimero, mai persistito). */
+  /** Raw interim result, UI only (ephemeral, never persisted). */
   onPartial?: (raw: string) => void;
-  /** Testo accumulato aggiornato dopo ogni finale. */
+  /** Accumulated text, updated after every final result. */
   onTextChange?: (text: string) => void;
-  /** Eventi di ciclo vita per log/diagnostica UI. */
+  /** Lifecycle events for logging/UI diagnostics. */
   onEvent?: (event: DictationSessionEvent) => void;
 }
 
-// più di MAX_RESTARTS riavvii in RESTART_WINDOW_MS = motore rotto (es. offline
-// senza pre-flight): meglio un errore chiaro che un loop silenzioso di riavvii.
+// more than MAX_RESTARTS restarts within RESTART_WINDOW_MS = broken engine (e.g.
+// offline without pre-flight): a clear error beats a silent restart loop.
 const MAX_RESTARTS = 5;
 const RESTART_WINDOW_MS = 10_000;
 
@@ -77,7 +76,7 @@ export class DictationSession {
     return this.composer.value;
   }
 
-  /** Riavvii della sessione motore dall'ultimo start (diagnostica/UI). */
+  /** Engine session restarts since the last start (diagnostics/UI). */
   get restartCount(): number {
     return this.restarts;
   }
@@ -86,7 +85,7 @@ export class DictationSession {
     return this.lastError;
   }
 
-  /** Avvia da idle (buffer azzerato) o riprende da paused (buffer conservato). */
+  /** Starts from idle (buffer cleared) or resumes from paused (buffer kept). */
   start(): void {
     this.dispatch('USER_START');
   }
@@ -99,13 +98,13 @@ export class DictationSession {
     this.dispatch('USER_STOP');
   }
 
-  /** Da error a idle, pronta per una nuova dettatura. */
+  /** From error back to idle, ready for a new dictation. */
   reset(): void {
     this.lastError = undefined;
     this.dispatch('RESET');
   }
 
-  /** Flush esplicito (es. passaggio in background): persiste il testo corrente. */
+  /** Explicit flush (e.g. moving to background): persists the current text. */
   flush(): void {
     this.options.onFlush(this.composer.value);
   }
@@ -141,7 +140,7 @@ export class DictationSession {
       case 'stopEngine':
         if (this.engineActive) {
           this.engine.stop().catch(() => {
-            // lo stop che fallisce non deve bloccare pausa/chiusura
+            // a failing stop must not block pause/close
           });
         }
         break;
@@ -153,7 +152,7 @@ export class DictationSession {
 
   private startEngine(): void {
     this.engine.start({ lang: this.options.lang ?? 'it-IT' }).catch(() => {
-      this.fail({ code: 'unknown', message: 'avvio del motore fallito', recoverable: false });
+      this.fail({ code: 'unknown', message: 'engine start failed', recoverable: false });
     });
   }
 
@@ -165,7 +164,7 @@ export class DictationSession {
       this.options.onEvent?.({ type: 'restart-storm' });
       this.fail({
         code: 'unknown',
-        message: `motore terminato ${this.restartTimestamps.length} volte in ${RESTART_WINDOW_MS / 1000}s`,
+        message: `engine ended ${this.restartTimestamps.length} times in ${RESTART_WINDOW_MS / 1000}s`,
         recoverable: false,
       });
       return;
@@ -180,8 +179,8 @@ export class DictationSession {
   }
 
   private handleEngineEnd(): void {
-    // DEDUP: un solo ENGINE_ENDED per sessione motore; i doppioni
-    // arrivati prima del prossimo onStart vengono ignorati (no doppio riavvio).
+    // DEDUP: a single ENGINE_ENDED per engine session; duplicates arriving
+    // before the next onStart are ignored (no double restart).
     if (!this.engineActive) {
       this.options.onEvent?.({ type: 'duplicate-end-ignored' });
       return;
@@ -196,8 +195,8 @@ export class DictationSession {
   }
 
   private handleFinal(raw: string): void {
-    // i finali si accettano anche in paused/committing: il motore può
-    // consolidare l'ultimo blocco DOPO lo stop, e non va mai perso
+    // finals are accepted in paused/committing too: the engine may
+    // finalize the last block AFTER the stop, and it must never be lost
     if (this.currentState === 'idle' || this.currentState === 'error') return;
     if (!raw.trim()) return;
     const text =
@@ -206,7 +205,7 @@ export class DictationSession {
         : this.composer.append(raw);
     this.options.onTextChange?.(text);
     if (this.currentState !== 'listening') {
-      // il flush di pausa/stop è già passato: persisti anche questo ritardatario
+      // the pause/stop flush has already run: persist this late arrival too
       this.flush();
     }
   }
@@ -218,11 +217,11 @@ export class DictationSession {
       return;
     }
     if (error.code === 'audio-interruption' || error.code === 'network') {
-      // pausa automatica + flush; si riparte solo su scelta dell'utente
+      // automatic pause + flush; resumes only on the user's choice
       this.options.onEvent?.({ type: 'audio-interruption', error });
       this.dispatch('AUDIO_INTERRUPTED');
     }
-    // 'no-speech' e simili: benigni, seguirà onEnd → riavvio automatico
+    // 'no-speech' and similar: benign, onEnd follows → automatic restart
   }
 
   private fail(error: DictationError): void {

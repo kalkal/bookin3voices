@@ -1,55 +1,55 @@
-// Prompt della rifinitura capitolo. I prompt sono CODICE:
-// versionati (REFINE_PROMPT_VERSION) e coperti da snapshot test.
-// QUALSIASI modifica qui (o alla Style Bible / few-shots che questo prompt
-// ingloba) va rigiocata sull'intero golden set col runner
-// (tools/goldenSetRunner) PRIMA di essere integrata — regola di manutenzione
-// vincolante.
+// Chapter refinement prompt. Prompts are CODE: versioned
+// (REFINE_PROMPT_VERSION) and covered by snapshot tests.
+// ANY change here (or to the Style Bible / few-shots this prompt embeds) must
+// be replayed on the whole golden set with the runner (tools/goldenSetRunner)
+// BEFORE being merged; this maintenance rule is binding.
 //
-// Struttura pensata per il caching implicito di Gemini: il
-// prefisso stabile (Style Bible + few-shot + regole di formato) sta tutto
-// nella system instruction, il materiale che cambia (contesto libro/capitolo
-// e testo) sta nello user text, in coda.
+// Structure designed for Gemini's implicit caching: the stable prefix (Style
+// Bible + few-shot + format rules) is all in the system instruction, while the
+// material that changes (book/chapter context and text) is in the user text,
+// at the end.
 
-/** Versione del prompt: da incrementare a OGNI modifica del testo o dello schema. */
+/** Prompt version: bump on EVERY change to the text or the schema. */
 export const REFINE_PROMPT_VERSION = 1;
 
-/** Temperatura della rifinitura: 0.3, bassa per restare vicini al testo. */
+/** Refinement temperature: 0.3, low to stay close to the text. */
 export const REFINE_TEMPERATURE = 0.3;
 
 export interface RefinePromptInput {
-  /** Testo integrale della Style Bible (system instruction). */
+  /** Full text of the Style Bible (system instruction). */
   styleBible: string;
-  /** Testo integrale dei few-shot before/after. */
+  /** Full text of the before/after few-shot examples. */
   fewShots: string;
   book: {
     title: string;
     genre: string;
     language: string;
-    /** Sinossi del libro, se presente: contesto di trama (seconda metà dell’outline). */
+    /** Book synopsis, if present: plot context. */
     synopsis: string;
   };
   chapter: {
     title: string;
-    /** Outline del capitolo, se presente. */
+    /** Chapter outline, if present. */
     outline: { summary: string; beats: string[] } | null;
   };
-  /** Il testo dettato da rifinire (come lo vede l'utente). */
+  /** The dictated text to refine (as the user sees it). */
   text: string;
 }
 
 export interface RefinePrompt {
   systemInstruction: string;
   userText: string;
-  /** JSON Schema (dialetto OpenAPI di Gemini) per lo structured output. */
+  /** JSON Schema (Gemini's OpenAPI dialect) for structured output. */
   responseSchema: Record<string, unknown>;
 }
 
 /**
- * Schema di risposta per lo structured output: rispecchia modelSuggestionSchema
- * (refineTypes.ts) nel dialetto OpenAPI. NIENTE minItems/maxItems (l'endpoint
- * li rifiuta con 400, verificato sull'endpoint): i limiti veri li fa rispettare
- * Zod, qui vivono solo nelle description. NIENTE offset numerici: il modello
- * riporta le parole esatte (`original`) e il server le localizza nel testo.
+ * Response schema for structured output: mirrors modelSuggestionSchema
+ * (refineTypes.ts) in the OpenAPI dialect. NO minItems/maxItems (the endpoint
+ * rejects them with 400, verified against the endpoint): the real limits are
+ * enforced by Zod and appear here only in the descriptions. NO numeric
+ * offsets: the model reports the exact words (`original`) and the server
+ * locates them in the text.
  */
 export const REFINE_RESPONSE_SCHEMA: Record<string, unknown> = {
   type: 'OBJECT',
@@ -90,7 +90,7 @@ export const REFINE_RESPONSE_SCHEMA: Record<string, unknown> = {
   propertyOrdering: ['suggestions'],
 };
 
-/** Regole di serializzazione: chiudono il «formato definito dal prompt» della Style Bible. */
+/** Serialization rules: they close the "format defined by the prompt" of the Style Bible. */
 const OUTPUT_RULES = [
   '# Formato della risposta (vincolante)',
   '',
@@ -133,7 +133,7 @@ function contextBlock(input: RefinePromptInput): string {
   return lines.join('\n');
 }
 
-/** Costruisce il prompt (funzione pura: lo snapshot test la blocca). */
+/** Builds the prompt (pure function: the snapshot test locks it). */
 export function buildRefinePrompt(input: RefinePromptInput): RefinePrompt {
   const systemInstruction = [
     input.styleBible.trim(),

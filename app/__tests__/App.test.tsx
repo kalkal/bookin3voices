@@ -13,15 +13,15 @@ import { InMemoryRevisionRepository, FakeSuggestionsProvider } from '../src/feat
 import { InMemoryOutlineService } from '../src/features/outline';
 import { InMemoryBackupService, LocalSettingsRepository } from '../src/features/settings';
 
-// I font Google non si caricano in ambiente jest: si simula il caricamento
-// completato per testare l'albero vero dell'app.
+// Google fonts do not load in the jest environment: loading is simulated as
+// completed so the real app tree can be tested.
 jest.mock('expo-font', () => ({
   ...jest.requireActual('expo-font'),
   useFonts: () => [true, null],
 }));
 
-// I moduli nativi (speech recognition, haptics, keep-awake, network,
-// AsyncStorage) sono coperti dai mock automatici in app/__mocks__.
+// Native modules (speech recognition, haptics, keep-awake, network,
+// AsyncStorage) are covered by the automatic mocks in app/__mocks__.
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -59,41 +59,41 @@ function testServices(): AppServices & { books: InMemoryBookRepository } {
 }
 
 describe('App', () => {
-  it('dopo il sign-in apre la Libreria e naviga fino alla Dettatura e ritorno', async () => {
+  it('after sign-in opens the Library and navigates to Dictation and back', async () => {
     const services = testServices();
     const screen = await render(
       <App signIn={async () => 'utente-di-prova'} createServices={() => services} />,
     );
     await act(async () => {}); // sign-in + caricamenti iniziali
 
-    // Libreria
+    // Library
     expect(await screen.findByTestId('library-screen')).toBeOnTheScreen();
     expect(await screen.findByTestId('library-book-faro')).toHaveTextContent(/Il custode del faro/);
 
-    // Libreria → Libro
+    // Library → Book
     await fireEvent.press(screen.getByTestId('library-book-faro'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
     expect(await screen.findByTestId('book-chapter-c1')).toHaveTextContent(/Le chiavi di casa/);
 
-    // Libro → Dettatura sul capitolo VERO via repository condiviso
+    // Book → Dictation on the REAL chapter via the shared repository
     await fireEvent.press(screen.getByTestId('book-chapter-mic-c1'));
     expect(await screen.findByTestId('dictation-screen')).toBeOnTheScreen();
     await act(async () => {}); // caricamento capitolo + pre-flight
     expect(screen.getByText(/CAPITOLO I · LE CHIAVI DI CASA/)).toBeOnTheScreen();
     expect(screen.getByText(/Il faro era spento\./)).toBeOnTheScreen();
 
-    // Dettatura → indietro al Libro
+    // Dictation → back to the Book
     await fireEvent.press(screen.getByTestId('dictation-back'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
 
-    // Libro → Taccuino dall'azione nell'header, con l'eyebrow del libro
+    // Book → Notebook from the header action, with the book's eyebrow
     await fireEvent.press(screen.getByTestId('book-open-notes'));
     expect(await screen.findByTestId('notes-screen')).toBeOnTheScreen();
     expect(screen.getByText('Il custode del faro')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('notes-back'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
 
-    // Libro → Editor sullo stesso capitolo
+    // Book → Editor on the same chapter
     await fireEvent.press(screen.getByTestId('book-chapter-c1'));
     expect(await screen.findByTestId('editor-screen')).toBeOnTheScreen();
     await act(async () => {});
@@ -102,7 +102,7 @@ describe('App', () => {
     await screen.unmount();
   });
 
-  it('l’ingranaggio della Libreria apre le Impostazioni e torna indietro', async () => {
+  it('the Library gear opens Settings and goes back', async () => {
     const services = testServices();
     const screen = await render(
       <App signIn={async () => 'utente-di-prova'} createServices={() => services} />,
@@ -117,11 +117,11 @@ describe('App', () => {
     await screen.unmount();
   });
 
-  it('se il sign-in fallisce mostra l’errore invece di una Libreria vuota', async () => {
+  it('if sign-in fails shows the error instead of an empty Library', async () => {
     const screen = await render(
       <App
         signIn={async () => {
-          throw new Error('emulatore spento');
+          throw new Error('emulator down');
         }}
         createServices={() => testServices()}
       />,

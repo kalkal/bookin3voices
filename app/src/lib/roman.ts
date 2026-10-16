@@ -1,5 +1,5 @@
 /**
- * Numerali romani — firma visiva dei capitoli.
+ * Roman numerals — the visual signature of chapters.
  */
 
 const ROMAN_STEPS: readonly (readonly [number, string])[] = [
@@ -18,10 +18,10 @@ const ROMAN_STEPS: readonly (readonly [number, string])[] = [
   [1, 'I'],
 ];
 
-/** Converte un intero 1–3999 in numerale romano. */
+/** Converts an integer 1–3999 to a Roman numeral. */
 export function toRoman(value: number): string {
   if (!Number.isInteger(value) || value < 1 || value > 3999) {
-    throw new RangeError(`toRoman accetta interi tra 1 e 3999, ricevuto: ${value}`);
+    throw new RangeError(`toRoman accepts integers between 1 and 3999, received: ${value}`);
   }
   let rest = value;
   let out = '';

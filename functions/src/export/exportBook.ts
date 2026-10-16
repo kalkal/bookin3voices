@@ -1,13 +1,13 @@
-// Callable `exportBook(bookId, format, requestId)`: legge libro e
-// capitoli da Firestore (solo il rawText finale — i suggerimenti pending si
-// IGNORANO deliberatamente), compone frontespizio+indice+capitoli e
-// restituisce il file al client. Storage non è attivo nell'MVP (piano Spark):
-// il file torna in base64 nella risposta e l'app lo salva in locale; la
-// variante Storage+URL firmato è annotata come lavoro futuro.
+// Callable `exportBook(bookId, format, requestId)`: reads the book and its
+// chapters from Firestore (only the final rawText - pending suggestions are
+// deliberately IGNORED), composes title page + index + chapters and returns
+// the file to the client. Storage is not enabled in the MVP (Spark plan): the
+// file is returned as base64 in the response and the app saves it locally; the
+// Storage + signed URL variant is noted as future work.
 //
-// Idempotenza: il requestId è l'id del documento
-// users/{uid}/exports/{requestId} — un retry di rete riusa il registro
-// esistente (stessa createdAt) invece di creare un secondo export.
+// Idempotency: the requestId is the id of the document
+// users/{uid}/exports/{requestId} - a network retry reuses the existing
+// registry entry (same createdAt) instead of creating a second export.
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
@@ -27,7 +27,7 @@ import {
 
 export interface ExportBookDeps {
   db: Firestore;
-  /** Orologio iniettabile nei test; default Date.now. */
+  /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
 }
 
@@ -39,18 +39,18 @@ async function readBookForExport(
   const bookRef = db.doc(`users/${uid}/books/${bookId}`);
   const bookSnap = await bookRef.get();
   if (!bookSnap.exists) {
-    throw new HttpsError('not-found', 'Libro inesistente.');
+    throw new HttpsError('not-found', 'Book not found.');
   }
   const bookParsed = bookExportDocSchema.safeParse(bookSnap.data());
   if (!bookParsed.success) {
-    throw new HttpsError('failed-precondition', 'Documento libro non valido per l’export.');
+    throw new HttpsError('failed-precondition', 'Book document is not valid for export.');
   }
 
   const chaptersSnap = await bookRef.collection('chapters').orderBy('order').get();
   const chapters = chaptersSnap.docs.map((doc) => {
     const parsed = chapterExportDocSchema.safeParse(doc.data());
     if (!parsed.success) {
-      throw new HttpsError('failed-precondition', `Capitolo ${doc.id} non valido per l’export.`);
+      throw new HttpsError('failed-precondition', `Chapter ${doc.id} is not valid for export.`);
     }
     return { title: parsed.data.title, rawText: parsed.data.rawText };
   });
@@ -63,10 +63,10 @@ async function readBookForExport(
 }
 
 /**
- * Riserva (o riusa) il registro dell'export in transazione: alla prima
- * richiesta crea users/{uid}/exports/{requestId}, un retry con lo stesso
- * requestId riusa createdAt; lo stesso requestId su un export DIVERSO è un
- * errore del client.
+ * Reserves (or reuses) the export registry entry in a transaction: the first
+ * request creates users/{uid}/exports/{requestId}, a retry with the same
+ * requestId reuses createdAt; the same requestId on a DIFFERENT export is a
+ * client error.
  */
 async function reserveExport(
   db: Firestore,
@@ -84,7 +84,7 @@ async function reserveExport(
         existing.data.bookId !== input.bookId ||
         existing.data.format !== input.format
       ) {
-        throw new HttpsError('already-exists', 'requestId già usato per un altro export.');
+        throw new HttpsError('already-exists', 'requestId already used for another export.');
       }
       return existing.data.createdAt;
     }
@@ -93,14 +93,14 @@ async function reserveExport(
       schemaVersion: 1,
       bookId: input.bookId,
       format: input.format,
-      storagePath: null, // MVP senza Storage
+      storagePath: null, // MVP without Storage
       createdAt,
     });
     return createdAt;
   });
 }
 
-/** Cuore della callable, testabile direttamente contro l'emulatore Firestore. */
+/** Core of the callable, testable directly against the Firestore emulator. */
 export async function runExportBook(
   deps: ExportBookDeps,
   uid: string,
@@ -143,20 +143,20 @@ export async function runExportBook(
   };
 }
 
-/** Handler della callable: auth + validazione input, poi runExportBook. */
+/** Callable handler: auth + input validation, then runExportBook. */
 export function createExportBookHandler(
   deps: ExportBookDeps,
 ): (request: CallableRequest<unknown>) => Promise<ExportBookResponse> {
   return async (request) => {
     const uid = request.auth?.uid;
     if (uid === undefined) {
-      throw new HttpsError('unauthenticated', 'Accesso richiesto.');
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
     }
     const parsed = exportBookInputSchema.safeParse(request.data);
     if (!parsed.success) {
       throw new HttpsError(
         'invalid-argument',
-        'Attesi { bookId, format: epub|docx, requestId, strict? }.',
+        'Expected { bookId, format: epub|docx, requestId, strict? }.',
       );
     }
     return runExportBook(deps, uid, parsed.data);

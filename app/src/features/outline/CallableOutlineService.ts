@@ -1,6 +1,6 @@
-// OutlineService sulla callable `generateOutline` (functions): l'unico punto
-// dell'app che parla con le Cloud Functions per la scaletta. La risposta passa
-// da Zod al confine: mai fidarsi dei dati che arrivano da fuori.
+// OutlineService on the `generateOutline` callable (functions): the only point
+// of the app that talks to the Cloud Functions for the outline. The response goes
+// through Zod at the boundary: never trust data coming from outside.
 
 import { httpsCallable, type Functions } from 'firebase/functions';
 
@@ -15,7 +15,7 @@ type CallGenerate = (data: GenerateOutlineRequest) => Promise<{ data: unknown }>
 
 export type CallableOutlineServiceDeps =
   | { functions: Functions }
-  /** Iniettabile nei test al posto di httpsCallable. */
+  /** Injectable in tests in place of httpsCallable. */
   | { call: CallGenerate };
 
 export class CallableOutlineService implements OutlineService {

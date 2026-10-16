@@ -1,6 +1,6 @@
 /**
- * Caricamento dei Google Fonts del tema: EB Garamond per corpo e
- * UI, Cormorant Garamond per titoli, numerali e capolettera.
+ * Loading of the theme's Google Fonts: EB Garamond for body and
+ * UI, Cormorant Garamond for titles, numerals and drop caps.
  */
 import {
   CormorantGaramond_500Medium,
@@ -18,27 +18,27 @@ import {
 import { useFonts } from 'expo-font';
 
 /**
- * Nomi delle famiglie caricate, da usare come `fontFamily`.
- * Le chiavi semantiche tengono i componenti indipendenti dai nomi Expo.
+ * Names of the loaded families, to be used as `fontFamily`.
+ * The semantic keys keep components independent of Expo's names.
  */
 export const fontFamilies = {
-  /** Titoli e numerali (Cormorant Garamond 600). */
+  /** Titles and numerals (Cormorant Garamond 600). */
   display: 'CormorantGaramond_600SemiBold',
-  /** Titoli di peso maggiore. */
+  /** Heavier titles. */
   displayBold: 'CormorantGaramond_700Bold',
-  /** Display di peso medio. */
+  /** Medium-weight display. */
   displayMedium: 'CormorantGaramond_500Medium',
-  /** Display corsivo. */
+  /** Italic display. */
   displayItalic: 'CormorantGaramond_500Medium_Italic',
-  /** Corpo e UI (EB Garamond 400). */
+  /** Body and UI (EB Garamond 400). */
   body: 'EBGaramond_400Regular',
-  /** Corsivo del corpo (didascalie, comandi vocali). */
+  /** Body italic (captions, voice commands). */
   bodyItalic: 'EBGaramond_400Regular_Italic',
-  /** Corpo di peso medio. */
+  /** Medium-weight body. */
   bodyMedium: 'EBGaramond_500Medium',
-  /** Corsivo di peso medio. */
+  /** Medium-weight italic. */
   bodyMediumItalic: 'EBGaramond_500Medium_Italic',
-  /** Corpo semi-grassetto (enfasi, titoli di riga). */
+  /** Semi-bold body (emphasis, row titles). */
   bodySemiBold: 'EBGaramond_600SemiBold',
 } as const;
 
@@ -57,9 +57,9 @@ const fontMap = {
 };
 
 /**
- * Carica i font del tema all'avvio. Restituisce `true` a caricamento
- * completato oppure in caso di errore (l'app parte comunque col serif di
- * sistema, `serifFallback` in tokens.ts, invece di restare bloccata).
+ * Loads the theme fonts at startup. Returns `true` once loading has
+ * completed or on error (the app still starts with the system serif,
+ * `serifFallback` in tokens.ts, instead of staying blocked).
  */
 export function useAppFonts(): boolean {
   const [loaded, error] = useFonts(fontMap);

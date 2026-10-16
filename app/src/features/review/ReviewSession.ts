@@ -1,24 +1,24 @@
-// Sessione di review dei suggerimenti: Command pattern con undo e
-// regole di convivenza al completo:
-// (a) suggerimenti nati su un hash diverso dal testo corrente → stale;
-// (b) all'accettazione, ri-mappatura degli span dei pending rimasti
-//     (le patch multiple si applicano dall'offset più alto al più basso);
-// (c) un edit manuale che tocca lo span di un pending lo invalida (stale);
-// (d) ogni patch verifica `original` prima di applicarsi — rifiuto pulito.
+// Suggestion review session: Command pattern with undo and the full set of
+// coexistence rules:
+// (a) suggestions born on a different hash than the current text → stale;
+// (b) on acceptance, the remaining pending spans are re-mapped
+//     (multiple patches are applied from the highest offset to the lowest);
+// (c) a manual edit touching a pending span invalidates it (stale);
+// (d) every patch verifies `original` before applying: a clean rejection.
 //
-// La classe è DOMINIO PURO: niente I/O. Le decisioni producono RevisionRecord
-// che il chiamante (useChapterReview) persiste su `revisions`; l'undo
-// restituisce gli id delle revisioni da togliere. Regola: l'undo copre
-// solo la cronologia dei comandi della sessione locale — un edit manuale o un
-// nuovo giro di rifinitura azzerano la cronologia (assunzione dichiarata:
-// l'undo è per ripensamenti immediati sulla review, non un time-travel).
+// The class is PURE DOMAIN: no I/O. Decisions produce RevisionRecords
+// that the caller (useChapterReview) persists to `revisions`; undo
+// returns the ids of the revisions to remove. Rule: undo covers only
+// the local session's command history; a manual edit or a new refinement
+// round clears the history (stated assumption: undo is for immediate
+// second thoughts during review, not time travel).
 
 import { applyPatch, diffAsPatch, invertPatch, remapSpan } from './patches';
 import type { PatchFailure, TextPatch } from './patches';
 import { textHash } from './textHash';
 import type { RefineResult, Span, Suggestion, SuggestionKind } from './types';
 
-/** Riga della sottocollezione `revisions` . */
+/** A row of the `revisions` subcollection. */
 export interface RevisionRecord {
   id: string;
   span: Span;
@@ -40,7 +40,7 @@ export type RejectOutcome =
 
 export interface AcceptAllOutcome {
   accepted: number;
-  /** Pending della categoria diventati stale perché la patch non combaciava. */
+  /** Pendings of the category that became stale because the patch did not match. */
   staled: number;
   text: string;
   revisions: RevisionRecord[];
@@ -52,27 +52,27 @@ export type UndoOutcome =
 
 export interface ManualEditOutcome {
   changed: boolean;
-  /** Pending invalidati perché l'edit toccava il loro span. */
+  /** Pendings invalidated because the edit touched their span. */
   staled: number;
 }
 
 export interface IngestOutcome {
   added: number;
-  /** true se il batch è nato su un testo diverso da quello corrente. */
+  /** true if the batch was born on a text different from the current one. */
   bornStale: boolean;
 }
 
 interface UndoEntry {
-  /** Inverse delle patch applicate, nell'ordine di applicazione. */
+  /** Inverses of the applied patches, in application order. */
   inverses: TextPatch[];
-  /** Fotografia dei suggerimenti prima del comando (immutabili). */
+  /** Snapshot of the suggestions before the command (immutable). */
   suggestionsBefore: readonly Suggestion[];
   revisionIds: string[];
 }
 
 export interface ReviewSessionOptions {
   initialText: string;
-  /** Iniettabili nei test; default: Date.now e id progressivi. */
+  /** Injectable in tests; defaults: Date.now and sequential ids. */
   now?: () => number;
   newId?: () => string;
 }
@@ -112,10 +112,10 @@ export class ReviewSession {
   }
 
   /**
-   * Sostituisce il lotto di suggerimenti con l'esito di una rifinitura.
-   * Se il testo è cambiato mentre il provider lavorava (hash diverso), il
-   * lotto nasce stale; in ogni caso ogni pending viene verificato
-   * contro il testo corrente (slice === original), mai fiducia cieca.
+   * Replaces the suggestion batch with the outcome of a refinement.
+   * If the text changed while the provider was working (different hash), the
+   * batch is born stale; in any case every pending is verified
+   * against the current text (slice === original), never blind trust.
    */
   ingest(result: RefineResult): IngestOutcome {
     const currentHash = textHash(this.currentText);
@@ -124,12 +124,12 @@ export class ReviewSession {
       bornStale && sug.state === 'pending' ? { ...sug, state: 'stale' as const } : { ...sug },
     );
     this.revalidatePending();
-    // nuovo lotto = nuova review: la cronologia degli undo non ha più senso
+    // new batch = new review: the undo history no longer makes sense
     this.undoStack.length = 0;
     return { added: this.items.length, bornStale };
   }
 
-  /** Accetta un suggerimento applicando la proposta scelta (default la prima). */
+  /** Accepts a suggestion by applying the chosen proposal (the first by default). */
   accept(suggestionId: string, proposalIndex = 0): AcceptOutcome {
     const suggestion = this.items.find((s) => s.id === suggestionId);
     if (!suggestion) return { ok: false, reason: 'unknown-suggestion' };
@@ -145,7 +145,7 @@ export class ReviewSession {
     };
     const applied = applyPatch(this.currentText, patch);
     if (!applied.ok) {
-      // rifiuto pulito; il suggerimento non è più applicabile
+      // clean rejection; the suggestion is no longer applicable
       this.markStale(suggestionId);
       return { ok: false, reason: applied.reason };
     }
@@ -175,7 +175,7 @@ export class ReviewSession {
     return { ok: true, text: this.currentText, revision };
   }
 
-  /** Rifiuta un suggerimento; la revisione registra la proposta scartata. */
+  /** Rejects a suggestion; the revision records the discarded proposal. */
   reject(suggestionId: string): RejectOutcome {
     const suggestion = this.items.find((s) => s.id === suggestionId);
     if (!suggestion) return { ok: false, reason: 'unknown-suggestion' };
@@ -198,9 +198,9 @@ export class ReviewSession {
   }
 
   /**
-   * Accetta tutti i pending di una categoria con la prima
-   * proposta, applicando le patch dall'offset più alto al più basso.
-   * Un solo comando: un undo li ripristina tutti insieme.
+   * Accepts all pendings of a category with their first
+   * proposal, applying patches from the highest offset to the lowest.
+   * A single command: one undo restores them all together.
    */
   acceptAll(kind: SuggestionKind): AcceptAllOutcome {
     const targets = [...this.pendingOf(kind)].sort((a, b) => b.span.from - a.span.from);
@@ -214,7 +214,7 @@ export class ReviewSession {
     let staled = 0;
 
     for (const target of targets) {
-      // rilegge il suggerimento: le patch precedenti possono averlo ri-mappato
+      // re-read the suggestion: earlier patches may have re-mapped it
       const current = this.items.find((s) => s.id === target.id);
       if (!current || current.state !== 'pending') continue;
       const patch: TextPatch = {
@@ -258,10 +258,9 @@ export class ReviewSession {
   }
 
   /**
-   * Annulla l'ultimo comando (LIFO): applica le patch inverse in ordine
-   * contrario e ripristina la fotografia dei suggerimenti. Ogni inversa viene
-   * comunque verificata: un mismatch svuota la cronologia invece di
-   * applicare alla cieca.
+   * Undoes the last command (LIFO): applies the inverse patches in reverse
+   * order and restores the suggestions snapshot. Each inverse is still
+   * verified: a mismatch empties the history instead of applying blindly.
    */
   undo(): UndoOutcome {
     const entry = this.undoStack.pop();
@@ -283,10 +282,10 @@ export class ReviewSession {
   }
 
   /**
-   * Registra un edit manuale dell'utente: ri-mappa gli span dei pending
-   * e invalida quelli toccati dall'edit. L'edit manuale non
-   * entra nella cronologia undo (che copre solo i comandi di review) e la
-   * azzera: le inverse rimaste non descrivono più il testo corrente.
+   * Records a manual user edit: re-maps the pending spans
+   * and invalidates those touched by the edit. The manual edit does not
+   * enter the undo history (which covers only review commands) and it
+   * clears it: the remaining inverses no longer describe the current text.
    */
   applyManualEdit(newText: string): ManualEditOutcome {
     const patch = diffAsPatch(this.currentText, newText);
@@ -300,7 +299,7 @@ export class ReviewSession {
     return { changed: true, staled: pendingBefore - this.pending.length };
   }
 
-  /** Ri-mappa lo span di un pending dopo una patch; overlap → stale. */
+  /** Re-maps a pending's span after a patch; overlap → stale. */
   private remapAfterPatch(suggestion: Suggestion, patch: TextPatch): Suggestion {
     if (suggestion.state !== 'pending') return suggestion;
     const remapped = remapSpan(suggestion.span, patch);
@@ -311,9 +310,9 @@ export class ReviewSession {
   }
 
   /**
-   * Invariante di sicurezza ("mai applicazione cieca"): dopo OGNI
-   * mutazione, un pending il cui `original` non combacia più col testo allo
-   * span diventa stale. Rete di salvataggio sotto la ri-mappatura.
+   * Safety invariant ("never apply blindly"): after EVERY
+   * mutation, a pending whose `original` no longer matches the text at its
+   * span becomes stale. A safety net beneath the re-mapping.
    */
   private revalidatePending(): void {
     this.items = this.items.map((s) => {

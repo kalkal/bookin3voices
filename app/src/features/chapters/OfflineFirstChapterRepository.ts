@@ -1,15 +1,15 @@
-// Composito offline-first: Firestore + mirror locale su disco.
+// Offline-first composite: Firestore + local on-disk mirror.
 //
-// Perché esiste: il JS SDK di Firestore su React Native ha SOLO la cache in
-// memoria (niente IndexedDB), quindi una scrittura in coda offline muore con
-// l'app. Regola:  il testo dettato non viva mai solo in RAM:
-// qui ogni salvataggio tocca PRIMA il mirror AsyncStorage (durabile) e poi
-// Firestore; alla lettura vince il più recente, e un mirror più fresco del
-// remoto viene rispinto verso Firestore (recovery della sessione morta offline).
+// Why it exists: the Firestore JS SDK on React Native has ONLY the in-memory
+// cache (no IndexedDB), so a write queued offline dies with the app.
+// Rule: dictated text never lives only in RAM:
+// here every save touches the AsyncStorage mirror (durable) FIRST and then
+// Firestore; on read the most recent wins, and a mirror fresher than the
+// remote is pushed back to Firestore (recovery of a session that died offline).
 //
-// Regola di convivenza 2: durante una sessione il capitolo ha un solo
-// scrittore, quindi il confronto per updatedAt è un recupero post-crash, non
-// una risoluzione di conflitti tra dispositivi.
+// Coexistence rule: during a session the chapter has a single writer, so
+// the updatedAt comparison is post-crash recovery, not conflict resolution
+// between devices.
 
 import { countWords } from '../../lib/text';
 import type { LocalChapterRepository } from './LocalChapterRepository';
@@ -27,9 +27,9 @@ export interface OfflineFirstChapterRepositoryOptions {
   remote: ChapterRepository;
   mirror: LocalChapterRepository;
   /**
-   * Parole AGGIUNTE a ogni salvataggio (delta positivo): alimenta l'obiettivo
-   * del giorno in Libreria. Le cancellazioni non tolgono parole al
-   * conteggio motivazionale.
+   * Words ADDED on every save (positive delta): feeds the daily goal
+   * in the Library. Deletions do not subtract words from the
+   * motivational count.
    */
   onWordsAdded?: (delta: number) => void;
 }
@@ -38,7 +38,7 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
   private readonly remote: ChapterRepository;
   private readonly mirror: LocalChapterRepository;
   private readonly onWordsAdded?: (delta: number) => void;
-  /** Parole dell'ultimo testo visto per capitolo (per i delta dell'obiettivo). */
+  /** Words of the last text seen per chapter (for the goal deltas). */
   private readonly lastWords = new Map<string, number>();
 
   constructor(options: OfflineFirstChapterRepositoryOptions) {
@@ -64,31 +64,31 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
     try {
       mirrorEntry = await this.mirror.loadEntry(ref);
     } catch {
-      // mirror illeggibile: si prosegue col solo remoto
+      // unreadable mirror: carry on with the remote only
     }
 
     if (remoteFailed && mirrorEntry === null) {
-      // né remoto né mirror: NON è un capitolo vuoto, è una lettura fallita —
-      // tornare null qui farebbe ripartire la dettatura da zero sovrascrivendo
-      throw new Error(`Capitolo ${this.keyFor(ref)} irraggiungibile e senza copia locale`);
+      // neither remote nor mirror: this is NOT an empty chapter, it is a failed read;
+      // returning null here would restart dictation from zero and overwrite
+      throw new Error(`Chapter ${this.keyFor(ref)} unreachable and no local copy`);
     }
 
     let text: string | null;
     if (mirrorEntry === null) {
       text = remoteChapter === null ? null : remoteChapter.rawText;
     } else if (remoteChapter === null) {
-      // il remoto risponde ma non ha (più) il capitolo: si riparte dal mirror,
-      // che risalirà col prossimo salvataggio
+      // the remote responds but no longer has the chapter: restart from the mirror,
+      // which will go back up on the next save
       text = mirrorEntry.rawText;
     } else if (
       mirrorEntry.updatedAt > remoteChapter.updatedAt &&
       mirrorEntry.rawText !== remoteChapter.rawText
     ) {
-      // recovery: la sessione precedente è morta offline dopo il mirror ma
-      // prima del sync — si rispinge la copia locale verso Firestore
+      // recovery: the previous session died offline after the mirror write but
+      // before the sync; push the local copy back to Firestore
       text = mirrorEntry.rawText;
       this.remote.saveRawText(ref, mirrorEntry.rawText).catch((error) => {
-        console.warn('Recovery del mirror verso Firestore non riuscito', error);
+        console.warn('Mirror recovery to Firestore failed', error);
       });
     } else {
       text = remoteChapter.rawText;
@@ -99,15 +99,15 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
   }
 
   async saveRawText(ref: ChapterRef, rawText: string): Promise<void> {
-    // durabilità prima di tutto: il mirror su disco è il salvataggio "vero";
-    // Firestore segue (e offline resta in coda solo per la sessione corrente)
+    // durability first: the on-disk mirror is the "real" save;
+    // Firestore follows (and offline it stays queued only for the current session)
     await this.mirror.saveRawText(ref, rawText);
     try {
       await this.remote.saveRawText(ref, rawText);
     } catch (error) {
-      // il testo è già al sicuro nel mirror: il remoto recupererà al prossimo
-      // salvataggio o col recovery in loadRawText
-      console.warn('Salvataggio Firestore non riuscito (testo al sicuro nel mirror)', error);
+      // the text is already safe in the mirror: the remote will catch up on the
+      // next save or via the recovery in loadRawText
+      console.warn('Firestore save failed (text is safe in the mirror)', error);
     }
 
     const key = this.keyFor(ref);
@@ -119,8 +119,8 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
     this.lastWords.set(key, words);
   }
 
-  // Il CRUD e le sottoscrizioni restano al remoto: i metadati sono
-  // ricostruibili e la Libreria/il Libro vivono di observe* (Observer).
+  // CRUD and subscriptions stay with the remote: the metadata can be
+  // rebuilt, and the Library/Book live on observe* (Observer).
 
   observeChapters(
     bookId: string,
@@ -155,8 +155,8 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
   }
 
   async deleteChapter(ref: ChapterRef): Promise<void> {
-    // la voce di mirror orfana è innocua (verrà sovrascritta se l'id rinasce),
-    // ma il conteggio di sessione va dimenticato
+    // the orphan mirror entry is harmless (it will be overwritten if the id is reborn),
+    // but the session count must be forgotten
     this.lastWords.delete(this.keyFor(ref));
     return this.remote.deleteChapter(ref);
   }

@@ -1,4 +1,4 @@
-// Difese meccaniche del contratto: scarti, gerarchia, tetto, ordinamento.
+// Mechanical defenses of the contract: discards, hierarchy, cap, ordering.
 
 import { normalizeSuggestions, MAX_SUGGESTIONS } from '../normalizeSuggestions';
 import { suggestionSchema, type ModelOutput } from '../refineTypes';
@@ -14,7 +14,7 @@ function output(suggestions: ModelOutput['suggestions']): ModelOutput {
 const STYLE_BASE = { kind: 'style' as const, rationale: 'motivo' };
 
 describe('normalizeSuggestions', () => {
-  it('localizza gli original e produce span coerenti', () => {
+  it('locates the originals and produces consistent spans', () => {
     const { suggestions, discarded } = normalizeSuggestions(
       output([
         { ...STYLE_BASE, original: 'posò lentamente', proposals: ['posò'] },
@@ -31,16 +31,16 @@ describe('normalizeSuggestions', () => {
     expect(TEXT.slice(first?.span.from, first?.span.to)).toBe('posò lentamente');
     expect(first?.state).toBe('pending');
     expect(first?.textHash).toBe(HASH);
-    // in ordine di testo, id derivati dal requestId
+    // in text order, ids derived from the requestId
     expect(suggestions.map((s) => s.id)).toEqual(['req-1-1', 'req-1-2']);
     for (const sug of suggestions) expect(suggestionSchema.parse(sug)).toBeTruthy();
   });
 
-  it('scarta original assenti o ambigui (mai applicazioni cieche)', () => {
+  it('discards absent or ambiguous originals (never blind applications)', () => {
     const { suggestions, discarded } = normalizeSuggestions(
       output([
         { ...STYLE_BASE, original: 'non esiste nel testo', proposals: ['x'] },
-        { ...STYLE_BASE, original: 'la', proposals: ['x'] }, // «la» compare più volte
+        { ...STYLE_BASE, original: 'la', proposals: ['x'] }, // "la" appears more than once
         { ...STYLE_BASE, original: 'uscì fuori', proposals: ['uscì'] },
       ]),
       TEXT,
@@ -51,7 +51,7 @@ describe('normalizeSuggestions', () => {
     expect(suggestions.map((s) => s.original)).toEqual(['uscì fuori']);
   });
 
-  it('grammar: si tiene solo la prima proposta (gerarchia)', () => {
+  it('grammar: keeps only the first proposal (hierarchy)', () => {
     const { suggestions } = normalizeSuggestions(
       output([
         {
@@ -68,7 +68,7 @@ describe('normalizeSuggestions', () => {
     expect(suggestions[0]?.proposals).toEqual(['Fine della scena.'.replace('.', '!')]);
   });
 
-  it('proposte vuote o identiche all’original vengono rimosse; senza proposte → scarto', () => {
+  it('empty proposals or ones identical to the original are removed; no proposals left → discard', () => {
     const { suggestions, discarded } = normalizeSuggestions(
       output([
         { ...STYLE_BASE, original: 'uscì fuori', proposals: ['  ', 'uscì fuori', 'uscì'] },
@@ -83,7 +83,7 @@ describe('normalizeSuggestions', () => {
     expect(discarded).toBe(1);
   });
 
-  it('span sovrapposti: vince il primo in ordine di testo', () => {
+  it('overlapping spans: the first in text order wins', () => {
     const { suggestions, discarded } = normalizeSuggestions(
       output([
         { ...STYLE_BASE, original: 'lentamente la tazza', proposals: ['la tazza'] },
@@ -97,7 +97,7 @@ describe('normalizeSuggestions', () => {
     expect(discarded).toBe(1);
   });
 
-  it('tetto assoluto: mai più di MAX_SUGGESTIONS', () => {
+  it('absolute cap: never more than MAX_SUGGESTIONS', () => {
     const words = Array.from({ length: 40 }, (_, i) => `parola${String(i).padStart(2, '0')}`);
     const longText = words.join(' ');
     const { suggestions, discarded } = normalizeSuggestions(

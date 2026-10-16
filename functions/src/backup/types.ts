@@ -1,15 +1,15 @@
-// Contratto del backup Markdown (via d'uscita indipendente da
-// Firebase/Gemini). Input della callable validato con Zod al confine,
-// documenti Firestore validati alla lettura (parse, don't validate), risposta
-// come zip in base64 — stesso approccio MVP senza Storage della feature Export.
+// Contract of the Markdown backup (exit route independent of Firebase/Gemini).
+// Callable input validated with Zod at the boundary, Firestore documents
+// validated on read (parse, don't validate), response as a base64 zip - same
+// MVP-without-Storage approach as the Export feature.
 
 import { z } from 'zod';
 
 /**
- * Input della callable `exportBackup`. Senza `bookId` si esportano TUTTI i
- * libri (è il caso d'uso principale di questa callable: portare a casa tutto). Il
- * requestId è la chiave di idempotenza e diventa l'id del documento
- * `users/{uid}/exports/{requestId}`: caratteri sicuri per un id Firestore.
+ * Input of the `exportBackup` callable. Without `bookId`, ALL books are
+ * exported (the main use case of this callable: take everything home). The
+ * requestId is the idempotency key and becomes the id of the document
+ * `users/{uid}/exports/{requestId}`: characters safe for a Firestore id.
  */
 export const exportBackupInputSchema = z.object({
   bookId: z.string().min(1).optional(),
@@ -19,8 +19,8 @@ export const exportBackupInputSchema = z.object({
 export type ExportBackupInput = z.infer<typeof exportBackupInputSchema>;
 
 /**
- * Campi del documento libro che servono al backup: i metadati finiscono
- * nell'indice del libro (indice.md). Subset dello schema.
+ * Book document fields needed by the backup: the metadata ends up in the book
+ * index (indice.md). Subset of the schema.
  */
 export const bookBackupDocSchema = z.object({
   title: z.string(),
@@ -31,10 +31,10 @@ export const bookBackupDocSchema = z.object({
 });
 
 /**
- * Campi del documento capitolo che servono al backup: il frontmatter vuole
- * titolo/ordine/stato/wordCount, il corpo è il rawText FEDELE (il backup è
- * testo grezzo, mai rielaborato). I suggerimenti pending vivono in una
- * sottocollezione e NON vengono letti (come nell'export).
+ * Chapter document fields needed by the backup: the frontmatter wants
+ * title/order/status/wordCount, the body is the FAITHFUL rawText (the backup is
+ * raw text, never reworked). Pending suggestions live in a subcollection and
+ * are NOT read (as in export).
  */
 export const chapterBackupDocSchema = z.object({
   order: z.number(),
@@ -46,7 +46,7 @@ export const chapterBackupDocSchema = z.object({
 
 export type ChapterForBackup = z.infer<typeof chapterBackupDocSchema>;
 
-/** Libro pronto per il backup: capitoli già in ordine di lettura. */
+/** Book ready for backup: chapters already in reading order. */
 export interface BookForBackup {
   title: string;
   author: string;
@@ -57,9 +57,9 @@ export interface BookForBackup {
 }
 
 /**
- * Registro del backup su `users/{uid}/exports/{requestId}`: stessa collezione
- * degli export, distinta da `format: 'backup-md'`. `bookId` null = backup
- * di tutti i libri. `storagePath` resta null nell'MVP (piano Spark).
+ * Backup registry entry at `users/{uid}/exports/{requestId}`: same collection
+ * as exports, distinguished by `format: 'backup-md'`. `bookId` null = backup of
+ * all books. `storagePath` stays null in the MVP (Spark plan).
  */
 export const backupRegistryDocSchema = z.object({
   schemaVersion: z.literal(1),
@@ -73,7 +73,7 @@ export const backupRegistryDocSchema = z.object({
 
 export type BackupRegistryDoc = z.infer<typeof backupRegistryDocSchema>;
 
-/** Risposta della callable: lo zip torna al client come base64 (MVP). */
+/** Callable response: the zip is returned to the client as base64 (MVP). */
 export interface ExportBackupResponse {
   exportId: string;
   fileName: string;
@@ -81,6 +81,6 @@ export interface ExportBackupResponse {
   base64: string;
   size: number;
   createdAt: number;
-  /** Quanti libri sono finiti nello zip (per il messaggio in app). */
+  /** How many books ended up in the zip (for the in-app message). */
   bookCount: number;
 }

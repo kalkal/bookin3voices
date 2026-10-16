@@ -1,6 +1,6 @@
-// Test di componente della schermata Taccuino con il FakeDictationEngine e il
-// repository in memoria: lista cronologica, filtro per tag, empty state, FAB e
-// cattura vocale (comandi vocali → testo, "Salva idea" → createNote).
+// Component test of the Notebook screen with the FakeDictationEngine and the
+// in-memory repository: chronological list, tag filter, empty state, FAB and
+// voice capture (voice commands → text, "Salva idea" → createNote).
 
 import { act, fireEvent, render } from '@testing-library/react-native';
 
@@ -11,7 +11,7 @@ import { ThemeProvider } from '../../../theme';
 
 const BOOK = 'libro-test';
 
-/** Orologio monotono per un ordine deterministico dei seed. */
+/** Monotonic clock for a deterministic order of the seeds. */
 function tickingClock(start = 1000): () => number {
   let t = start;
   return () => (t += 1);
@@ -37,31 +37,31 @@ async function renderScreen(options?: { seed?: (repo: InMemoryNoteRepository) =>
   return { engine, repository, onBack, ...utils };
 }
 
-describe('NotesScreen — apertura e lista', () => {
-  it('mostra eyebrow del libro, "Taccuino" e le note (più recenti in cima)', async () => {
+describe('NotesScreen — opening and list', () => {
+  it('shows the book eyebrow, "Taccuino" and the notes (most recent first)', async () => {
     const { getByText, getAllByText } = await renderScreen({
       seed: (repo) => {
         repo.seed(BOOK, { text: 'La più vecchia', tag: 'trama' });
         repo.seed(BOOK, { text: 'La più recente', tag: 'dialogo' });
       },
     });
-    // eyebrow = titolo del libro (maiuscolo solo via stile), poi "Taccuino"
+    // eyebrow = book title (uppercase only via style), then "Taccuino"
     expect(getByText('Il custode del faro')).toBeTruthy();
     expect(getByText('Taccuino')).toBeTruthy();
     expect(getByText('La più recente')).toBeTruthy();
     expect(getByText('La più vecchia')).toBeTruthy();
-    // il tag della nota compare come chip di categoria
+    // the note's tag appears as a category chip
     expect(getAllByText('Trama').length).toBeGreaterThan(0);
   });
 
-  it('taccuino vuoto: empty state invita a dettare il primo spunto', async () => {
+  it('empty notebook: the empty state invites dictating the first idea', async () => {
     const { getByText } = await renderScreen();
     expect(getByText('Il taccuino è vuoto')).toBeTruthy();
   });
 });
 
-describe('NotesScreen — filtro per tag', () => {
-  it('un chip filtra le note; "Tutte" le riporta tutte', async () => {
+describe('NotesScreen — tag filter', () => {
+  it('a chip filters the notes; "Tutte" brings them all back', async () => {
     const { getByTestId, getByText, queryByText } = await renderScreen({
       seed: (repo) => {
         repo.seed(BOOK, { text: 'Nota di trama', tag: 'trama' });
@@ -77,7 +77,7 @@ describe('NotesScreen — filtro per tag', () => {
     expect(getByText('Nota di dialogo')).toBeTruthy();
   });
 
-  it('filtro senza risultati: empty state dedicato', async () => {
+  it('filter with no results: dedicated empty state', async () => {
     const { getByTestId, getByText } = await renderScreen({
       seed: (repo) => repo.seed(BOOK, { text: 'Solo trama', tag: 'trama' }),
     });
@@ -86,16 +86,16 @@ describe('NotesScreen — filtro per tag', () => {
   });
 });
 
-describe('NotesScreen — cattura vocale', () => {
-  it('il FAB apre la cattura; i comandi vocali diventano testo e "Salva idea" crea la nota', async () => {
+describe('NotesScreen — voice capture', () => {
+  it('the FAB opens capture; voice commands become text and "Salva idea" creates the note', async () => {
     const { engine, repository, getByTestId, getByText, queryByTestId } = await renderScreen();
 
-    // il pannello è chiuso finché non si tocca il FAB
+    // the panel is closed until the FAB is tapped
     expect(queryByTestId('note-capture-modal')).toBeNull();
     await fireEvent.press(getByTestId('notes-fab'));
     expect(getByTestId('note-capture-modal')).toBeTruthy();
 
-    // dettatura: mic → start, un finale con comando vocale "punto"
+    // dictation: mic → start, a final result with the voice command "punto"
     await fireEvent.press(getByTestId('note-capture-mic'));
     expect(engine.startCalls).toEqual([{ lang: 'it-IT' }]);
     await act(async () => engine.emitPartial('e se il faro'));
@@ -103,18 +103,18 @@ describe('NotesScreen — cattura vocale', () => {
     await act(async () => engine.emitFinal('e se il faro fosse la prigione punto'));
     expect(getByTestId('note-capture-text').props.value).toBe('E se il faro fosse la prigione.');
 
-    // tag opzionale + salvataggio
+    // optional tag + saving
     await fireEvent.press(getByTestId('note-capture-tag-trama'));
     await fireEvent.press(getByTestId('note-capture-save'));
 
     const saved = await repository.getNote({ bookId: BOOK, noteId: 'nota-1' });
     expect(saved).toMatchObject({ text: 'E se il faro fosse la prigione.', tag: 'trama' });
-    // salvata: il pannello si chiude e la nota compare in lista
+    // saved: the panel closes and the note appears in the list
     expect(queryByTestId('note-capture-modal')).toBeNull();
     expect(getByText('E se il faro fosse la prigione.')).toBeTruthy();
   });
 
-  it('"Salva idea" è disabilitato finché non c’è testo', async () => {
+  it('"Salva idea" is disabled until there is text', async () => {
     const { engine, getByTestId } = await renderScreen();
     await fireEvent.press(getByTestId('notes-fab'));
     expect(getByTestId('note-capture-save')).toBeDisabled();
@@ -123,7 +123,7 @@ describe('NotesScreen — cattura vocale', () => {
     expect(getByTestId('note-capture-save')).not.toBeDisabled();
   });
 
-  it('testo scritto a mano: la nota si salva anche senza dettatura', async () => {
+  it('hand-typed text: the note saves even without dictation', async () => {
     const { repository, getByTestId } = await renderScreen();
     await fireEvent.press(getByTestId('notes-fab'));
     await fireEvent.changeText(getByTestId('note-capture-text'), '  Idea scritta a mano  ');
@@ -134,29 +134,29 @@ describe('NotesScreen — cattura vocale', () => {
     });
   });
 
-  it('alla chiusura della schermata il motore viene rilasciato', async () => {
+  it('when the screen closes the engine is released', async () => {
     const { engine, unmount } = await renderScreen();
     await unmount();
     expect(engine.disposed).toBe(true);
   });
 
-  it('chiudendo il pannello (salva) il motore viene fermato: niente microfono acceso in background', async () => {
+  it('closing the panel (save) stops the engine: no microphone left on in the background', async () => {
     const { engine, getByTestId } = await renderScreen();
     await fireEvent.press(getByTestId('notes-fab'));
-    // avvio dell'ascolto: il microfono è acceso
+    // listening starts: the microphone is on
     await fireEvent.press(getByTestId('note-capture-mic'));
     expect(engine.startCalls).toHaveLength(1);
     const stopsPrima = engine.stopCalls;
 
-    // salvataggio: il pannello si chiude (visible=false) senza smontare
+    // saving: the panel closes (visible=false) without unmounting
     await fireEvent.changeText(getByTestId('note-capture-text'), 'un pensiero');
     await fireEvent.press(getByTestId('note-capture-save'));
 
-    // il motore DEVE essere stato fermato alla chiusura
+    // the engine MUST have been stopped on close
     expect(engine.stopCalls).toBeGreaterThan(stopsPrima);
   });
 
-  it('chiudendo il pannello (annulla) il motore viene fermato', async () => {
+  it('closing the panel (cancel) stops the engine', async () => {
     const { engine, getByTestId } = await renderScreen();
     await fireEvent.press(getByTestId('notes-fab'));
     await fireEvent.press(getByTestId('note-capture-mic'));
@@ -166,10 +166,10 @@ describe('NotesScreen — cattura vocale', () => {
   });
 });
 
-describe('NotesScreen — errore del listener', () => {
-  it('se observeNotes fallisce mostra un avviso invece della schermata muta', async () => {
+describe('NotesScreen — listener error', () => {
+  it('if observeNotes fails it shows a warning instead of a silent screen', async () => {
     const engine = new FakeDictationEngine();
-    // repository che fallisce la sottoscrizione (listener in errore)
+    // repository whose subscription fails (listener in error)
     const failing = {
       observeNotes: (_bookId: string, _onChange: unknown, onError?: (e: Error) => void) => {
         onError?.(new Error('permessi'));
@@ -196,8 +196,8 @@ describe('NotesScreen — errore del listener', () => {
   });
 });
 
-describe('NotesScreen — modifica ed elimina', () => {
-  it('elimina una nota dopo la conferma (chiama deleteNote)', async () => {
+describe('NotesScreen — edit and delete', () => {
+  it('deletes a note after confirmation (calls deleteNote)', async () => {
     const { repository, getByTestId, queryByText } = await renderScreen({
       seed: (repo) => repo.seed(BOOK, { text: 'Idea da buttare', tag: 'idea' }),
     });
@@ -205,17 +205,17 @@ describe('NotesScreen — modifica ed elimina', () => {
     const note = await repository.getNote({ bookId: BOOK, noteId: 'nota-1' });
     expect(note).not.toBeNull();
 
-    // apertura delle azioni sulla nota (press lungo, come il riordino capitoli)
+    // open the note's actions (long press, like chapter reordering)
     await fireEvent(getByTestId('note-nota-1'), 'longPress');
     await fireEvent.press(getByTestId('note-actions-delete'));
-    // conferma leggera
+    // light confirmation
     await fireEvent.press(getByTestId('note-actions-delete-confirm'));
 
     expect(deleteSpy).toHaveBeenCalledWith({ bookId: BOOK, noteId: 'nota-1' });
     expect(queryByText('Idea da buttare')).toBeNull();
   });
 
-  it('modifica una nota esistente: precompila e chiama updateNote coi campi giusti', async () => {
+  it('edits an existing note: pre-fills and calls updateNote with the right fields', async () => {
     const { repository, getByTestId } = await renderScreen({
       seed: (repo) => repo.seed(BOOK, { text: 'Bozza', tag: null }),
     });
@@ -223,7 +223,7 @@ describe('NotesScreen — modifica ed elimina', () => {
 
     await fireEvent(getByTestId('note-nota-1'), 'longPress');
     await fireEvent.press(getByTestId('note-actions-edit'));
-    // l'editor riusa il pannello di cattura, precompilato col testo esistente
+    // the editor reuses the capture panel, pre-filled with the existing text
     expect(getByTestId('note-capture-text').props.value).toBe('Bozza');
 
     await fireEvent.changeText(getByTestId('note-capture-text'), 'Bozza rivista');

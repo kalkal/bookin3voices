@@ -1,5 +1,5 @@
-// Implementazioni in memoria dei contratti export: per i test di componente e
-// per la modalità E2E Maestro (App.tsx), dove Firebase non esiste.
+// In-memory implementations of the export contracts: for component tests and
+// for Maestro E2E mode (App.tsx), where Firebase does not exist.
 
 import type {
   BookExportService,
@@ -15,7 +15,7 @@ const MIME_TYPES: Record<ExportRequest['format'], string> = {
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
 
-/** Risponde subito con un finto file minuscolo ("finto" in base64). */
+/** Answers immediately with a tiny fake file ("fake" in base64). */
 export class InMemoryBookExportService implements BookExportService {
   readonly requests: ExportRequest[] = [];
 
@@ -45,7 +45,7 @@ export class InMemoryPendingSuggestionsRepository implements PendingSuggestionsR
   }
 }
 
-/** Registra i file "condivisi" senza toccare disco né share sheet. */
+/** Records the "shared" files without touching disk or the share sheet. */
 export class InMemoryExportFileSink implements ExportFileSink {
   readonly shared: ShareableFile[] = [];
 

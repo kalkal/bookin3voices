@@ -1,14 +1,14 @@
-// Test d'integrazione della callable exportBackup contro
-// l'emulatore Firestore (MAI progetti reali): si seminano due libri
-// con capitoli via admin SDK, si invoca l'handler come farebbe la callable e
-// si verificano:
-//  - zip valido con un file per capitolo + indice per libro;
-//  - Markdown FEDELE al rawText (accenti, virgolette «» e apostrofi tipografici);
-//  - senza bookId si esportano TUTTI i libri, con bookId solo quello;
-//  - idempotenza sul requestId: niente doppio registro exports;
-//  - tetto sulla dimensione: oltre maxZipBytes errore chiaro che rimanda alla
-//    variante Storage, senza registro orfano;
-//  - errori chiari (auth, input, libro mancante, biblioteca vuota).
+// Integration test of the exportBackup callable against the
+// Firestore emulator (NEVER real projects): two books are seeded
+// with chapters via the admin SDK, the handler is invoked as the callable would
+// invoke it, and the following is verified:
+//  - valid zip with one file per chapter + an index per book;
+//  - Markdown FAITHFUL to rawText (accents, «» quotes and typographic apostrophes);
+//  - without bookId ALL books are exported, with bookId only that one;
+//  - idempotency on requestId: no duplicate exports registry entry;
+//  - size cap: above maxZipBytes a clear error pointing to the
+//    Storage variant, with no orphaned registry entry;
+//  - clear errors (auth, input, missing book, empty library).
 
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
@@ -19,16 +19,14 @@ import { createExportBackupHandler, runExportBackup } from '../backup/exportBack
 import type { ExportBackupResponse } from '../backup/types';
 
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
-  throw new Error(
-    'Questi test girano SOLO contro l’emulatore Firestore (firebase emulators:exec).',
-  );
+  throw new Error('These tests run ONLY against the Firestore emulator (firebase emulators:exec).');
 }
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'demo-bookvoice-functions';
 const PROPOSTA_PENDING = 'PROPOSTA-PENDING-CHE-NON-DEVE-ENTRARE';
 
-// testo con accenti, caporali e apostrofi tipografici: il backup deve
-// restituirlo IDENTICO (fedeltà al testo grezzo)
+// text with accents, guillemets and typographic apostrophes: the backup must
+// return it IDENTICAL (fidelity to the raw text)
 const TESTO_CAP_1 = [
   'Il traghetto delle sette e un quarto attraccò con mezz’ora di ritardo.',
   'Diciassette anni senza mettere piede sull’isola: «un’eternità», avrebbe detto lo zio.',
@@ -38,9 +36,9 @@ const TESTO_CAP_2 = 'Il registro era lì: date, orari & coordinate <in codice>.'
 
 let db: Firestore;
 
-const NOW = 1788688800000; // orologio finto: 2026-09-06T10:00Z, createdAt deterministico
+const NOW = 1788688800000; // fake clock: 2026-09-06T10:00Z, deterministic createdAt
 
-/** Semina la biblioteca: due libri, il secondo senza capitoli. */
+/** Seeds the library: two books, the second without chapters. */
 async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
   const mainBookId = 'libro-di-prova';
   const bookRef = db.doc(`users/${uid}/books/${mainBookId}`);
@@ -77,7 +75,7 @@ async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
     rawText: TESTO_CAP_2,
     updatedAt: NOW,
   });
-  // suggerimento pending: il backup salva solo il rawText e DEVE ignorarlo
+  // pending suggestion: the backup stores only rawText and MUST ignore it
   await bookRef
     .collection('chapters')
     .doc('cap-1')
@@ -94,7 +92,7 @@ async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
       textHash: 'hash-di-prova',
     });
 
-  // secondo libro, appena nato: nessun capitolo, deve comparire col solo indice
+  // second book, just created: no chapters, must appear with the index only
   await db.doc(`users/${uid}/books/quaderno-nuovo`).set({
     schemaVersion: 1,
     title: 'Quaderno nuovo',
@@ -128,7 +126,7 @@ async function unzip(response: ExportBackupResponse): Promise<JSZip> {
 
 async function fileText(zip: JSZip, path: string): Promise<string> {
   const file = zip.file(path);
-  if (file === null) throw new Error(`File assente nello zip: ${path}`);
+  if (file === null) throw new Error(`File missing from the zip: ${path}`);
   return file.async('string');
 }
 
@@ -141,7 +139,7 @@ beforeAll(() => {
   db = getFirestore();
 });
 
-describe('exportBackup — tutta la biblioteca', () => {
+describe('exportBackup — whole library', () => {
   const uid = 'jane-backup-tutto';
   let response: ExportBackupResponse;
   let zip: JSZip;
@@ -152,7 +150,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     zip = await unzip(response);
   });
 
-  it('risponde con i metadati dello zip', () => {
+  it('responds with the zip metadata', () => {
     expect(response).toMatchObject({
       exportId: 'bak-tutto-1',
       fileName: 'backup-bookvoice-2026-09-06.zip',
@@ -163,7 +161,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     expect(response.size).toBe(Buffer.from(response.base64, 'base64').length);
   });
 
-  it('contiene un indice e un file per capitolo, per ogni libro', () => {
+  it('contains an index and one file per chapter, for each book', () => {
     expect(
       Object.keys(zip.files)
         .filter((name) => !zip.files[name]?.dir)
@@ -176,7 +174,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     ]);
   });
 
-  it('il Markdown del capitolo è FEDELE al rawText (accenti e virgolette)', async () => {
+  it('the chapter Markdown is FAITHFUL to rawText (accents and quotes)', async () => {
     const md = await fileText(zip, 'il-faro-di-levante/01-il-ritorno.md');
     expect(md).toBe(
       [
@@ -193,7 +191,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     expect(md).not.toContain(PROPOSTA_PENDING);
   });
 
-  it('l’indice del libro elenca metadati e capitoli', async () => {
+  it('the book index lists metadata and chapters', async () => {
     const indice = await fileText(zip, 'il-faro-di-levante/indice.md');
     expect(indice).toContain('# Il faro di Levante');
     expect(indice).toContain('- Autore: Jane Doe');
@@ -203,7 +201,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     expect(vuoto).toContain('_Nessun capitolo ancora._');
   });
 
-  it('registra il backup su users/{uid}/exports/{requestId} (senza Storage)', async () => {
+  it('records the backup at users/{uid}/exports/{requestId} (without Storage)', async () => {
     const registry = await db.doc(`users/${uid}/exports/bak-tutto-1`).get();
     expect(registry.data()).toMatchObject({
       schemaVersion: 1,
@@ -216,7 +214,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     });
   });
 
-  it('è idempotente: stesso requestId → stessi byte, nessun doppio registro', async () => {
+  it('is idempotent: same requestId → same bytes, no duplicate registry entry', async () => {
     const retry = await callBackup(uid, { requestId: 'bak-tutto-1' });
     expect(retry.createdAt).toBe(NOW);
     expect(retry.base64).toBe(response.base64);
@@ -224,7 +222,7 @@ describe('exportBackup — tutta la biblioteca', () => {
     expect(registry.size).toBe(1);
   });
 
-  it('rifiuta il riuso del requestId per un backup diverso', async () => {
+  it('rejects reuse of the requestId for a different backup', async () => {
     await expectHttpsError(
       callBackup(uid, { bookId: 'libro-di-prova', requestId: 'bak-tutto-1' }),
       'already-exists',
@@ -232,10 +230,10 @@ describe('exportBackup — tutta la biblioteca', () => {
   });
 });
 
-describe('exportBackup — libro singolo', () => {
+describe('exportBackup — single book', () => {
   const uid = 'jane-backup-uno';
 
-  it('esporta solo il libro richiesto, con lo slug nel nome del file', async () => {
+  it('exports only the requested book, with the slug in the file name', async () => {
     const { mainBookId } = await seedLibrary(uid);
     const response = await callBackup(uid, { bookId: mainBookId, requestId: 'bak-uno-1' });
     expect(response.fileName).toBe('backup-il-faro-di-levante-2026-09-06.zip');
@@ -246,10 +244,10 @@ describe('exportBackup — libro singolo', () => {
   });
 });
 
-describe('exportBackup — tetto sulla dimensione', () => {
+describe('exportBackup — size cap', () => {
   const uid = 'jane-backup-tetto';
 
-  it('oltre maxZipBytes: resource-exhausted con rimando alla variante su Storage, niente registro orfano', async () => {
+  it('above maxZipBytes: resource-exhausted pointing to the Storage variant, no orphaned registry entry', async () => {
     await seedLibrary(uid);
     await expectHttpsError(
       runExportBackup({ db, now: () => NOW, maxZipBytes: 64 }, uid, { requestId: 'bak-big-1' }),
@@ -257,30 +255,30 @@ describe('exportBackup — tetto sulla dimensione', () => {
     );
     await expect(
       runExportBackup({ db, now: () => NOW, maxZipBytes: 64 }, uid, { requestId: 'bak-big-1' }),
-    ).rejects.toMatchObject({ message: expect.stringContaining('variante su Storage') });
+    ).rejects.toMatchObject({ message: expect.stringContaining('Storage') });
     const registry = await db.collection(`users/${uid}/exports`).get();
     expect(registry.size).toBe(0);
   });
 });
 
-describe('exportBackup — errori', () => {
+describe('exportBackup — errors', () => {
   const uid = 'jane-backup-errori';
 
-  it('senza autenticazione: unauthenticated', async () => {
+  it('without authentication: unauthenticated', async () => {
     const handler = createExportBackupHandler({ db });
     await expectHttpsError(handler(fakeRequest({ requestId: 'r1' })), 'unauthenticated');
   });
 
-  it('input malformato: invalid-argument', async () => {
+  it('malformed input: invalid-argument', async () => {
     await expectHttpsError(callBackup(uid, { requestId: 'niente spazi!' }), 'invalid-argument');
     await expectHttpsError(callBackup(uid, { bookId: '', requestId: 'r1' }), 'invalid-argument');
   });
 
-  it('libro inesistente: not-found', async () => {
+  it('nonexistent book: not-found', async () => {
     await expectHttpsError(callBackup(uid, { bookId: 'non-esiste', requestId: 'r2' }), 'not-found');
   });
 
-  it('biblioteca vuota: failed-precondition (niente registro orfano)', async () => {
+  it('empty library: failed-precondition (no orphaned registry entry)', async () => {
     await expectHttpsError(callBackup(uid, { requestId: 'r3' }), 'failed-precondition');
     const registry = await db.collection(`users/${uid}/exports`).get();
     expect(registry.size).toBe(0);

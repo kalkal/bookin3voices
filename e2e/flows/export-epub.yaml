@@ -1,16 +1,16 @@
-# Flusso E2E — export EPUB dalla tab Export (EXPO_PUBLIC_E2E=1).
-# In modalità E2E l'app è tutta in memoria per progetto (App.tsx): l'export è
-# servito da InMemoryBookExportService/-FileSink e il conteggio pending è
-# fisso a 2. Il flusso copre l'avviso «suggerimenti in sospeso», l'avvio della
-# generazione e l'esito a schermo — senza Emulator Suite né share sheet di
-# sistema. La callable exportBook vera (EPUB reale) è coperta dai test Jest
-# della feature Export sul Firebase Emulator.
+# E2E flow — EPUB export from the Export tab (EXPO_PUBLIC_E2E=1).
+# In E2E mode the app is entirely in memory per project (App.tsx): the export is
+# served by InMemoryBookExportService/-FileSink and the pending count is
+# fixed at 2. The flow covers the «suggerimenti in sospeso» warning, the start of
+# generation and the on-screen outcome — without the Emulator Suite or the system
+# share sheet. The real exportBook callable (real EPUB) is covered by the Jest
+# tests of the Export feature on the Firebase Emulator.
 appId: dev.kalkal.bookvoice
-name: Export EPUB con avviso pending
+name: EPUB export with pending warning
 ---
 - runFlow: ../helpers/open-e2e-app.yaml
 
-# Dalla Dettatura iniziale a Libreria → Libro → tab Export.
+# From the initial Dictation to Library → Book → Export tab.
 - back
 - extendedWaitUntil:
     visible:
@@ -29,9 +29,9 @@ name: Export EPUB con avviso pending
       id: "export-tab"
     timeout: 10000
 
-# Avviso pending (2 seminati in App.tsx): c'è e dice quanti sono. Lo scroll
-# punta il TESTO, non la card: la card «visibile» col solo bordo nel viewport
-# lascerebbe il testo sotto la piega (assertVisible non scrolla).
+# Pending warning (2 seeded in App.tsx): it is there and says how many. The scroll
+# targets the TEXT, not the card: the card «visible» with just its border in the viewport
+# would leave the text below the fold (assertVisible does not scroll).
 - scrollUntilVisible:
     element:
       text: "Ci sono 2 suggerimenti in sospeso"
@@ -39,8 +39,8 @@ name: Export EPUB con avviso pending
 - assertVisible:
     id: "export-pending-warning"
 
-# EPUB è il formato di default: si genera e si attende l'esito
-# (file finto: «libro.epub», 5 byte → «1 KB» arrotondato per difetto a 1).
+# EPUB is the default format: it is generated and the outcome is awaited
+# (fake file: «libro.epub», 5 bytes → «1 KB» rounded down to 1).
 - scrollUntilVisible:
     element:
       text: "Genera EPUB"

@@ -1,6 +1,6 @@
-// Merge additivo della scaletta (VINCOLANTE): i capitoli con
-// testo non si toccano MAI; le schede riempiono prima gli slot vuoti in
-// ordine, il resto va in coda; niente eliminazioni.
+// Additive outline merge (BINDING): chapters with
+// text are NEVER touched; cards fill empty slots first in
+// order, the rest goes at the end; no deletions.
 
 import { InMemoryChapterRepository } from '../../chapters';
 import type { ChapterSummary } from '../../chapters';
@@ -27,13 +27,13 @@ function card(n: number): OutlineCard {
 }
 
 describe('planOutlineMerge', () => {
-  it('senza capitoli esistenti: tutte le schede diventano creazioni, in ordine', () => {
+  it('with no existing chapters: all cards become creations, in order', () => {
     const plan = planOutlineMerge([], [card(1), card(2)]);
     expect(plan.updates).toEqual([]);
     expect(plan.creates.map((c) => c.title)).toEqual(['Scheda 1', 'Scheda 2']);
   });
 
-  it('le schede riempiono PRIMA gli slot vuoti (in ordine), il resto va in coda', () => {
+  it('cards fill empty slots FIRST (in order), the rest goes at the end', () => {
     const chapters = [
       summary('scritto-1', 0, 120),
       summary('vuoto-1', 1, 0),
@@ -57,21 +57,21 @@ describe('planOutlineMerge', () => {
     expect(plan.creates.map((c) => c.title)).toEqual(['Scheda 3']);
   });
 
-  it('i capitoli con testo non compaiono MAI nel piano', () => {
+  it('chapters with text NEVER appear in the plan', () => {
     const chapters = [summary('scritto-1', 0, 300), summary('scritto-2', 1, 500)];
     const plan = planOutlineMerge(chapters, [card(1)]);
     expect(plan.updates).toEqual([]);
     expect(plan.creates).toHaveLength(1);
   });
 
-  it('meno schede che slot vuoti: gli slot in più restano intoccati', () => {
+  it('fewer cards than empty slots: the extra slots stay untouched', () => {
     const chapters = [summary('vuoto-1', 0, 0), summary('vuoto-2', 1, 0)];
     const plan = planOutlineMerge(chapters, [card(1)]);
     expect(plan.updates.map((u) => u.chapterId)).toEqual(['vuoto-1']);
     expect(plan.creates).toEqual([]);
   });
 
-  it('gli slot vuoti si riempiono nell’ordine del libro anche se la lista è disordinata', () => {
+  it("empty slots are filled in the book's order even if the list is unordered", () => {
     const chapters = [summary('vuoto-b', 3, 0), summary('vuoto-a', 1, 0)];
     const plan = planOutlineMerge(chapters, [card(1), card(2)]);
     expect(plan.updates.map((u) => u.chapterId)).toEqual(['vuoto-a', 'vuoto-b']);
@@ -79,7 +79,7 @@ describe('planOutlineMerge', () => {
 });
 
 describe('applyOutlineMerge', () => {
-  it('aggiorna gli slot vuoti (titolo+outline) e crea i capitoli in più, status draft', async () => {
+  it('updates empty slots (title+outline) and creates the extra chapters, status draft', async () => {
     const repo = new InMemoryChapterRepository();
     repo.seed({ bookId: BOOK, chapterId: 'vuoto-1' }, '', { title: 'Vuoto', order: 0 });
     const chapters = [summary('vuoto-1', 0, 0)];
@@ -110,13 +110,13 @@ describe('applyOutlineMerge', () => {
     });
   });
 
-  it('doppia difesa: uno slot pianificato come vuoto ma ORA con testo viene saltato', async () => {
+  it('double defense: a slot planned as empty but NOW with text is skipped', async () => {
     const repo = new InMemoryChapterRepository();
     repo.seed({ bookId: BOOK, chapterId: 'vuoto-1' }, '', { title: 'Era vuoto', order: 0 });
-    // il piano nasce da summary NON aggiornati (wordCount 0)...
+    // the plan is built from STALE summaries (wordCount 0)...
     const stale = [summary('vuoto-1', 0, 0)];
     const plan = planOutlineMerge(stale, [card(1)]);
-    // ...ma nel frattempo il capitolo ha preso testo (es. dettatura su altro tab)
+    // ...but in the meantime the chapter has gained text (e.g. dictation on another tab)
     await repo.saveRawText({ bookId: BOOK, chapterId: 'vuoto-1' }, 'Testo dettato nel frattempo.');
 
     const result = await applyOutlineMerge(repo, BOOK, plan);

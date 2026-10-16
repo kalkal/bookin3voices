@@ -1,11 +1,11 @@
 import { uiLocale } from '../i18n';
 
 /**
- * Utility pure sul testo, condivise tra le feature.
- * Logica pura = target preferito degli unit test.
+ * Pure text utilities, shared across features.
+ * Pure logic = preferred target for unit tests.
  */
 
-/** Conta le parole di un testo (spazi e a capo multipli inclusi). */
+/** Counts the words in a text (multiple spaces and newlines included). */
 export function countWords(text: string): number {
   const trimmed = text.trim();
   if (trimmed === '') {
@@ -15,8 +15,8 @@ export function countWords(text: string): number {
 }
 
 /**
- * Numero nel formato italiano del mockup ("24.310"). Se Intl non è disponibile
- * si torna alle cifre semplici: meglio spoglio che rotto.
+ * Number in the Italian format of the mockup ("24.310"). If Intl is not
+ * available, falls back to plain digits: better bare than broken.
  */
 export function formatNumber(value: number): string {
   try {
@@ -27,8 +27,8 @@ export function formatNumber(value: number): string {
 }
 
 /**
- * Accoda un blocco di testo a uno esistente separandoli con uno spazio,
- * senza raddoppiare spazi o a capo già presenti alla giunzione.
+ * Appends a block of text to an existing one, separating them with a space,
+ * without doubling spaces or newlines already present at the join.
  */
 export function appendText(base: string, addition: string): string {
   if (addition === '') return base;

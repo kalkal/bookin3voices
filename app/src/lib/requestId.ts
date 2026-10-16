@@ -1,6 +1,6 @@
-// Chiavi di idempotenza per le callable: id nuovo a ogni azione
-// dell'utente, riusato solo dai retry di rete interni all'SDK. Deve rispettare
-// i caratteri sicuri per un id Firestore (vedi gli inputSchema lato functions):
+// Idempotency keys for callables: a new id for every user action, reused only
+// by the SDK's internal network retries. Must stick to the characters that are
+// safe for a Firestore id (see the inputSchemas on the functions side):
 // [A-Za-z0-9_-], max 128.
 
 export function makeRequestId(prefix: string): string {

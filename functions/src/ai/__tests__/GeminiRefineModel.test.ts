@@ -1,6 +1,5 @@
-// Test del RefineModel su Gemini con fetch finto (fetch finto):
-// URL, chiave nell'header, generationConfig con la
-// temperatura della validazione, errori HTTP tipizzati.
+// Tests of the Gemini RefineModel with a fake fetch: URL, key in the header,
+// generationConfig with the refine temperature, typed HTTP errors.
 
 import { GeminiHttpError, GeminiRefineModel, isRetryableGeminiError } from '../GeminiRefineModel';
 import { buildRefinePrompt } from '../refinePrompt';
@@ -32,7 +31,7 @@ function fakeFetch(status: number, body: unknown): { fn: typeof fetch; calls: un
 }
 
 describe('GeminiRefineModel', () => {
-  it('chiama generateContent col modello da config, la chiave nell’header e temperatura 0.3', async () => {
+  it('calls generateContent with the configured model, the key in the header and temperature 0.3', async () => {
     const { fn, calls } = fakeFetch(200, envelope({ suggestions: [] }));
     const model = new GeminiRefineModel({
       model: () => 'gemini-3.5-flash',
@@ -57,7 +56,7 @@ describe('GeminiRefineModel', () => {
     expect(body.systemInstruction.parts[0]?.text).toContain('Bibbia.');
   });
 
-  it('HTTP non-2xx → GeminiHttpError con status (503 è ritentabile)', async () => {
+  it('non-2xx HTTP → GeminiHttpError with status (503 is retryable)', async () => {
     const { fn } = fakeFetch(503, { error: 'high demand' });
     const model = new GeminiRefineModel({
       model: () => 'gemini-3.6-flash',
@@ -73,21 +72,21 @@ describe('GeminiRefineModel', () => {
     expect(caught).toBeInstanceOf(GeminiHttpError);
     expect((caught as GeminiHttpError).status).toBe(503);
     expect(isRetryableGeminiError(caught)).toBe(true);
-    expect((caught as Error).message).not.toContain('k'); // mai la chiave nei log
+    expect((caught as Error).message).not.toContain('k'); // never the key in logs
   });
 
-  it('400 non è ritentabile; altri errori nemmeno', () => {
+  it('400 is not retryable; neither are other errors', () => {
     expect(isRetryableGeminiError(new GeminiHttpError(400, 'bad schema'))).toBe(false);
     expect(isRetryableGeminiError(new Error('boom'))).toBe(false);
   });
 
-  it('risposta senza testo candidato → errore parlante', async () => {
+  it('response without candidate text → descriptive error', async () => {
     const { fn } = fakeFetch(200, { candidates: [] });
     const model = new GeminiRefineModel({ model: () => 'm', apiKey: () => 'k', fetchFn: fn });
     await expect(model.generate(PROMPT)).rejects.toThrow('no candidate');
   });
 
-  it('testo non JSON → SyntaxError (fa scattare il retry del chiamante)', async () => {
+  it("non-JSON text → SyntaxError (triggers the caller's retry)", async () => {
     const { fn } = fakeFetch(200, {
       candidates: [{ content: { parts: [{ text: 'non-json' }] } }],
     });

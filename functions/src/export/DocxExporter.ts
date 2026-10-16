@@ -1,8 +1,8 @@
-// Exporter DOCX con la libreria `docx`: frontespizio, indice
-// statico (i titoli dei capitoli) e un capitolo per sezione, ognuno su pagina
-// nuova. KDP accetta DOCX per l'ebook; il formato serve anche agli editor
-// umani, quindi si privilegia un documento pulito che Word apre senza dialoghi
-// (niente campo TOC dinamico, che chiederebbe "aggiornare i campi?").
+// DOCX exporter using the `docx` library: title page, static index (the
+// chapter titles) and one chapter per section, each on a new page. KDP accepts
+// DOCX for ebooks; the format also serves human editors, so a clean document
+// that Word opens without dialogs is preferred (no dynamic TOC field, which
+// would ask "update fields?").
 
 import {
   AlignmentType,
@@ -74,7 +74,7 @@ export class DocxExporter implements Exporter {
       title: book.title,
       creator: book.author,
       description: book.description,
-      // Lingua di default dei run: aiuta il controllo ortografico in Word.
+      // Default language of runs: helps spell checking in Word.
       styles: {
         default: {
           document: { run: { language: { value: exportLanguage(book.language) } } },
@@ -83,8 +83,9 @@ export class DocxExporter implements Exporter {
       sections: [{ children: titlePage(book) }, indexSection, ...chapterSections],
     });
 
-    // `docx` scrive da sé le date nei core properties: `generatedAt` qui non
-    // serve (l'idempotenza vive nel registro exports, non nei byte del file).
+    // `docx` writes the dates in the core properties itself: `generatedAt` is
+    // not needed here (idempotency lives in the exports registry, not in the
+    // file bytes).
     void generatedAt;
 
     return Packer.toBuffer(document);

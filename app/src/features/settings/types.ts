@@ -1,26 +1,26 @@
-// Contratto delle impostazioni (Repository pattern): la UI non
-// importa mai l'SDK di persistenza. La struttura rispecchia il documento
-// `settings/app`; l'integrazione Firestore sostituirà l'implementazione locale
-// con Firestore SENZA toccare le schermate.
+// Settings contract (Repository pattern): the UI never
+// imports the persistence SDK. The structure mirrors the
+// `settings/app` document; the Firestore integration will replace the local implementation
+// with Firestore WITHOUT touching the screens.
 
 import { z } from 'zod';
 
 import { AI_PROVIDER_IDS, DEFAULT_AI_PROVIDER_ID } from './aiProviders';
 
-/** Preferenza di tema: carta, a lume di candela, o automatico. */
+/** Theme preference: paper, candlelight, or automatic. */
 export const THEME_PREFERENCES = ['paper', 'candlelight', 'auto'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
-/** Frequenza del backup Markdown (l'export vero arriva con la feature Backup). */
+/** Frequency of the Markdown backup (the real export arrives with the Backup feature). */
 export const BACKUP_FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
 export type BackupFrequency = (typeof BACKUP_FREQUENCIES)[number];
 
-/** Limiti dell'obiettivo parole giornaliero (schermata Impostazioni). */
+/** Limits of the daily word goal (Settings screen). */
 export const DAILY_GOAL_MIN = 100;
 export const DAILY_GOAL_MAX = 10_000;
 export const DAILY_GOAL_STEP = 100;
 
-// dati esterni (disco oggi, Firestore domani) validati al confine con Zod
+// external data (disk today, Firestore tomorrow) validated at the boundary with Zod
 export const appSettingsSchema = z.object({
   schemaVersion: z.literal(1),
   aiProvider: z.enum(AI_PROVIDER_IDS),
@@ -28,9 +28,9 @@ export const appSettingsSchema = z.object({
   dailyGoalWords: z.number().int().min(DAILY_GOAL_MIN).max(DAILY_GOAL_MAX),
   backupFrequency: z.enum(BACKUP_FREQUENCIES),
   /**
-   * Quando è stato scaricato l'ultimo backup, epoch ms; null = mai.
-   * `default` e non campo obbligatorio: i payload salvati prima della feature Backup non
-   * ce l'hanno e NON devono decadere ai DEFAULT_SETTINGS.
+   * When the last backup was downloaded, epoch ms; null = never.
+   * `default` and not a required field: payloads saved before the Backup feature do not
+   * have it and must NOT fall back to DEFAULT_SETTINGS.
    */
   lastBackupAt: z.number().int().positive().nullable().default(null),
 });
@@ -38,8 +38,8 @@ export const appSettingsSchema = z.object({
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 /**
- * Valori di partenza del doc `settings/app`: Amazon Nova (bedrock) è il provider
- * DEFAULT; il tema di default dell'app è la carta.
+ * Starting values of the `settings/app` doc: Amazon Nova (bedrock) is the
+ * DEFAULT provider; the app's default theme is paper.
  */
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: 1,
@@ -52,11 +52,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export interface SettingsRepository {
   /**
-   * Impostazioni correnti; se non è mai stato salvato nulla (o il payload non
-   * è leggibile) tornano i DEFAULT_SETTINGS — le impostazioni sono sempre
-   * ricostruibili, a differenza del testo dettato.
+   * Current settings; if nothing was ever saved (or the payload is not
+   * readable) DEFAULT_SETTINGS is returned — settings can always be
+   * rebuilt, unlike dictated text.
    */
   load(): Promise<AppSettings>;
-  /** Sostituisce per intero il documento impostazioni. */
+  /** Replaces the whole settings document. */
   save(settings: AppSettings): Promise<void>;
 }

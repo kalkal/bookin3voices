@@ -1,12 +1,12 @@
-// Smoke test contro l'Emulator Suite.
-// Prerequisito: emulatori attivi (`firebase emulators:start` dalla root del repo).
-// Uso: node scripts/emulator-smoke.mjs   (dalla cartella app/)
+// Smoke test against the Emulator Suite.
+// Prerequisite: emulators running (`firebase emulators:start` from the repo root).
+// Usage: node scripts/emulator-smoke.mjs   (from the app/ folder)
 //
-// Verifica, con il vero SDK Firebase dell'app:
-//  1. signup + sign-in email/password sull'emulatore Auth;
-//  2. callable `ping` sull'emulatore Functions;
-//  3. (se GEMINI_SMOKE=1) callable `geminiSmoke` con un TESTO FITTIZIO —
-//     mai testo reale del libro: chiave free solo in sviluppo.
+// Checks, with the app's real Firebase SDK:
+//  1. email/password signup + sign-in on the Auth emulator;
+//  2. `ping` callable on the Functions emulator;
+//  3. (if GEMINI_SMOKE=1) `geminiSmoke` callable with a FAKE TEXT —
+//     never real book text: free key only in development.
 
 import { initializeApp } from 'firebase/app';
 import {
@@ -20,8 +20,8 @@ import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/
 
 const HOST = process.env.EMULATOR_HOST ?? '127.0.0.1';
 
-// Stesso projectId di .firebaserc (demo-bookvoice), apiKey fittizia: con gli
-// emulatori connessi sotto, nessuna chiamata può raggiungere il progetto reale.
+// Same projectId as .firebaserc (demo-bookvoice), fake apiKey: with the
+// emulators connected below, no call can reach the real project.
 const app = initializeApp({
   apiKey: 'emulator-fake-api-key',
   authDomain: 'demo-bookvoice.firebaseapp.com',
@@ -35,28 +35,28 @@ const functions = getFunctions(app);
 connectFunctionsEmulator(functions, HOST, 5001);
 
 const email = `smoke-${Date.now()}@example.com`;
-const password = 'una-password-di-prova-123';
+const password = 'a-test-password-123';
 
-console.log(`[1/3] Signup su Auth emulator (${email})...`);
+console.log(`[1/3] Signup on Auth emulator (${email})...`);
 const created = await createUserWithEmailAndPassword(auth, email, password);
 console.log(`      OK — uid: ${created.user.uid}`);
 
 await signOut(auth);
 
-console.log('[2/3] Sign-in con le stesse credenziali...');
+console.log('[2/3] Sign-in with the same credentials...');
 const signedIn = await signInWithEmailAndPassword(auth, email, password);
 if (signedIn.user.uid !== created.user.uid) {
-  throw new Error(`uid diverso dopo il sign-in: ${signedIn.user.uid} != ${created.user.uid}`);
+  throw new Error(`uid differs after sign-in: ${signedIn.user.uid} != ${created.user.uid}`);
 }
-console.log('      OK — stessa uid, token ottenuto.');
+console.log('      OK — same uid, token obtained.');
 
-console.log('[3/3] Callable ping su Functions emulator...');
+console.log('[3/3] Ping callable on Functions emulator...');
 const ping = httpsCallable(functions, 'ping');
 const pong = await ping({});
-console.log(`      OK — risposta: ${JSON.stringify(pong.data)}`);
+console.log(`      OK — response: ${JSON.stringify(pong.data)}`);
 
 if (process.env.GEMINI_SMOKE === '1') {
-  console.log('[extra] Callable geminiSmoke con testo fittizio...');
+  console.log('[extra] geminiSmoke callable with fake text...');
   const geminiSmoke = httpsCallable(functions, 'geminiSmoke');
   const testoFittizio =
     'Brano di prova inventato: il faro di Punta Brema lampeggiava tre volte, ' +
@@ -65,5 +65,5 @@ if (process.env.GEMINI_SMOKE === '1') {
   console.log(`      OK — ${JSON.stringify(result.data).slice(0, 300)}`);
 }
 
-console.log('\nSmoke test superato.');
+console.log('\nSmoke test passed.');
 process.exit(0);

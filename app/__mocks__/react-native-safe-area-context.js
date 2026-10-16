@@ -1,5 +1,5 @@
-// Mock automatico di react-native-safe-area-context per Jest: quello ufficiale
-// del pacchetto (SafeAreaProvider sintetico con inset a zero — senza, il
-// provider nativo non renderizza i figli in ambiente di test).
+// Automatic react-native-safe-area-context mock for Jest: the package's official
+// one (synthetic SafeAreaProvider with zero insets — without it, the
+// native provider does not render its children in the test environment).
 
 module.exports = require('react-native-safe-area-context/jest/mock').default;

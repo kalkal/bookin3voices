@@ -15,7 +15,7 @@ function Probe() {
 }
 
 describe('ThemeProvider', () => {
-  it('parte in tema carta', async () => {
+  it('starts in the paper theme', async () => {
     const { getByTestId } = await render(
       <ThemeProvider>
         <Probe />
@@ -25,7 +25,7 @@ describe('ThemeProvider', () => {
     expect(getByTestId('background')).toHaveTextContent(paperPalette.background);
   });
 
-  it('passa al tema a lume di candela con setMode', async () => {
+  it('switches to the candlelight theme with setMode', async () => {
     const { getByTestId } = await render(
       <ThemeProvider>
         <Probe />
@@ -36,8 +36,8 @@ describe('ThemeProvider', () => {
     expect(getByTestId('background')).toHaveTextContent(candlelightPalette.background);
   });
 
-  it('useTheme fuori dal provider lancia un errore esplicito', async () => {
-    // Sopprime il log dell'errore di render atteso.
+  it('useTheme outside the provider throws an explicit error', async () => {
+    // Suppresses the log of the expected render error.
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     await expect(render(<Probe />)).rejects.toThrow(/ThemeProvider/);
     spy.mockRestore();

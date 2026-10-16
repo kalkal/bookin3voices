@@ -18,8 +18,8 @@ if (getApps().length === 0) {
   initializeApp();
 }
 
-// Chiave Gemini: in locale arriva da functions/.secret.local (ignorato da git),
-// in produzione da Secret Manager. Mai nel repo, mai nell'app.
+// Gemini key: locally it comes from functions/.secret.local (git-ignored), in
+// production from Secret Manager. Never in the repo, never in the app.
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 // AWS credentials for Amazon Bedrock (default provider). Standard names so the
 // AWS SDK picks them up from the environment. Grant the IAM user only
@@ -47,26 +47,26 @@ const modelFor = (role: ModelRole, temperature: number, name?: AiProviderName) =
 
 export const ping = onCall(() => ({ ok: true }));
 
-// Export EPUB/DOCX: il file torna al client in base64
-// (MVP senza Storage). Un libro intero in base64 resta ampiamente sotto il
-// limite di risposta delle callable; memoria abbondante per la generazione.
+// EPUB/DOCX export: the file is returned to the client as base64 (MVP without
+// Storage). A whole book in base64 stays well under the callable response
+// limit; generous memory for generation.
 export const exportBook = onCall(
   { memory: '512MiB', timeoutSeconds: 120 },
   createExportBookHandler({ db: getFirestore() }),
 );
 
-// Backup Markdown del testo grezzo: zip in base64
-// come per l'export — via d'uscita indipendente da Firebase/Gemini. Oltre il
-// tetto della risposta callable serve la variante Storage.
+// Markdown backup of the raw text: base64 zip as for export - exit route
+// independent of Firebase/Gemini. Above the callable response cap the Storage
+// variant is needed.
 export const exportBackup = onCall(
   { memory: '512MiB', timeoutSeconds: 120 },
   createExportBackupHandler({ db: getFirestore() }),
 );
 
-// Scaletta capitoli dalla sinossi: Gemini tier
-// Pro (modello da config, ai/models.ts) con structured output validato Zod.
-// La callable restituisce SOLO la proposta: la conferma e il merge additivo
-// (mai toccare capitoli con testo) restano all'app.
+// Chapter outline from the synopsis: Gemini Pro tier (model from config,
+// ai/models.ts) with Zod-validated structured output. The callable returns
+// ONLY the proposal: confirmation and the additive merge (never touching
+// chapters that have text) stay with the app.
 export const generateOutline = onCall(
   { secrets: aiSecrets, timeoutSeconds: 300 },
   createGenerateOutlineHandler({
@@ -75,11 +75,11 @@ export const generateOutline = onCall(
   }),
 );
 
-// Rifinitura del capitolo: Style Bible + few-shot +
-// contesto (sinossi/outline) → suggerimenti puntuali validati, batch
-// atomico su `suggestions`, idempotenza requestId, dedup dei pending.
-// Modello da config (GEMINI_MODEL_REFINE, riserva GEMINI_MODEL_REFINE_FALLBACK):
-// ogni cambio va rigiocato sul golden set (npm run golden).
+// Chapter refinement: Style Bible + few-shot + context (synopsis/outline) ->
+// validated pinpoint suggestions, atomic batch on `suggestions`, requestId
+// idempotency, dedup of pending ones. Model from config (GEMINI_MODEL_REFINE,
+// fallback GEMINI_MODEL_REFINE_FALLBACK): every change must be replayed on the
+// golden set (npm run golden).
 export const refineChapter = onCall(
   { secrets: aiSecrets, timeoutSeconds: 300, memory: '512MiB' },
   createRefineChapterHandler({
@@ -99,8 +99,8 @@ export const refineChapter = onCall(
 );
 
 const geminiSmokeInput = z.object({
-  // Solo testi fittizi: la chiave free è ammessa unicamente in sviluppo
-  // con brani di prova inventati (regola di commutazione).
+  // Fictitious text only: the free key is allowed solely in development with
+  // invented sample passages (switching rule).
   text: z.string().min(1).max(2000),
 });
 
@@ -118,19 +118,19 @@ const geminiResponseSchema = z.object({
     .optional(),
 });
 
-// Ping "la chiave Gemini raggiunge l'API?" con testo fittizio. Vive SOLO
-// sull'emulatore (dev): in produzione sarebbe un endpoint PUBBLICO, senza auth
-// né App Check, che consuma la chiave Gemini — buco di sicurezza. Il
-// test della qualità della rifinitura NON passa da qui: golden set (npm run golden) e la
-// callable refineChapter deployata. Sotto deploy FUNCTIONS_EMULATOR non è
-// impostata, quindi l'export vale undefined e la funzione non viene deployata.
+// Ping "does the Gemini key reach the API?" with fictitious text. Lives ONLY
+// on the emulator (dev): in production it would be a PUBLIC endpoint, with no
+// auth or App Check, consuming the Gemini key - a security hole. Refinement
+// quality testing does NOT go through here: golden set (npm run golden) and the
+// deployed refineChapter callable. Under deploy FUNCTIONS_EMULATOR is not set,
+// so the export is undefined and the function is not deployed.
 const geminiSmokeHandler = onCall({ secrets: [geminiApiKey] }, async (request) => {
   const parsed = geminiSmokeInput.safeParse(request.data);
   if (!parsed.success) {
-    throw new HttpsError('invalid-argument', 'Atteso { text: string }');
+    throw new HttpsError('invalid-argument', 'Expected { text: string }');
   }
 
-  // nome modello da config, tier Flash: basta per il fumo
+  // model name from config, Flash tier: enough for a smoke test
   const model = modelForTier('flash');
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -156,6 +156,6 @@ const geminiSmokeHandler = onCall({ secrets: [geminiApiKey] }, async (request) =
   return { ok: true, model, reply };
 });
 
-// Esportata SOLO sull'emulatore: in produzione resta undefined (non deployata).
+// Exported ONLY on the emulator: in production it stays undefined (not deployed).
 export const geminiSmoke =
   process.env.FUNCTIONS_EMULATOR === 'true' ? geminiSmokeHandler : undefined;

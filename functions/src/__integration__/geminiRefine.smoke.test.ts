@@ -1,7 +1,7 @@
-// Fumo OPZIONALE della rifinitura con chiamata VERA a Gemini.
-// Gira solo se GEMINI_API_KEY è nell'ambiente (in CI non c'è → skip).
-// SOLO testo fittizio: la chiave free è ammessa unicamente con brani di prova
-// (regola di commutazione). Nei log solo conteggi, mai contenuti.
+// OPTIONAL refine smoke test with a REAL Gemini call.
+// Runs only if GEMINI_API_KEY is in the environment (CI has none → skip).
+// Fictitious text ONLY: the free key is allowed solely with sample passages
+// (switching rule). Logs contain counts only, never content.
 
 import { GeminiRefineModel } from '../ai/GeminiRefineModel';
 import { normalizeSuggestions } from '../ai/normalizeSuggestions';
@@ -15,8 +15,8 @@ const MODEL = process.env.GEMINI_SMOKE_MODEL ?? 'gemini-3.5-flash';
 
 const maybeDescribe = API_KEY === undefined || API_KEY === '' ? describe.skip : describe;
 
-// Brano FITTIZIO con difetti piantati (avverbio, filtro, ridondanza) e una
-// battuta colloquiale da non toccare.
+// FICTITIOUS passage with planted defects (adverb, filter word, redundancy)
+// and a colloquial line of dialogue that must not be touched.
 const TESTO_FITTIZIO = [
   'Quella mattina Riccardo aprì lentamente la saracinesca del bar e vide che',
   'la macchina del caffè era rimasta accesa tutta la notte. Annuì con la testa',
@@ -24,8 +24,8 @@ const TESTO_FITTIZIO = [
   'la signora del chiosco dei giornali.',
 ].join(' ');
 
-maybeDescribe('fumo Gemini refine (chiamata vera, brano fittizio)', () => {
-  it('produce suggerimenti conformi allo schema e ancorabili al testo', async () => {
+maybeDescribe('Gemini refine smoke (real call, fictitious passage)', () => {
+  it('produces suggestions that conform to the schema and can be anchored to the text', async () => {
     const profile = loadStyleProfileContent('suspense');
     const model = new GeminiRefineModel({
       model: () => MODEL,
@@ -49,10 +49,10 @@ maybeDescribe('fumo Gemini refine (chiamata vera, brano fittizio)', () => {
     );
 
     console.log(
-      `fumo refine su ${MODEL}: ${output.suggestions.length} dal modello, ${suggestions.length} ancorati, ${discarded} scartati`,
+      `refine smoke on ${MODEL}: ${output.suggestions.length} from the model, ${suggestions.length} anchored, ${discarded} discarded`,
     );
     expect(suggestions.length).toBeGreaterThan(0);
-    // la battuta colloquiale non si tocca (Regola «dentro le virgolette»)
+    // the colloquial line is left alone (rule: inside quotation marks)
     for (const sug of suggestions) {
       expect(sug.original).not.toContain('er solito distratto');
     }

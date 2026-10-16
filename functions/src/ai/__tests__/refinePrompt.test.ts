@@ -1,6 +1,7 @@
-// Snapshot test del prompt di rifinitura (i prompt sono codice).
-// Un refactor non deve cambiarli silenziosamente; una modifica VOLUTA aggiorna
-// REFINE_PROMPT_VERSION, lo snapshot E rigioca il golden set (npm run golden).
+// Snapshot test of the refinement prompt (prompts are code).
+// A refactor must not change them silently; an INTENTIONAL change updates
+// REFINE_PROMPT_VERSION and the snapshot AND replays the golden set
+// (npm run golden).
 
 import {
   buildRefinePrompt,
@@ -18,16 +19,16 @@ const BASE_INPUT = {
 };
 
 describe('buildRefinePrompt', () => {
-  it('la versione del prompt è quella attesa (bump SOLO deliberato)', () => {
+  it('the prompt version is the expected one (bump ONLY on purpose)', () => {
     expect(REFINE_PROMPT_VERSION).toBe(1);
     expect(REFINE_TEMPERATURE).toBe(0.3);
   });
 
-  it('snapshot: prompt minimo senza sinossi né outline', () => {
+  it('snapshot: minimal prompt without synopsis or outline', () => {
     expect(buildRefinePrompt(BASE_INPUT)).toMatchSnapshot();
   });
 
-  it('snapshot: prompt con sinossi e outline (seconda metà dell’outline)', () => {
+  it('snapshot: prompt with synopsis and outline', () => {
     expect(
       buildRefinePrompt({
         ...BASE_INPUT,
@@ -43,22 +44,22 @@ describe('buildRefinePrompt', () => {
     ).toMatchSnapshot();
   });
 
-  it('Style Bible e few-shot stanno nel prefisso stabile (system instruction)', () => {
+  it('Style Bible and few-shot sit in the stable prefix (system instruction)', () => {
     const prompt = buildRefinePrompt(BASE_INPUT);
     expect(prompt.systemInstruction).toContain('Style Bible di prova');
     expect(prompt.systemInstruction).toContain('Esempio 1');
-    // il materiale variabile resta nello user text (caching implicito)
+    // the variable material stays in the user text (implicit caching)
     expect(prompt.systemInstruction).not.toContain('Il faro');
     expect(prompt.userText).toContain('Elena posò lentamente');
   });
 
-  it('senza outline/sinossi il contesto non contiene blocchi vuoti', () => {
+  it('without outline/synopsis the context has no empty blocks', () => {
     const prompt = buildRefinePrompt(BASE_INPUT);
     expect(prompt.userText).not.toContain('Sinossi');
     expect(prompt.userText).not.toContain('Traccia del capitolo');
   });
 
-  it('outline: beat numerati e avvertenza solo-contesto', () => {
+  it('outline: numbered beats and a context-only warning', () => {
     const prompt = buildRefinePrompt({
       ...BASE_INPUT,
       chapter: {
@@ -71,13 +72,13 @@ describe('buildRefinePrompt', () => {
     expect(prompt.userText).toContain('NON suggerire modifiche di trama');
   });
 
-  it('niente minItems/maxItems nello schema (l’endpoint li rifiuta con 400)', () => {
+  it('no minItems/maxItems in the schema (the endpoint rejects them with 400)', () => {
     const flat = JSON.stringify(REFINE_RESPONSE_SCHEMA);
     expect(flat).not.toContain('minItems');
     expect(flat).not.toContain('maxItems');
   });
 
-  it('fallback per titoli e lingua vuoti', () => {
+  it('fallback for empty titles and language', () => {
     const prompt = buildRefinePrompt({
       ...BASE_INPUT,
       book: { title: '', genre: '', language: '', synopsis: '' },

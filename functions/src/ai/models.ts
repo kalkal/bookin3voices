@@ -1,10 +1,10 @@
-// Nomi dei modelli Gemini per tier: il nome vive in CONFIG, mai
-// cablato nel codice — i parametri firebase-functions si sovrascrivono da
-// .env/deploy senza toccare il codice. Default (da verificare sull'endpoint
-// ListModels):
+// Gemini model names per tier: the name lives in CONFIG, never hard-coded in
+// the code; firebase-functions params can be overridden from .env/deploy
+// without touching the code. Defaults (to be verified against the ListModels
+// endpoint):
 //  - flash: gemini-3.6-flash (default);
 //  - pro:   gemini-3.1-pro-preview.
-// L'outline usa il tier PRO di default.
+// The outline uses the PRO tier by default.
 
 import { defineString } from 'firebase-functions/params';
 
@@ -13,41 +13,41 @@ export type AiTier = (typeof AI_TIERS)[number];
 
 const geminiModelFlash = defineString('GEMINI_MODEL_FLASH', {
   default: 'gemini-3.6-flash',
-  description: 'Modello Gemini del tier Flash (rifiniture correnti)',
+  description: 'Gemini model for the Flash tier (current refinements)',
 });
 
 const geminiModelPro = defineString('GEMINI_MODEL_PRO', {
   default: 'gemini-3.1-pro-preview',
-  description: 'Modello Gemini del tier Pro (outline e revisioni capitolo intero)',
+  description: 'Gemini model for the Pro tier (outline and whole-chapter reviews)',
 });
 
-/** Nome del modello per tier, risolto a runtime dalla config. */
+/** Model name per tier, resolved at runtime from config. */
 export function modelForTier(tier: AiTier): string {
   return tier === 'pro' ? geminiModelPro.value() : geminiModelFlash.value();
 }
 
-/** Tier usato da generateOutline (outline sul tier Pro). */
+/** Tier used by generateOutline (outline runs on the Pro tier). */
 export const OUTLINE_TIER: AiTier = 'pro';
 
 const geminiModelRefine = defineString('GEMINI_MODEL_REFINE', {
   default: '',
   description:
-    'Modello della rifinitura capitolo; vuoto = tier Flash. Ogni cambio va rigiocato sul golden set (npm run golden).',
+    'Chapter refinement model; empty = Flash tier. Every change must be replayed on the golden set (npm run golden).',
 });
 
 const geminiModelRefineFallback = defineString('GEMINI_MODEL_REFINE_FALLBACK', {
   default: 'gemini-3.6-flash',
   description:
-    'Modello di riserva della rifinitura (usato su 429/5xx del primario); vuoto = nessuna riserva.',
+    'Fallback model for refinement (used on 429/5xx from the primary); empty = no fallback.',
 });
 
-/** Modello primario di refineChapter, risolto a runtime dalla config. */
+/** Primary model of refineChapter, resolved at runtime from config. */
 export function refineModelName(): string {
   const configured = geminiModelRefine.value();
   return configured === '' ? modelForTier('flash') : configured;
 }
 
-/** Modello di riserva di refineChapter ('' = nessuna riserva). */
+/** Fallback model of refineChapter ('' = no fallback). */
 export function refineFallbackModelName(): string {
   return geminiModelRefineFallback.value();
 }

@@ -66,25 +66,25 @@ function renderBook(overrides?: {
 }
 
 describe('BookScreen', () => {
-  it('mostra intestazione, numerali romani e stati a colore dei capitoli', async () => {
+  it('shows header, Roman numerals and color-coded chapter statuses', async () => {
     const { result, books } = renderBook();
     const screen = await result;
 
     expect(await screen.findByText('Il custode del faro')).toBeOnTheScreen();
     expect(screen.getByText(/24\.310 parole · 9 capitoli/)).toBeOnTheScreen();
-    // i capitoli arrivano dopo il libro: aspettarli, non darli per già caricati
-    // nota: it-IT non raggruppa i numeri a 4 cifre (CLDR), quindi "3180"
+    // chapters arrive after the book: wait for them, do not assume they are loaded
+    // note: it-IT does not group 4-digit numbers (CLDR), so "3180"
     expect(await screen.findByTestId('book-chapter-c1')).toHaveTextContent(/Finale · 3180 parole/);
     expect(screen.getByTestId('book-chapter-c2')).toHaveTextContent(/Rifinito/);
     expect(screen.getByTestId('book-chapter-c3')).toHaveTextContent(/Bozza/);
-    // numerali romani in ordine di lista
+    // Roman numerals in list order
     expect(screen.getByTestId('book-chapter-c2')).toHaveTextContent(/^II/);
-    // all'apertura parte la riconciliazione self-healing dei contatori
+    // on open, the self-healing counter reconciliation starts
     expect(books.reconcileCalls).toContain('faro');
     await screen.unmount();
   });
 
-  it('tap sulla riga apre l’editor, il mic apre la dettatura (posizione 1-based)', async () => {
+  it('tapping the row opens the editor, the mic opens dictation (1-based position)', async () => {
     const onOpenChapter = jest.fn();
     const onDictateChapter = jest.fn();
     const { result } = renderBook({ onOpenChapter, onDictateChapter });
@@ -97,7 +97,7 @@ describe('BookScreen', () => {
     await screen.unmount();
   });
 
-  it('press lungo attiva il riordino e le frecce spostano i capitoli', async () => {
+  it('long press enables reordering and the arrows move the chapters', async () => {
     const { result, chapters } = renderBook();
     const screen = await result;
 
@@ -108,14 +108,14 @@ describe('BookScreen', () => {
       const list = await chapters.getChapter({ bookId: 'faro', chapterId: 'c1' });
       expect(list?.order).toBe(1);
     });
-    // in modalità riordino il tap sulla riga non apre l'editor
+    // in reorder mode, tapping the row does not open the editor
     expect(screen.getByTestId('book-reorder-done')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('book-reorder-done'));
     expect(screen.queryByTestId('book-reorder-done')).toBeNull();
     await screen.unmount();
   });
 
-  it('crea un capitolo dal titolo digitato', async () => {
+  it('creates a chapter from the typed title', async () => {
     const { result, chapters } = renderBook();
     const screen = await result;
 
@@ -133,7 +133,7 @@ describe('BookScreen', () => {
     await screen.unmount();
   });
 
-  it('l’azione nell’header apre il Taccuino passando il titolo del libro', async () => {
+  it('the header action opens the Notebook, passing the book title', async () => {
     const onOpenNotes = jest.fn();
     const { result } = renderBook({ onOpenNotes });
     const screen = await result;
@@ -143,7 +143,7 @@ describe('BookScreen', () => {
     await screen.unmount();
   });
 
-  it('la tab Sinossi mostra la feature vera, la tab Export la sua', async () => {
+  it('the Synopsis tab shows the real feature, the Export tab shows its own', async () => {
     const { result } = renderBook();
     const screen = await result;
 

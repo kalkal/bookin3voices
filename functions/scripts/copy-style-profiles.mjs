@@ -1,7 +1,7 @@
-// Copia content/style-profiles/ (fonte di verità, radice del repo) in
-// functions/content/ così che il deploy Firebase — che carica solo la
-// cartella functions/ — porti con sé Style Bible e few-shot. La copia è
-// ignorata da git (niente doppioni committati); gira dentro `npm run build`.
+// Copies content/style-profiles/ (source of truth, repo root) into
+// functions/content/ so that the Firebase deploy — which uploads only the
+// functions/ folder — carries the Style Bible and few-shots with it. The copy
+// is ignored by git (no committed duplicates); it runs inside `npm run build`.
 
 import { cpSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import * as path from 'node:path';

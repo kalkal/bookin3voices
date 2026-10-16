@@ -1,14 +1,14 @@
 /**
- * Test d'integrazione del FirestoreNoteRepository (feature Taccuino) contro
- * l'EMULATORE (mai progetti reali), con le REGOLE VERE del repo
- * (firestore.rules): oltre al comportamento del repository si verifica così che
- * ogni scrittura rispetti le validazioni di forma delle rules (schemaVersion su
- * create/update) per la sottocollezione notes. Il projectId demo-* garantisce
- * che nessuna chiamata raggiunga il cloud.
+ * Integration test of FirestoreNoteRepository (Notebook feature) against
+ * the EMULATOR (never real projects), with the repo's REAL RULES
+ * (firestore.rules): besides the repository behavior, this checks that
+ * every write respects the rules' shape validations (schemaVersion on
+ * create/update) for the notes subcollection. The demo-* projectId guarantees
+ * that no call reaches the cloud.
  *
- * NOTA AMBIENTE: su questa macchina l'emulatore può non partire (Defender
- * blocca il loopback). Il test è comunque scritto e gira in CI / dove
- * l'emulatore è disponibile: `npm run test:integration` da app/.
+ * ENVIRONMENT NOTE: on some machines the emulator may fail to start (Defender
+ * blocks loopback). The test is written regardless and runs in CI / wherever
+ * the emulator is available: `npm run test:integration` from app/.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,7 +41,7 @@ function emulatorHostAndPort(): { host: string; port: number } {
 let env: RulesTestEnvironment;
 let db: Firestore;
 
-/** Attende che una condizione sull'observe diventi vera. */
+/** Waits for a condition on the observe stream to become true. */
 function waitUntil<T>(
   subscribe: (onChange: (value: T) => void) => () => void,
   predicate: (value: T) => boolean,
@@ -51,7 +51,7 @@ function waitUntil<T>(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       unsubscribe();
-      reject(new Error(`Timeout in attesa di: ${label}`));
+      reject(new Error(`Timed out waiting for: ${label}`));
     }, timeoutMs);
     const unsubscribe = subscribe((value) => {
       if (!predicate(value)) return;
@@ -87,7 +87,7 @@ afterAll(async () => {
 });
 
 describe('FirestoreNoteRepository', () => {
-  it('createNote scrive un documento conforme allo schema e observeNotes lo emette', async () => {
+  it('createNote writes a schema-conforming document and observeNotes emits it', async () => {
     const repo = makeRepo();
     const created = await repo.createNote(BOOK, {
       text: 'E se il faro fosse la prigione?',
@@ -102,7 +102,7 @@ describe('FirestoreNoteRepository', () => {
     const notes = await waitUntil<Note[]>(
       (cb) => repo.observeNotes(BOOK, cb),
       (list) => list.length === 1,
-      'observeNotes emette la nota creata',
+      'observeNotes emits the created note',
     );
     expect(notes[0]).toMatchObject({ id: created.id, text: 'E se il faro fosse la prigione?' });
 
@@ -112,7 +112,7 @@ describe('FirestoreNoteRepository', () => {
     expect(typeof fetched?.createdAt).toBe('number');
   });
 
-  it('observeNotes ordina per createdAt discendente (più recenti in cima)', async () => {
+  it('observeNotes orders by createdAt descending (newest first)', async () => {
     const repo = makeRepo();
     await repo.createNote(BOOK, { text: 'prima' });
     await waitForPendingWrites(db);
@@ -123,12 +123,12 @@ describe('FirestoreNoteRepository', () => {
     const notes = await waitUntil<Note[]>(
       (cb) => repo.observeNotes(BOOK, cb),
       (list) => list.length === 3,
-      'observeNotes emette le tre note',
+      'observeNotes emits the three notes',
     );
     expect(notes.map((n) => n.text)).toEqual(['terza', 'seconda', 'prima']);
   });
 
-  it('updateNote cambia testo/tag; deleteNote toglie la nota', async () => {
+  it('updateNote changes text/tags; deleteNote removes the note', async () => {
     const repo = makeRepo();
     const created = await repo.createNote(BOOK, { text: 'bozza', tag: null });
     await waitForPendingWrites(db);
@@ -144,16 +144,18 @@ describe('FirestoreNoteRepository', () => {
     expect(await repo.getNote({ bookId: BOOK, noteId: created.id })).toBeNull();
   });
 
-  it('getNote lancia su documento rotto (mai confondere vuoto con rotto)', async () => {
+  it('getNote throws on a broken document (never confuse empty with broken)', async () => {
     const repo = makeRepo();
     await setDoc(doc(db, 'users', UID, 'books', BOOK, 'notes', 'rotto'), {
       schemaVersion: 1,
       text: 42,
     });
-    await expect(repo.getNote({ bookId: BOOK, noteId: 'rotto' })).rejects.toThrow(/non conforme/);
+    await expect(repo.getNote({ bookId: BOOK, noteId: 'rotto' })).rejects.toThrow(
+      /does not match the schema/,
+    );
   });
 
-  it('regole per-utente: un altro utente non legge le note di Jane', async () => {
+  it('per-user rules: another user cannot read Jane’s notes', async () => {
     const repo = makeRepo();
     const created = await repo.createNote(BOOK, { text: 'privata' });
     await waitForPendingWrites(db);

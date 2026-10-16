@@ -16,7 +16,7 @@ describe('toRoman', () => {
     expect(toRoman(value)).toBe(expected);
   });
 
-  it.each([0, -1, 4000, 2.5, NaN])('rifiuta %p', (value) => {
+  it.each([0, -1, 4000, 2.5, NaN])('rejects %p', (value) => {
     expect(() => toRoman(value)).toThrow(RangeError);
   });
 });

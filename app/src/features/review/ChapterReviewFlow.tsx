@@ -1,9 +1,9 @@
 /**
- * Flusso Editor capitolo ⇄ Review suggerimenti:
- * possiede il controller condiviso e alterna le due schermate. Quando arriverà
- * la navigazione vera (Libreria → Libro → Editor), le schermate si montano
- * come route passando lo stesso controller; questo componente resta il punto
- * d'ingresso comodo per collaudo e sviluppo.
+ * Chapter editor ⇄ suggestion Review flow:
+ * owns the shared controller and alternates the two screens. When real
+ * navigation arrives (Library → Book → Editor), the screens mount
+ * as routes passing the same controller; this component remains the
+ * convenient entry point for testing and development.
  */
 import { useState } from 'react';
 
@@ -16,12 +16,12 @@ import { useChapterReview } from './useChapterReview';
 
 export interface ChapterReviewFlowProps {
   chapter: ChapterRef;
-  /** Es. "VII · La marea". */
+  /** E.g. "VII · La marea". */
   chapterTitle?: string;
   chapterRepository: ChapterTextRepository;
   revisionRepository: RevisionRepository;
   provider: SuggestionsProvider;
-  /** Se presente, l'Editor mostra il chevron di ritorno al Libro. */
+  /** If present, the Editor shows the back chevron to the Book. */
   onBack?: () => void;
 }
 

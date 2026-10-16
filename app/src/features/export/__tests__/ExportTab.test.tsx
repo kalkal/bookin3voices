@@ -37,7 +37,7 @@ function setup(options?: { pending?: number; exportService?: BookExportService }
 }
 
 describe('ExportTab', () => {
-  it('mostra i metadati KDP del libro e li salva modificati', async () => {
+  it("shows the book's KDP metadata and saves them after editing", async () => {
     const { result, books } = setup();
     const screen = await result;
 
@@ -56,7 +56,7 @@ describe('ExportTab', () => {
     await screen.unmount();
   });
 
-  it('senza suggerimenti pending non mostra avvisi', async () => {
+  it('with no pending suggestions it shows no warnings', async () => {
     const { result } = setup({ pending: 0 });
     const screen = await result;
     await screen.findByTestId('export-tab');
@@ -64,7 +64,7 @@ describe('ExportTab', () => {
     await screen.unmount();
   });
 
-  it('avvisa se ci sono suggerimenti pending', async () => {
+  it('warns if there are pending suggestions', async () => {
     const { result } = setup({ pending: 3 });
     const screen = await result;
     const warning = await screen.findByTestId('export-pending-warning');
@@ -73,7 +73,7 @@ describe('ExportTab', () => {
     await screen.unmount();
   });
 
-  it('genera nel formato scelto, salva e condivide, poi mostra l’esito', async () => {
+  it('generates in the chosen format, saves and shares, then shows the outcome', async () => {
     const { result, exportService, fileSink } = setup();
     const screen = await result;
     const service = exportService as InMemoryBookExportService;
@@ -89,7 +89,7 @@ describe('ExportTab', () => {
     await screen.unmount();
   });
 
-  it('un errore della callable diventa un messaggio leggibile', async () => {
+  it('a callable error becomes a readable message', async () => {
     const failing: BookExportService = {
       exportBook: async () => {
         throw new Error('Il libro non ha capitoli da esportare.');

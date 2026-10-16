@@ -1,7 +1,7 @@
 /**
- * Divisore ornamentale: linea · rombo dorato · linea (firma visiva).
- * Variante `prominent` per i frontespizi (sotto "bookin3voice" nel mockup),
- * variante normale per i divisori interni (editor).
+ * Ornamental divider: line · golden diamond · line (visual signature).
+ * `prominent` variant for title pages (under "bookin3voice" in the mockup),
+ * normal variant for inner dividers (editor).
  */
 import { StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -9,7 +9,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../theme';
 
 interface OrnamentDividerProps {
-  /** Linee oro attenuato e rombo oro pieno (frontespizio). */
+  /** Muted gold lines and solid gold diamond (title page). */
   prominent?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;

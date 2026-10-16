@@ -1,20 +1,20 @@
-// Test d'integrazione della callable refineChapter contro
-// l'emulatore Firestore (MAI progetti reali). Il modello è un fake
-// iniettato (Strategy RefineModel); la chiamata vera sta nel fumo opzionale
-// geminiRefine.smoke.test.ts. Si verificano:
-//  - percorso felice: suggerimenti validati, ancorati, scritti in batch nella
-//    sottocollezione `suggestions` + registro users/{uid}/refines/{requestId};
-//  - contesto sinossi/outline: sinossi del libro e outline del capitolo entrano nel prompt;
-//  - idempotenza requestId (retry → stessa risposta, UNA chiamata al modello;
-//    riuso su altro capitolo → already-exists);
-//  - dedup: i pending non decisi vengono sostituiti, accettati/rifiutati
-//    restano;
-//  - original non combaciante → scartato dal server;
-//  - output non conforme due volte → 'unavailable' e NESSUNA scrittura
-//    parziale (atomicità);
-//  - riserva su 503 del primario;
-//  - provider da settings/app (default gemini; sconosciuto → failed-precondition);
-//  - errori chiari (auth, input, textHash non combaciante, capitolo mancante).
+// Integration test of the refineChapter callable against the
+// Firestore emulator (NEVER real projects). The model is an injected fake
+// (RefineModel Strategy); the real call lives in the optional smoke test
+// geminiRefine.smoke.test.ts. The following is verified:
+//  - happy path: suggestions validated, anchored, batch-written to the
+//    `suggestions` subcollection + users/{uid}/refines/{requestId} registry entry;
+//  - synopsis/outline context: the book synopsis and chapter outline enter the prompt;
+//  - requestId idempotency (retry → same response, ONE model call;
+//    reuse on another chapter → already-exists);
+//  - dedup: undecided pending suggestions are replaced, accepted/rejected
+//    ones remain;
+//  - non-matching original → discarded by the server;
+//  - non-conforming output twice → 'unavailable' and NO partial
+//    write (atomicity);
+//  - fallback on a 503 from the primary;
+//  - provider from settings/app (default gemini; unknown → failed-precondition);
+//  - clear errors (auth, input, non-matching textHash, missing chapter).
 
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
@@ -27,9 +27,7 @@ import type { RefineChapterResponse, RefineModel } from '../ai/refineTypes';
 import { textHash } from '../ai/textHash';
 
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
-  throw new Error(
-    'Questi test girano SOLO contro l’emulatore Firestore (firebase emulators:exec).',
-  );
+  throw new Error('These tests run ONLY against the Firestore emulator (firebase emulators:exec).');
 }
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'demo-bookvoice-functions';
@@ -61,7 +59,7 @@ const OUTPUT_FINTO = {
   ],
 };
 
-/** Fake RefineModel: registra i prompt e risponde a copione. */
+/** Fake RefineModel: records the prompts and answers from a script. */
 class FakeRefineModel implements RefineModel {
   readonly prompts: RefinePrompt[] = [];
   private readonly script: (unknown | Error)[];
@@ -81,10 +79,10 @@ class FakeRefineModel implements RefineModel {
   }
 }
 
-/** Profilo di stile finto: i test non dipendono dai file veri in content/. */
+/** Fake style profile: the tests do not depend on the real files in content/. */
 const PROFILO_FINTO = {
-  styleBible: 'Style Bible di prova: la voce è intoccabile.',
-  fewShots: 'Esempio finto.',
+  styleBible: 'Test Style Bible: the voice is untouchable.',
+  fewShots: 'Fake example.',
 };
 
 let db: Firestore;
@@ -182,8 +180,8 @@ beforeAll(() => {
   db = getFirestore();
 });
 
-describe('refineChapter (emulatore Firestore, modello finto)', () => {
-  it('percorso felice: suggerimenti ancorati, batch su Firestore e registro', async () => {
+describe('refineChapter (Firestore emulator, fake model)', () => {
+  it('happy path: anchored suggestions, Firestore batch and registry entry', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const model = new FakeRefineModel();
@@ -200,7 +198,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(TESTO.slice(first?.span.from, first?.span.to)).toBe('posò lentamente');
     expect(first?.state).toBe('pending');
 
-    // scritti in batch nella sottocollezione, con metadati di provenienza
+    // batch-written to the subcollection, with provenance metadata
     const stored = await listSuggestions(uid, bookId, chapterId);
     expect(stored).toHaveLength(3);
     expect(stored.map((s) => s.id).sort()).toEqual(['req-1-1', 'req-1-2', 'req-1-3']);
@@ -209,13 +207,13 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(storedFirst.state).toBe('pending');
     expect(storedFirst.textHash).toBe(textHash(TESTO));
 
-    // registro di idempotenza
+    // idempotency registry
     const registry = await db.doc(`users/${uid}/refines/req-1`).get();
     expect(registry.exists).toBe(true);
     expect(registry.get('chapterId')).toBe(chapterId);
   });
 
-  it('contesto sinossi/outline: Style Bible nel prefisso, sinossi e outline nello user text', async () => {
+  it('synopsis/outline context: Style Bible in the prefix, synopsis and outline in the user text', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid, true);
     const model = new FakeRefineModel();
@@ -223,15 +221,15 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     await run(makeDeps(model), uid, input(bookId, chapterId, 'req-ctx'));
 
     const prompt = model.prompts[0];
-    expect(prompt?.systemInstruction).toContain('Style Bible di prova');
-    expect(prompt?.systemInstruction).toContain('Esempio finto');
+    expect(prompt?.systemInstruction).toContain('Test Style Bible');
+    expect(prompt?.systemInstruction).toContain('Fake example');
     expect(prompt?.userText).toContain('Nora eredita un faro dismesso');
     expect(prompt?.userText).toContain('1. L’arrivo');
     expect(prompt?.userText).toContain('Il registro strappato');
     expect(prompt?.userText).toContain(TESTO);
   });
 
-  it('idempotenza: stesso requestId → stessa risposta, UNA chiamata al modello', async () => {
+  it('idempotency: same requestId → same response, ONE model call', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const model = new FakeRefineModel();
@@ -245,7 +243,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(await listSuggestions(uid, bookId, chapterId)).toHaveLength(3);
   });
 
-  it('stesso requestId su un altro capitolo → already-exists', async () => {
+  it('same requestId on another chapter → already-exists', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     await db.doc(`users/${uid}/books/${bookId}/chapters/cap-2`).set({
@@ -266,7 +264,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     ).rejects.toMatchObject({ code: 'already-exists' });
   });
 
-  it('dedup: una nuova rifinitura sostituisce i pending, non i decisi', async () => {
+  it('dedup: a new refine replaces the pending suggestions, not the decided ones', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const suggestionsRef = db.collection(
@@ -278,7 +276,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
       span: { from: 0, to: 5 },
       original: 'Elena',
       proposals: ['Lei'],
-      rationale: 'vecchio giro',
+      rationale: 'previous run',
       state: 'pending',
       textHash: 'v1-vecchio',
       requestId: 'req-vecchio',
@@ -290,7 +288,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
       span: { from: 0, to: 5 },
       original: 'Elena',
       proposals: ['Lei'],
-      rationale: 'deciso',
+      rationale: 'decided',
       state: 'accepted',
       textHash: 'v1-vecchio',
       requestId: 'req-vecchio',
@@ -306,7 +304,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(stored.filter((s) => s.state === 'pending')).toHaveLength(3);
   });
 
-  it('original non combaciante col testo → scartato dal server', async () => {
+  it('original not matching the text → discarded by the server', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const model = new FakeRefineModel([
@@ -316,7 +314,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
           {
             original: 'frase che non esiste nel capitolo',
             kind: 'style',
-            rationale: 'inventata',
+            rationale: 'made up',
             proposals: ['x'],
           },
         ],
@@ -329,7 +327,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(response.discarded).toBe(1);
   });
 
-  it('output non conforme due volte → unavailable e NESSUNA scrittura parziale', async () => {
+  it('non-conforming output twice → unavailable and NO partial write', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const model = new FakeRefineModel([{ garbage: true }, { garbage: true }]);
@@ -342,7 +340,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect((await db.doc(`users/${uid}/refines/req-rotto`).get()).exists).toBe(false);
   });
 
-  it('retry: output non conforme al primo tentativo, valido al secondo', async () => {
+  it('retry: non-conforming output on the first attempt, valid on the second', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const model = new FakeRefineModel([{ garbage: true }, OUTPUT_FINTO]);
@@ -353,14 +351,14 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     expect(model.prompts).toHaveLength(2);
   });
 
-  it('503 sul primario → risponde la riserva (fallback configurato)', async () => {
+  it('503 on the primary → the fallback answers (fallback configured)', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const primary = new FakeRefineModel(
       [new GeminiHttpError(503, 'high demand'), new GeminiHttpError(503, 'high demand')],
-      'fake-primario',
+      'fake-primary',
     );
-    const fallback = new FakeRefineModel([OUTPUT_FINTO], 'fake-riserva');
+    const fallback = new FakeRefineModel([OUTPUT_FINTO], 'fake-fallback');
 
     const response = await run(
       makeDeps(primary, fallback),
@@ -368,12 +366,12 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
       input(bookId, chapterId, 'req-503'),
     );
 
-    expect(response.model).toBe('fake-riserva');
+    expect(response.model).toBe('fake-fallback');
     expect(primary.prompts).toHaveLength(2);
     expect(fallback.prompts).toHaveLength(1);
   });
 
-  it('provider da settings/app: gemini esplicito ok, sconosciuto → failed-precondition', async () => {
+  it('provider from settings/app: explicit gemini ok, unknown → failed-precondition', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     await db.doc(`users/${uid}/settings/app`).set({ aiProvider: 'gemini' });
@@ -385,7 +383,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 
-  it('textHash non combaciante → invalid-argument', async () => {
+  it('non-matching textHash → invalid-argument', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     await expect(
@@ -396,7 +394,7 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 
-  it('tetto d’uso: blocca oltre il limite, il retry idempotente non conta', async () => {
+  it('usage cap: blocks above the limit, the idempotent retry does not count', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const deps: RefineChapterDeps = {
@@ -407,17 +405,17 @@ describe('refineChapter (emulatore Firestore, modello finto)', () => {
       },
     };
 
-    // prima rifinitura reale: consuma l'unico slot del giorno
+    // first real refine: consumes the only slot of the day
     await run(deps, uid, input(bookId, chapterId, 'req-lim-1'));
-    // retry di rete sullo stesso requestId: short-circuit idempotente, NON conta
+    // network retry on the same requestId: idempotent short-circuit, does NOT count
     await run(deps, uid, input(bookId, chapterId, 'req-lim-1'));
-    // una nuova richiesta oltre il tetto viene respinta prima di toccare il modello
+    // a new request over the cap is rejected before touching the model
     await expect(run(deps, uid, input(bookId, chapterId, 'req-lim-2'))).rejects.toMatchObject({
       code: 'resource-exhausted',
     });
   });
 
-  it('errori chiari: senza auth, input malformato, capitolo mancante', async () => {
+  it('clear errors: no auth, malformed input, missing chapter', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const deps = makeDeps(new FakeRefineModel());

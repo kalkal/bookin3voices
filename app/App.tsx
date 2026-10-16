@@ -1,14 +1,14 @@
 /**
- * Radice dell'app: bootstrap dell'identità (accesso anonimo,
- * lib/auth), costruzione dei repository (Firestore + mirror offline-first) e
- * navigazione a stack tra le schermate dell'app:
- * Libreria → Libro → Dettatura / Editor+Review, ingranaggio →
- * Impostazioni. Uno stack fatto in casa basta per queste rotte; una
- * navigation library si potrà innestare qui senza toccare le schermate.
+ * App root: identity bootstrap (anonymous sign-in, lib/auth), repository
+ * construction (Firestore + offline-first mirror) and stack navigation
+ * between the app screens:
+ * Library → Book → Dictation / Editor+Review, gear icon → Settings.
+ * A home-grown stack is enough for these routes; a navigation library can be
+ * plugged in here later without touching the screens.
  *
- * Modalità E2E Maestro (EXPO_PUBLIC_E2E=1): niente Firebase —
- * servizi in memoria, sign-in fittizio, motore di dettatura a script e stack
- * che parte già sulla Dettatura ("Capitolo I", come si aspetta il flusso).
+ * Maestro E2E mode (EXPO_PUBLIC_E2E=1): no Firebase — in-memory services,
+ * fake sign-in, scripted dictation engine and a stack that starts directly on
+ * Dictation ("Capitolo I", as the flow expects).
  */
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
@@ -77,7 +77,7 @@ import { ensureSignedIn } from './src/lib/auth';
 import { auth, firestore, functions } from './src/lib/firebase';
 import { toRoman } from './src/lib/roman';
 
-/** Tutte le dipendenze delle schermate: iniettabili nei test. */
+/** All the screens' dependencies: injectable in tests. */
 export interface AppServices {
   bookRepository: BookRepository;
   chapterRepository: ChapterRepository;
@@ -94,7 +94,7 @@ export interface AppServices {
 }
 
 export interface AppProps {
-  /** Iniettabili nei test; default: Firebase reale (emulatori in sviluppo). */
+  /** Injectable in tests; default: real Firebase (emulators in development). */
   createServices?: (uid: string) => AppServices;
   signIn?: () => Promise<string>;
 }
@@ -111,8 +111,8 @@ function defaultServices(uid: string): AppServices {
   return {
     bookRepository: new FirestoreBookRepository({ db: firestore, uid }),
     chapterRepository,
-    // offline-first come i capitoli: outbox durabile su AsyncStorage + Firestore,
-    // così una nota creata offline non si perde nemmeno se l'app viene uccisa
+    // offline-first like chapters: durable outbox on AsyncStorage + Firestore,
+    // so a note created offline is not lost even if the app is killed
     noteRepository: new OfflineFirstNoteRepository({
       remote: new FirestoreNoteRepository({ db: firestore, uid }),
       mirror: new LocalNoteRepository(),
@@ -120,7 +120,7 @@ function defaultServices(uid: string): AppServices {
     settingsRepository: new LocalSettingsRepository(),
     dailyProgressRepository,
     revisionRepository: new LocalRevisionRepository(),
-    // rifinitura vera: callable refineChapter dietro la stessa interfaccia
+    // real refinement: refineChapter callable behind the same interface
     suggestionsProvider: new CallableSuggestionsProvider({ functions }),
     exportService: new CallableBookExportService({ functions }),
     pendingSuggestions: new FirestorePendingSuggestionsRepository({ db: firestore, uid }),
@@ -130,15 +130,15 @@ function defaultServices(uid: string): AppServices {
   };
 }
 
-// ── Modalità E2E ────────────────────────────────────────────────
-// Ogni run Maestro parte pulito: tutto in memoria, niente AsyncStorage né
-// Firebase. Il capitolo della dettatura NON è seminato: il flusso verifica
-// proprio il percorso "capitolo vuoto → dettatura → salvato".
+// ── E2E mode ────────────────────────────────────────────────────
+// Every Maestro run starts clean: everything in memory, no AsyncStorage or
+// Firebase. The dictation chapter is NOT seeded: the flow checks exactly the
+// "empty chapter → dictation → saved" path.
 const E2E_CHAPTER: ChapterRef = { bookId: 'libro-di-prova', chapterId: 'capitolo-1' };
 
-// Capitolo già scritto per il flusso review-accept: il testo fa scattare due
-// regole del FakeSuggestionsProvider — «posò lentamente» (stile, 3 varianti)
-// e «un altra» (grammatica, una proposta) — che il flusso accetta e rifiuta.
+// Chapter already written for the review-accept flow: the text triggers two
+// FakeSuggestionsProvider rules — «posò lentamente» (style, 3 variants) and
+// «un altra» (grammar, one proposal) — which the flow accepts and rejects.
 const E2E_REVIEW_CHAPTER: ChapterRef = { bookId: E2E_CHAPTER.bookId, chapterId: 'capitolo-2' };
 const E2E_REVIEW_TEXT = 'Elena posò lentamente la tazza sul tavolo. Prese un altra decisione.';
 const e2eEngine = isE2E ? createE2EDictationEngine() : undefined;
@@ -168,8 +168,8 @@ function e2eServices(): AppServices {
     revisionRepository: new InMemoryRevisionRepository(),
     suggestionsProvider: new FakeSuggestionsProvider(),
     exportService: new InMemoryBookExportService(),
-    // 2 pending fissi: fanno comparire l'avviso della tab Export (flusso
-    // export-epub); il conteggio vero per-libro è del repository Firestore.
+    // 2 fixed pending suggestions: they make the Export tab warning appear
+    // (export-epub flow); the real per-book count comes from the Firestore repository.
     pendingSuggestions: new InMemoryPendingSuggestionsRepository(2),
     exportFileSink: new InMemoryExportFileSink(),
     backupService: new InMemoryBackupService(),
@@ -203,7 +203,7 @@ function AppNavigator({ services }: { services: AppServices }) {
   const push = (next: Route) => setStack((current) => [...current, next]);
   const pop = () => setStack((current) => (current.length > 1 ? current.slice(0, -1) : current));
 
-  // tasto indietro Android: risale lo stack finché non si è in Libreria
+  // Android back button: pops the stack until the Library is reached
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       let handled = false;
@@ -248,7 +248,7 @@ function AppNavigator({ services }: { services: AppServices }) {
     case 'dictation':
       return (
         <DictationScreen
-          // key: cambiando capitolo si rimonta la schermata (sessione nuova)
+          // key: changing chapter remounts the screen (fresh session)
           key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
           chapter={route.chapter}
           chapterTitle={route.title}
@@ -331,20 +331,20 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     return () => {
       cancelled = true;
     };
-    // il flusso di sign-in è fisso per la vita dell'app
+    // the sign-in flow is fixed for the lifetime of the app
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const services = useMemo(() => {
     if (uid === null) return null;
     return (createServices ?? (isE2E ? e2eServices : defaultServices))(uid);
-    // il factory è fisso per la vita dell'app
+    // the factory is fixed for the lifetime of the app
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
   if (!fontsReady || (services === null && !authError)) {
-    // schermata vuota color carta finché font e identità non sono pronti
-    // (niente flash di serif sbagliato, niente Libreria senza dati)
+    // blank paper-colored screen until fonts and identity are ready
+    // (no flash of the wrong serif, no Library without data)
     return <View style={[styles.container, { backgroundColor: paperPalette.background }]} />;
   }
 

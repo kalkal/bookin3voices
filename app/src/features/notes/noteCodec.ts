@@ -1,24 +1,24 @@
-// Decodifica dei documenti nota al confine (Zod + upgrade-on-read).
-// Funzioni pure: i test non hanno bisogno né dell'SDK né dell'emulatore.
+// Decoding of note documents at the boundary (Zod + upgrade-on-read).
+// Pure functions: tests need neither the SDK nor the emulator.
 
 import { noteDocSchema } from './types';
 import type { Note, NoteDoc } from './types';
 
 /**
- * Upgrade-on-read: ogni documento porta la propria schemaVersion e
- * i documenti vecchi si aggiornano pigramente alla prima lettura. Oggi esiste
- * solo la v1, quindi il passaggio è l'identità; quando lo schema evolverà, qui
- * si aggiungerà la migrazione `v1 → v2` (e il repository riscriverà il
- * documento aggiornato).
+ * Upgrade-on-read: every document carries its own schemaVersion and
+ * old documents are lazily upgraded on first read. Only v1 exists
+ * today, so the step is the identity; when the schema evolves, the `v1 → v2`
+ * migration will be added here (and the repository will rewrite the
+ * upgraded document).
  */
 export function upgradeNoteData(data: Record<string, unknown>): Record<string, unknown> {
   return data;
 }
 
 /**
- * Valida (e aggiorna, se serve) i dati grezzi di un documento nota.
- * Ritorna null su payload non conformi: sta al chiamante decidere se saltare
- * la riga (liste) o considerarlo un errore (letture puntuali).
+ * Validates (and upgrades, if needed) the raw data of a note document.
+ * Returns null for non-conforming payloads: the caller decides whether to skip
+ * the row (lists) or treat it as an error (single reads).
  */
 export function decodeNoteDoc(data: Record<string, unknown>): NoteDoc | null {
   const parsed = noteDocSchema.safeParse(upgradeNoteData(data));

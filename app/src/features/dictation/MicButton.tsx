@@ -1,8 +1,8 @@
 /**
- * Pulsante microfono dominante della Dettatura:
- * cerchio verde biblioteca da 88px con tre stati visivi — fermo, in ascolto
- * (anello oro pulsante), in pausa (cerchio su carta con bordo verde).
- * L'aptica è del chiamante: qui solo la resa visiva e l'accessibilità.
+ * Dominant microphone button of the Dictation screen:
+ * an 88px library-green circle with three visual states: idle, listening
+ * (pulsing gold ring), paused (circle on paper with a green border).
+ * Haptics belong to the caller: only rendering and accessibility live here.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
@@ -21,7 +21,7 @@ interface MicButtonProps {
 }
 
 const BUTTON_SIZE = 88;
-// anello oro: il mockup lo mostra staccato di 6px dal cerchio
+// gold ring: the mockup shows it detached 6px from the circle
 const RING_SIZE = BUTTON_SIZE + 16;
 
 const ACCESSIBILITY_LABEL_KEYS: Record<MicVisualState, string> = {
@@ -32,8 +32,8 @@ const ACCESSIBILITY_LABEL_KEYS: Record<MicVisualState, string> = {
 
 export function MicButton({ state, onPress, disabled = false, testID }: MicButtonProps) {
   const { colors } = useTheme();
-  // Animated.Value stabile per la vita del componente (in state, non in ref:
-  // leggerlo durante il render è legittimo per interpolate)
+  // Animated.Value stable for the component's lifetime (in state, not in a ref:
+  // reading it during render is legitimate for interpolate)
   const [pulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {

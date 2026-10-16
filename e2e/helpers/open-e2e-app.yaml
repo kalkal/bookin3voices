@@ -1,19 +1,19 @@
-# Preambolo comune dei flussi E2E: rilancio pulito dell'app in
-# modalità E2E e gestione del developer menu del dev client.
-# Prerequisiti (li prepara e2e/run-android.mjs): emulatore avviato, dev client
-# dev.kalkal.bookvoice installato, Metro su 8081 con EXPO_PUBLIC_E2E=1 e
+# Shared preamble of the E2E flows: clean relaunch of the app in
+# E2E mode and handling of the dev client's developer menu.
+# Prerequisites (prepared by e2e/run-android.mjs): emulator started, dev client
+# dev.kalkal.bookvoice installed, Metro on 8081 with EXPO_PUBLIC_E2E=1 and
 # `adb reverse tcp:8081`.
-# `stopApp` prima del deep link: ogni flusso riparte da processo (e quindi
-# stato in memoria) fresco anche quando i flussi girano in sequenza.
+# `stopApp` before the deep link: every flow restarts from a fresh process (and thus
+# in-memory state) even when the flows run in sequence.
 appId: dev.kalkal.bookvoice
 ---
 - stopApp
-# Il deep link del dev client carica il bundle E2E servito da Metro.
+# The dev client's deep link loads the E2E bundle served by Metro.
 - openLink: "exp+bookvoice://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
 
-# Si attende il primo bundle (download da Metro, timeout largo). Al primo
-# avvio dopo l'installazione il dev client mostra il developer menu in un
-# bottom sheet che copre l'intera gerarchia: va chiuso prima di procedere.
+# Wait for the first bundle (download from Metro, wide timeout). On the first
+# launch after installation the dev client shows the developer menu in a
+# bottom sheet that covers the whole hierarchy: it must be closed before proceeding.
 - extendedWaitUntil:
     visible:
       text: 'Continue|CAPITOLO I'
@@ -23,10 +23,10 @@ appId: dev.kalkal.bookvoice
       visible: 'Continue'
     commands:
       - tapOn: 'Continue'
-      # dopo «Continue» resta aperto il menu vero e proprio: back lo chiude
+      # after «Continue» the actual menu stays open: back closes it
       - back
 
-# Rotta iniziale in modalità E2E: la Dettatura del "Capitolo I".
+# Initial route in E2E mode: the Dictation of "Capitolo I".
 - extendedWaitUntil:
     visible:
       id: "dictation-screen"

@@ -1,7 +1,7 @@
-// Test di componente della schermata Progressi: anello obiettivo (oggi/obiettivo),
-// card serie (computeStreak), striscia della settimana con spunte, barre degli
-// ultimi 7 giorni e riga del libro più recente. Dati iniettati via repository
-// finti + InMemoryBookRepository, come per LibraryScreen/NotesScreen.
+// Component test of the Progress screen: goal ring (today/goal),
+// streak card (computeStreak), week strip with checkmarks, bars for the
+// last 7 days and the most recent book row. Data injected via fake
+// repositories + InMemoryBookRepository, as for LibraryScreen/NotesScreen.
 
 import { act, fireEvent, render } from '@testing-library/react-native';
 
@@ -14,7 +14,7 @@ import { buildHistory, reconcileStreak } from '../dailyProgress';
 import type { DailyProgressRepository } from '../dailyProgress';
 
 const TODAY = '2026-09-10';
-// storico: 10 e 09 e 08 sopra l'obiettivo (500), 07 sotto → serie di 3
+// history: 10, 09 and 08 above the goal (500), 07 below → streak of 3
 const DAYS: Record<string, number> = {
   '2026-09-05': 600,
   '2026-09-06': 520,
@@ -58,7 +58,7 @@ async function renderScreen(overrides?: {
       />
     </ThemeProvider>,
   );
-  // due passaggi: caricamento impostazioni → getStreak riconciliato (catena di promise)
+  // two steps: settings load → reconciled getStreak (promise chain)
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
@@ -67,33 +67,33 @@ async function renderScreen(overrides?: {
 }
 
 describe('ProgressScreen', () => {
-  it('anello: mostra parole di oggi e obiettivo', async () => {
+  it("ring: shows today's words and the goal", async () => {
     const { getByTestId } = await renderScreen();
     const ring = getByTestId('progress-ring');
     expect(ring).toHaveTextContent(/512/);
     expect(ring).toHaveTextContent(/500/);
   });
 
-  it('serie: computeStreak sui giorni sopra obiettivo (qui 3)', async () => {
+  it('streak: computeStreak over the days above the goal (3 here)', async () => {
     const { getByTestId } = await renderScreen({ goal: 800 });
-    // con obiettivo 800: solo 09 (800) e ieri... 10=512<800 → si guarda da 09=800 (ok), 08=700<800 → serie 1
+    // with goal 800: only 09 (800) and yesterday... 10=512<800 → look from 09=800 (ok), 08=700<800 → streak 1
     expect(getByTestId('progress-streak')).toHaveTextContent(/1/);
   });
 
-  it('serie: obiettivo 500 → tre giorni di fila', async () => {
+  it('streak: goal 500 → three days in a row', async () => {
     const { getByTestId } = await renderScreen({ goal: 500 });
     expect(getByTestId('progress-streak')).toHaveTextContent(/3/);
   });
 
-  it('striscia settimana: sette celle, oggi incluso', async () => {
+  it('week strip: seven cells, today included', async () => {
     const { getByTestId } = await renderScreen();
-    // 7 giorni fino a oggi: 04 → 10 settembre
+    // 7 days up to today: September 04 → 10
     for (const date of buildHistory(DAYS, 7, TODAY).map((d) => d.date)) {
       expect(getByTestId(`progress-day-${date}`)).toBeTruthy();
     }
   });
 
-  it('striscia settimana: giorno raggiunto marcato, giorno sotto no', async () => {
+  it('week strip: day with goal met is marked, day below is not', async () => {
     const { getByTestId } = await renderScreen({ goal: 500 });
     expect(getByTestId('progress-day-2026-09-09')).toHaveAccessibilityValue({ text: 'raggiunto' });
     expect(getByTestId('progress-day-2026-09-07')).toHaveAccessibilityValue({
@@ -101,14 +101,14 @@ describe('ProgressScreen', () => {
     });
   });
 
-  it('barre: una barra per ciascuno degli ultimi 7 giorni', async () => {
+  it('bars: one bar for each of the last 7 days', async () => {
     const { getByTestId } = await renderScreen();
     for (const date of buildHistory(DAYS, 7, TODAY).map((d) => d.date)) {
       expect(getByTestId(`progress-bar-${date}`)).toBeTruthy();
     }
   });
 
-  it('riga libro: titolo e contatori del libro più recente', async () => {
+  it('book row: title and counters of the most recent book', async () => {
     const books = new InMemoryBookRepository();
     books.seed({ id: 'faro', title: 'Il custode del faro', wordCount: 24_310, chapterCount: 9 });
     const { getByTestId } = await renderScreen({ books });
@@ -118,12 +118,12 @@ describe('ProgressScreen', () => {
     expect(row).toHaveTextContent(/24\.310 parole/);
   });
 
-  it('senza libri la riga libro non compare', async () => {
+  it('with no books the book row does not appear', async () => {
     const { queryByTestId } = await renderScreen();
     expect(queryByTestId('progress-book')).toBeNull();
   });
 
-  it('il tasto indietro torna alla schermata precedente', async () => {
+  it('the back button returns to the previous screen', async () => {
     const onBack = jest.fn();
     const { getByTestId } = await renderScreen({ onBack });
     await fireEvent.press(getByTestId('progress-back'));

@@ -1,35 +1,35 @@
-// Contratto di accesso ai capitoli (Repository pattern): la UI non
-// importa mai l'SDK di persistenza. Due livelli di contratto:
-//  - ChapterTextRepository: il minimo che serve a Dettatura ed Editor
-// — caricare e salvare il testo grezzo;
-//  - ChapterRepository: il Contratto completo (CRUD, riordino
-//    e sottoscrizioni `observe*`), implementato su Firestore dalla integrazione Firestore.
+// Chapter access contract (Repository pattern): the UI never
+// imports the persistence SDK. Two contract levels:
+//  - ChapterTextRepository: the minimum Dictation and Editor need,
+//    loading and saving the raw text;
+//  - ChapterRepository: the full contract (CRUD, reordering
+//    and `observe*` subscriptions), implemented on Firestore.
 
 import { z } from 'zod';
 
-/** Coordinate di un capitolo dentro un libro (rispecchia il path del). */
+/** Coordinates of a chapter within a book (mirrors the document path). */
 export interface ChapterRef {
   bookId: string;
   chapterId: string;
 }
 
-/** Stati del capitolo: bozza → rifinito → finale. */
+/** Chapter states: draft → refined → final. */
 export const CHAPTER_STATUSES = ['draft', 'refined', 'final'] as const;
 export type ChapterStatus = (typeof CHAPTER_STATUSES)[number];
 
 /**
- * Traccia del capitolo generata dalla scaletta:
- * riassunto e beat principali. Il titolo proposto vive nel `title` del
- * capitolo stesso. Visibile in dettatura come traccia.
+ * Chapter track generated from the synopsis outline:
+ * summary and main beats. The proposed title lives in the chapter's own
+ * `title`. Shown in dictation as the track.
  */
 export const chapterOutlineSchema = z.object({
   summary: z.string(),
   beats: z.array(z.string()),
   /**
-   * Indici (0-based) dei beat spuntati in dettatura: puro segno visivo
-   * di "coperto", nessuna automazione. Additivo come `outline`: i documenti
-   * nati prima si normalizzano a [] senza bump di schemaVersion. Vive DENTRO
-   * l'outline così una rigenerazione della traccia riparte con i beat da fare.
+   * Indices (0-based) of the beats ticked in dictation: a purely visual
+   * "covered" mark, no automation. Additive like `outline`: documents
+   * born earlier normalize to [] without a schemaVersion bump. It lives INSIDE
+   * the outline so that regenerating the track restarts with the beats to do.
    */
   beatsDone: z.array(z.number().int().min(0)).default([]),
 });
@@ -37,11 +37,11 @@ export const chapterOutlineSchema = z.object({
 export type ChapterOutline = z.infer<typeof chapterOutlineSchema>;
 
 /**
- * Documento capitolo come vive su Firestore, validato al confine.
- * `updatedAt` viaggia nel dominio come millisecondi epoch: i tipi dell'SDK
- * (Timestamp) non escono mai dal repository.
- * `outline` è additivo: i documenti nati prima non ce l'hanno,
- * il default li normalizza a null senza bump di schemaVersion.
+ * Chapter document as it lives on Firestore, validated at the boundary.
+ * `updatedAt` travels in the domain as epoch milliseconds: the SDK types
+ * (Timestamp) never leave the repository.
+ * `outline` is additive: documents born earlier do not have it,
+ * the default normalizes them to null without a schemaVersion bump.
  */
 export const chapterDocSchema = z.object({
   schemaVersion: z.literal(1),
@@ -56,15 +56,15 @@ export const chapterDocSchema = z.object({
 
 export type ChapterDoc = z.infer<typeof chapterDocSchema>;
 
-/** Capitolo completo (documento + coordinate), per editor e dettatura. */
+/** Full chapter (document + coordinates), for editor and dictation. */
 export interface Chapter extends ChapterDoc {
   id: string;
   bookId: string;
 }
 
 /**
- * Riga della lista capitoli (tab Capitoli del Libro). Niente rawText:
- * la lista non deve dipendere dal testo integrale.
+ * Row of the chapter list (Chapters tab of the Book). No rawText:
+ * the list must not depend on the full text.
  */
 export interface ChapterSummary {
   id: string;
@@ -76,7 +76,7 @@ export interface ChapterSummary {
   updatedAt: number;
 }
 
-/** Campi modificabili di un capitolo (il testo passa da saveRawText). */
+/** Editable fields of a chapter (text goes through saveRawText). */
 export interface ChapterPatch {
   title?: string;
   status?: ChapterStatus;
@@ -85,34 +85,34 @@ export interface ChapterPatch {
 
 export interface CreateChapterInput {
   title: string;
-  /** Traccia dalla scaletta; assente = capitolo senza outline. */
+  /** Track from the outline; absent = chapter without an outline. */
   outline?: ChapterOutline;
 }
 
 /**
- * Contratto minimo usato da Dettatura ed Editor: solo il testo grezzo.
- * Le schermate che scrivono testo dipendono da questo, non dal CRUD completo.
+ * Minimal contract used by Dictation and Editor: raw text only.
+ * Screens that write text depend on this, not on the full CRUD.
  */
 export interface ChapterTextRepository {
   /**
-   * Testo grezzo del capitolo, o null se il capitolo non è mai stato salvato.
-   * Un errore di lettura è un'eccezione: mai confondere "vuoto" con "rotto".
+   * Raw chapter text, or null if the chapter was never saved.
+   * A read error is an exception: never confuse "empty" with "broken".
    */
   loadRawText(ref: ChapterRef): Promise<string | null>;
-  /** Sostituisce il testo grezzo del capitolo (fonte di verità). */
+  /** Replaces the chapter's raw text (source of truth). */
   saveRawText(ref: ChapterRef, rawText: string): Promise<void>;
 }
 
-/** Ferma una sottoscrizione observe* (Observer del). */
+/** Stops an observe* subscription (Observer). */
 export type Unsubscribe = () => void;
 
 /**
- * Contratto completo. Le scritture sono ottimistiche
- * (Optimistic UI): risolvono appena la mutazione è presa in carico dal
- * layer di persistenza; l'esito consolidato arriva dagli observe*.
+ * Full contract. Writes are optimistic
+ * (Optimistic UI): they resolve as soon as the mutation is taken over by the
+ * persistence layer; the settled outcome arrives from the observe* methods.
  */
 export interface ChapterRepository extends ChapterTextRepository {
-  /** Lista ordinata per `order`; si riemette a ogni cambiamento. */
+  /** List ordered by `order`; re-emitted on every change. */
   observeChapters(
     bookId: string,
     onChange: (chapters: ChapterSummary[]) => void,
@@ -124,14 +124,14 @@ export interface ChapterRepository extends ChapterTextRepository {
     onError?: (error: Error) => void,
   ): Unsubscribe;
   getChapter(ref: ChapterRef): Promise<Chapter | null>;
-  /** Crea in coda (order = max + 1) e incrementa book.chapterCount. */
+  /** Creates at the end (order = max + 1) and increments book.chapterCount. */
   createChapter(bookId: string, input: CreateChapterInput): Promise<Chapter>;
   updateChapter(ref: ChapterRef, patch: ChapterPatch): Promise<void>;
   /**
-   * Riscrive `order` secondo l'ordine degli id ricevuti (drag&drop del).
-   * Id mancanti o estranei sono un errore: il riordino è totale, mai parziale.
+   * Rewrites `order` according to the order of the ids received (drag & drop).
+   * Missing or foreign ids are an error: reordering is total, never partial.
    */
   reorderChapters(bookId: string, orderedIds: readonly string[]): Promise<void>;
-  /** Elimina il capitolo e aggiorna i contatori denormalizzati del libro. */
+  /** Deletes the chapter and updates the book's denormalized counters. */
   deleteChapter(ref: ChapterRef): Promise<void>;
 }

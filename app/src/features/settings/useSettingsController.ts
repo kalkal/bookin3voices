@@ -1,7 +1,7 @@
-// Logica della schermata Impostazioni: carica il documento dal repository,
-// persiste ogni modifica (scritture rare: si salva subito, senza debounce) e
-// tiene il ThemeProvider allineato alla preferenza di tema — compreso
-// "automatico", che segue il tema di sistema.
+// Logic of the Settings screen: loads the document from the repository,
+// persists every change (rare writes: saved immediately, no debounce) and
+// keeps the ThemeProvider aligned with the theme preference — including
+// "automatic", which follows the system theme.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useColorScheme } from 'react-native';
@@ -13,9 +13,9 @@ import { DAILY_GOAL_MAX, DAILY_GOAL_MIN, DEFAULT_SETTINGS } from './types';
 import type { AppSettings, BackupFrequency, SettingsRepository, ThemePreference } from './types';
 
 /**
- * Traduce la preferenza salvata nel modo concreto del ThemeProvider.
- * `systemScheme` è il valore di `useColorScheme()` (in RN 0.86 può anche
- * essere "unspecified"): tutto ciò che non è "dark" cade sulla carta.
+ * Translates the saved preference into the ThemeProvider's concrete mode.
+ * `systemScheme` is the value of `useColorScheme()` (in RN 0.86 it can also
+ * be "unspecified"): everything that is not "dark" falls back to paper.
  */
 export function resolveThemeMode(
   preference: ThemePreference,
@@ -26,14 +26,14 @@ export function resolveThemeMode(
 }
 
 export interface SettingsController {
-  /** false finché il documento non è stato letto dal repository. */
+  /** false until the document has been read from the repository. */
   ready: boolean;
   settings: AppSettings;
   setAiProvider: (id: AiProviderId) => void;
   setThemePreference: (preference: ThemePreference) => void;
   setDailyGoalWords: (words: number) => void;
   setBackupFrequency: (frequency: BackupFrequency) => void;
-  /** Registra l'istante dell'ultimo backup riuscito (promemoria visivo). */
+  /** Records the time of the last successful backup (visual reminder). */
   setLastBackupAt: (at: number) => void;
 }
 
@@ -48,7 +48,7 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     let cancelled = false;
     repository
       .load()
-      // un errore di lettura non blocca la schermata: si riparte dai default
+      // a read error does not block the screen: start again from the defaults
       .catch(() => DEFAULT_SETTINGS)
       .then((loaded) => {
         if (cancelled) return;
@@ -61,7 +61,7 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     };
   }, [repository]);
 
-  // il tema segue la preferenza (e il sistema, quando è "automatico")
+  // the theme follows the preference (and the system, when "automatic")
   useEffect(() => {
     if (!ready) return;
     setMode(resolveThemeMode(settings.theme, systemScheme));
@@ -73,9 +73,9 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
       settingsRef.current = next;
       setSettings(next);
       repository.save(next).catch((error) => {
-        // le impostazioni restano valide in memoria; al prossimo avvio si
-        // ripartirà dall'ultimo salvataggio riuscito
-        console.warn('Salvataggio impostazioni non riuscito', error);
+        // settings stay valid in memory; at the next launch we
+        // will restart from the last successful save
+        console.warn('Saving settings failed', error);
       });
     },
     [repository],

@@ -1,5 +1,5 @@
-// Outbox durabile delle note: upsert per id, rimozione, e payload
-// corrotto messo in quarantena senza perdere lo storage (come LocalChapterRepository).
+// Durable note outbox: upsert by id, removal, and a corrupt
+// payload quarantined without losing the storage (like LocalChapterRepository).
 
 import { LocalNoteRepository, type KeyValueStorage } from '../LocalNoteRepository';
 import type { Note } from '../types';
@@ -29,12 +29,12 @@ function note(id: string, over: Partial<Note> = {}): Note {
 }
 
 describe('LocalNoteRepository', () => {
-  it('outbox vuoto quando non c’è nulla', async () => {
+  it('empty outbox when there is nothing', async () => {
     const { storage } = memoryStorage();
     expect(await new LocalNoteRepository(storage).listPending('libro-1')).toEqual([]);
   });
 
-  it('savePending inserisce e poi aggiorna per id (nessun doppione)', async () => {
+  it('savePending inserts and then updates by id (no duplicates)', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalNoteRepository(storage);
     await repo.savePending(note('a', { text: 'prima' }));
@@ -46,7 +46,7 @@ describe('LocalNoteRepository', () => {
     expect(pending.find((n) => n.id === 'a')?.text).toBe('rivista');
   });
 
-  it('removePending toglie solo la nota indicata', async () => {
+  it('removePending removes only the indicated note', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalNoteRepository(storage);
     await repo.savePending(note('a'));
@@ -57,14 +57,14 @@ describe('LocalNoteRepository', () => {
     expect(pending.map((n) => n.id)).toEqual(['b']);
   });
 
-  it('sopravvive al "riavvio": un nuovo repository sullo stesso storage rilegge l’outbox', async () => {
+  it('survives a "restart": a new repository on the same storage re-reads the outbox', async () => {
     const { storage } = memoryStorage();
     await new LocalNoteRepository(storage).savePending(note('a', { text: 'persistente' }));
     const pending = await new LocalNoteRepository(storage).listPending('libro-1');
     expect(pending).toEqual([expect.objectContaining({ id: 'a', text: 'persistente' })]);
   });
 
-  it('payload corrotto: quarantena e outbox vuoto (mai perdere lo storage)', async () => {
+  it('corrupt payload: quarantine and empty outbox (never lose the storage)', async () => {
     const { storage, data } = memoryStorage();
     data.set('bookvoice/notes-outbox/libro-1', '{non è json valido');
     const repo = new LocalNoteRepository(storage);

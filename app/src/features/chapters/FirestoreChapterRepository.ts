@@ -1,14 +1,14 @@
-// ChapterRepository su Firestore. Regole seguite:
-//  - Zod al confine: ogni documento letto passa da chapterCodec (upgrade-on-read);
-//  - scritture ottimistiche: i metodi risolvono appena la mutazione è in coda
-//    nell'SDK (latency compensation) — attendere l'ack del server bloccherebbe
-//    per sempre offline. Gli errori consolidati arrivano su onWriteError;
-//  - contatori denormalizzati: ogni salvataggio aggiorna chapter.wordCount e
-//    book.wordCount via increment (le transazioni non funzionano offline);
-//    il delta si calcola dall'ultimo conteggio noto in sessione (regola di
-//    convivenza 2: durante una sessione il capitolo ha UN solo scrittore).
-//    Se il conteggio di partenza non è noto (avvio offline a freddo) il libro
-//    non viene toccato: ci pensa BookRepository.reconcileCounters.
+// ChapterRepository on Firestore. Rules followed:
+//  - Zod at the boundary: every document read goes through chapterCodec (upgrade-on-read);
+//  - optimistic writes: the methods resolve as soon as the mutation is queued
+//    in the SDK (latency compensation); waiting for the server ack would block
+//    forever when offline. Settled errors arrive on onWriteError;
+//  - denormalized counters: every save updates chapter.wordCount and
+//    book.wordCount via increment (transactions do not work offline);
+//    the delta is computed from the last word count known in the session
+//    (during a session the chapter has a SINGLE writer).
+//    If the starting count is unknown (cold offline start) the book
+//    is left untouched: BookRepository.reconcileCounters takes care of it.
 
 import {
   collection,
@@ -43,11 +43,11 @@ import type {
 
 export interface FirestoreChapterRepositoryOptions {
   db: Firestore;
-  /** Proprietario dei dati: tutto vive sotto users/{uid}. */
+  /** Data owner: everything lives under users/{uid}. */
   uid: string;
   /**
-   * Notifica degli errori di scrittura consolidati dal server (es. permessi).
-   * Il testo non si perde comunque: resta nel mirror locale offline-first.
+   * Notification of write errors settled by the server (e.g. permissions).
+   * The text is not lost anyway: it stays in the offline-first local mirror.
    */
   onWriteError?: (error: Error) => void;
 }
@@ -56,7 +56,7 @@ export class FirestoreChapterRepository implements ChapterRepository {
   private readonly db: Firestore;
   private readonly uid: string;
   private readonly onWriteError?: (error: Error) => void;
-  /** Ultimo conteggio parole noto per capitolo, per i delta di book.wordCount. */
+  /** Last known word count per chapter, for the book.wordCount deltas. */
   private readonly lastKnownWords = new Map<string, number>();
 
   constructor(options: FirestoreChapterRepositoryOptions) {
@@ -81,11 +81,11 @@ export class FirestoreChapterRepository implements ChapterRepository {
     return `${ref.bookId}/${ref.chapterId}`;
   }
 
-  /** Scrittura ottimistica: non si attende l'ack del server (vedi testata). */
+  /** Optimistic write: the server ack is not awaited (see header). */
   private commitInBackground(commit: Promise<unknown>): void {
     commit.catch((error) => {
       const wrapped = toError(error);
-      console.warn('Scrittura Firestore rifiutata dal server', wrapped);
+      console.warn('Firestore write rejected by the server', wrapped);
       this.onWriteError?.(wrapped);
     });
   }
@@ -111,8 +111,8 @@ export class FirestoreChapterRepository implements ChapterRepository {
         for (const docSnap of snapshot.docs) {
           const chapter = this.decodeSnapshot(docSnap, { bookId, chapterId: docSnap.id });
           if (chapter === null) {
-            // payload non conforme: si salta la riga senza rompere la lista
-            console.warn(`Capitolo ${bookId}/${docSnap.id} non conforme allo schema: saltato`);
+            // non-conforming payload: skip the row without breaking the list
+            console.warn(`Chapter ${bookId}/${docSnap.id} does not match the schema: skipped`);
             continue;
           }
           chapters.push(toChapterSummary(chapter));
@@ -140,8 +140,8 @@ export class FirestoreChapterRepository implements ChapterRepository {
     if (!snapshot.exists()) return null;
     const chapter = this.decodeSnapshot(snapshot, ref);
     if (chapter === null) {
-      // documento presente ma illeggibile: mai confondere "vuoto" con "rotto"
-      throw new Error(`Capitolo ${this.keyFor(ref)} non conforme allo schema`);
+      // document present but unreadable: never confuse "empty" with "broken"
+      throw new Error(`Chapter ${this.keyFor(ref)} does not match the schema`);
     }
     this.lastKnownWords.set(this.keyFor(ref), countWords(chapter.rawText));
     return chapter;
@@ -212,9 +212,9 @@ export class FirestoreChapterRepository implements ChapterRepository {
   }
 
   /**
-   * Prossimo `order` (coda della lista). Se la lettura fallisce (avvio offline
-   * a freddo, cache vuota) si ripiega su un ordine-epoch che finisce comunque
-   * in coda: il prossimo riordino lo rinormalizza a 0..n-1.
+   * Next `order` (end of the list). If the read fails (cold offline start,
+   * empty cache) we fall back to an epoch-based order that still lands
+   * at the end: the next reorder renormalizes it to 0..n-1.
    */
   private async nextOrder(bookId: string): Promise<number> {
     try {
@@ -254,8 +254,8 @@ export class FirestoreChapterRepository implements ChapterRepository {
   }
 
   async deleteChapter(ref: ChapterRef): Promise<void> {
-    // parole da scalare dal libro: dal documento se leggibile, altrimenti
-    // dall'ultimo conteggio di sessione; reconcileCounters copre il resto
+    // words to subtract from the book: from the document if readable, otherwise
+    // from the last session count; reconcileCounters covers the rest
     let words: number | undefined;
     try {
       const snapshot = await getDoc(this.chapterRef(ref));

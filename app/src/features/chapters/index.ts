@@ -1,6 +1,6 @@
-// API pubblica della feature capitoli: contratti (testo e CRUD completo)
-// e implementazioni — Firestore, mirror locale offline-first, in-memory
-// per i test.
+// Public API of the chapters feature: contracts (text and full CRUD)
+// and implementations: Firestore, offline-first local mirror, in-memory
+// for tests.
 
 export type {
   Chapter,

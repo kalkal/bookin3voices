@@ -1,9 +1,9 @@
-// SuggestionsProvider sulla callable `refineChapter` (functions):
-// l'unico punto dell'app che parla con le Cloud Functions per la rifinitura.
-// Subentra al FakeSuggestionsProvider dietro la STESSA interfaccia (Strategy):
-// la UI non cambia. La risposta passa da Zod al confine —
-// refineResultSchema scarta i campi extra del server (model, discarded, …)
-// e garantisce la gerarchia delle proposte.
+// SuggestionsProvider on the `refineChapter` callable (functions):
+// the only place in the app that talks to the Cloud Functions for refinement.
+// It takes over from FakeSuggestionsProvider behind the SAME interface (Strategy),
+// so the UI does not change. The response goes through Zod at the boundary:
+// refineResultSchema drops the server's extra fields (model, discarded, ...)
+// and guarantees the proposal hierarchy.
 
 import { httpsCallable, type Functions } from 'firebase/functions';
 
@@ -18,7 +18,7 @@ type CallRefine = (data: RefineRequest) => Promise<{ data: unknown }>;
 
 export type CallableSuggestionsProviderDeps =
   | { functions: Functions }
-  /** Iniettabile nei test al posto di httpsCallable. */
+  /** Injectable in tests in place of httpsCallable. */
   | { call: CallRefine };
 
 export class CallableSuggestionsProvider implements SuggestionsProvider {

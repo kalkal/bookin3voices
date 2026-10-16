@@ -1,17 +1,17 @@
 /**
- * Genera l'icona di BookVoice e tutti gli asset derivati.
+ * Generates the BookVoice icon and all derived assets.
  *
- * Concept ("biblioteca inglese elegante"): una pagina
- * rilegata dove le righe di testo, scendendo, diventano onda sonora — la
- * dettatura che si fa scrittura.
+ * Concept ("elegant English library"): a bound page
+ * where the lines of text, descending, turn into a sound wave —
+ * dictation becoming writing.
  *
- * Sorgente unica: le forme sono definite qui in uno spazio 1024x1024 e da esse
- * vengono emessi sia l'SVG pulito (assets/icon-source.svg) sia tutti i PNG.
- * La rasterizzazione SVG->PNG è fatta in puro Node (zlib, nessuna dipendenza
- * nativa: sharp/resvg non disponibili offline su questa macchina), con
- * supersampling 4x4 per l'antialiasing.
+ * Single source: the shapes are defined here in a 1024x1024 space and from
+ * them both the clean SVG (assets/icon-source.svg) and all the PNGs are
+ * emitted. SVG->PNG rasterization is done in pure Node (zlib, no native
+ * dependency: sharp/resvg not available offline on some machines), with
+ * 4x4 supersampling for antialiasing.
  *
- * Uso: node scripts/generate-app-icon.mjs   (da app/)
+ * Usage: node scripts/generate-app-icon.mjs   (from app/)
  */
 import { Buffer } from 'node:buffer';
 import fs from 'node:fs';
@@ -22,25 +22,25 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = path.join(HERE, '..', 'assets');
 
-// --- Palette (token di design) ---
+// --- Palette (design tokens) ---
 const HEX = {
-  paper: '#F0E8D3', // carta chiara
-  green: '#2E5343', // verde biblioteca (dorso)
-  filet: '#C9A961', // oro (filetto)
-  ink: '#2C241B', // inchiostro (righe di testo)
-  wave: '#A8853B', // oro antico (onda sonora)
+  paper: '#F0E8D3', // light paper
+  green: '#2E5343', // library green (spine)
+  filet: '#C9A961', // gold (rule)
+  ink: '#2C241B', // ink (text lines)
+  wave: '#A8853B', // antique gold (sound wave)
 };
 const RGB = Object.fromEntries(
   Object.entries(HEX).map(([k, v]) => [k, [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16))]),
 );
 
-// --- Forme, spazio 1024x1024 (rettangoli, eventualmente con raggio) ---
+// --- Shapes, 1024x1024 space (rectangles, optionally with a radius) ---
 const N = 1024;
 const marks = [];
-// Dorso rilegato a sinistra (~11.5% larghezza) + filetto oro sottile a fianco.
+// Bound spine on the left (~11.5% of the width) + thin gold rule beside it.
 marks.push({ x0: 0, y0: 0, x1: 118, y1: 1024, r: 0, color: 'green' });
 marks.push({ x0: 132, y0: 0, x1: 146, y1: 1024, r: 0, color: 'filet' });
-// Parte alta: 3 righe di "testo" (capsule orizzontali, lunghezze diverse).
+// Top part: 3 "text" lines (horizontal capsules, different lengths).
 const cap = (x0, x1, cy, h, color) => ({
   x0,
   x1,
@@ -52,8 +52,8 @@ const cap = (x0, x1, cy, h, color) => ({
 marks.push(cap(210, 858, 235, 46, 'ink'));
 marks.push(cap(210, 742, 325, 46, 'ink'));
 marks.push(cap(210, 806, 415, 46, 'ink'));
-// Parte bassa: le righe diventano onda sonora (barrette verticali, equalizzatore),
-// centrate sull'altezza di una riga (cy=655).
+// Bottom part: the lines become a sound wave (vertical bars, equalizer),
+// centered on the height of a line (cy=655).
 const barCx = [233, 308, 383, 458, 533, 608, 683, 758, 833];
 const barH = [110, 200, 300, 240, 340, 180, 270, 220, 140];
 const waveCy = 655;
@@ -70,17 +70,17 @@ barCx.forEach((cx, i) => {
   });
 });
 
-// Variante "page-card" per gli asset centrati (adaptive/monochrome/splash):
-// dorso e filetto NON a piena altezza ma racchiudono il blocco testo+onda,
-// così l'emblema è compatto e resta dentro la safe zone anche con maschera
-// circolare. Le righe/onda sono le stesse.
+// "page-card" variant for the centered assets (adaptive/monochrome/splash):
+// spine and rule do NOT span the full height but enclose the text+wave block,
+// so the emblem is compact and stays inside the safe zone even with a
+// circular mask. The lines/wave are the same.
 const SPINE_TOP = 190;
 const SPINE_BOTTOM = 835;
 const cardMarks = marks.map((sh) =>
   sh.color === 'green' || sh.color === 'filet' ? { ...sh, y0: SPINE_TOP, y1: SPINE_BOTTOM } : sh,
 );
 
-// Mappa affine: porta (cx,cy) del sorgente al centro (512,512) con fattore s.
+// Affine map: takes the source's (cx,cy) to the center (512,512) with factor s.
 const affine = (shapes, s, cx, cy) =>
   shapes.map((sh) => ({
     x0: 512 + (sh.x0 - cx) * s,
@@ -91,13 +91,13 @@ const affine = (shapes, s, cx, cy) =>
     color: sh.color,
   }));
 
-// Centro del bounding box dell'emblema e scala per riempire il 66% (626px)
-// centrale in larghezza (dimensione dominante).
+// Center of the emblem's bounding box and scale to fill the central 66% (626px)
+// in width (dominant dimension).
 const CARD_CX = (0 + 858) / 2;
 const CARD_CY = (SPINE_TOP + SPINE_BOTTOM) / 2;
 const emblem = (fillPx) => affine(cardMarks, fillPx / 858, CARD_CX, CARD_CY);
 
-// Test punto-in-rettangolo-arrotondato (somma di Minkowski rett+disco).
+// Point-in-rounded-rectangle test (Minkowski sum of rect + disc).
 const contains = (sh, ax, ay) => {
   const nx = Math.min(Math.max(ax, sh.x0 + sh.r), sh.x1 - sh.r);
   const ny = Math.min(Math.max(ay, sh.y0 + sh.r), sh.y1 - sh.r);
@@ -106,7 +106,7 @@ const contains = (sh, ax, ay) => {
   return dx * dx + dy * dy <= sh.r * sh.r + 1e-6;
 };
 
-// --- Rasterizzatore (supersampling 4x4) ---
+// --- Rasterizer (4x4 supersampling) ---
 const SS = 4;
 function rasterize(shapes, T, { includePaper, forceColor }) {
   const buf = Buffer.alloc(T * T * 4); // RGBA
@@ -138,7 +138,7 @@ function rasterize(shapes, T, { includePaper, forceColor }) {
         }
       }
       const o = (py * T + px) * 4;
-      // media premoltiplicata -> colore dritto
+      // premultiplied average -> straight color
       buf[o] = a ? Math.round(r / (a / 255)) : 0;
       buf[o + 1] = a ? Math.round(g / (a / 255)) : 0;
       buf[o + 2] = a ? Math.round(b / (a / 255)) : 0;
@@ -148,7 +148,7 @@ function rasterize(shapes, T, { includePaper, forceColor }) {
   return buf;
 }
 
-// --- Encoder PNG (RGBA, zlib) ---
+// --- PNG encoder (RGBA, zlib) ---
 function crc32(buf) {
   let c = ~0;
   for (let i = 0; i < buf.length; i++) {
@@ -185,7 +185,7 @@ function encodePNG(rgba, W, H) {
   ]);
 }
 
-// --- SVG sorgente (full-bleed, con carta) ---
+// --- Source SVG (full-bleed, with paper) ---
 function toSVG() {
   const rect = (sh) => {
     const w = sh.x1 - sh.x0;
@@ -203,8 +203,8 @@ function toSVG() {
 }
 
 // --- Output ---
-const fg = emblem(626); // adaptive/monochrome: riempie il 66% centrale
-const splash = emblem(560); // splash: emblema più raccolto, con più aria
+const fg = emblem(626); // adaptive/monochrome: fills the central 66%
+const splash = emblem(560); // splash: tighter emblem, with more air
 const write = (name, T, shapes, opts) => {
   const png = encodePNG(rasterize(shapes, T, opts), T, T);
   fs.writeFileSync(path.join(ASSETS, name), png);
@@ -212,18 +212,18 @@ const write = (name, T, shapes, opts) => {
 };
 
 fs.writeFileSync(path.join(ASSETS, 'icon-source.svg'), toSVG());
-console.log('Assets generati:');
-console.log('  icon-source.svg (sorgente)');
-// Icona app (full-bleed, con carta)
+console.log('Generated assets:');
+console.log('  icon-source.svg (source)');
+// App icon (full-bleed, with paper)
 write('icon.png', 1024, marks, { includePaper: true });
-// Adaptive icon Android: foreground (soggetto centrato, no carta) + background carta
+// Android adaptive icon: foreground (centered subject, no paper) + paper background
 write('android-icon-foreground.png', 1024, fg, { includePaper: false });
 write('android-icon-background.png', 1024, [], { includePaper: true });
 write('android-icon-monochrome.png', 1024, fg, {
   includePaper: false,
   forceColor: [0, 0, 0],
 });
-// Splash: emblema centrato su fondo carta
+// Splash: emblem centered on paper background
 write('splash-icon.png', 1024, splash, { includePaper: true });
-// Favicon web (full-bleed)
+// Web favicon (full-bleed)
 write('favicon.png', 48, marks, { includePaper: true });

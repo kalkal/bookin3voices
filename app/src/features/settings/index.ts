@@ -1,5 +1,5 @@
-// API pubblica della feature Impostazioni.
-// Il catalogo AiProvider è pensato per essere riusato dalle Functions.
+// Public API of the Settings feature.
+// The AiProvider catalog is meant to be reused by the Functions.
 
 export {
   AI_PROVIDERS,

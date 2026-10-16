@@ -1,17 +1,17 @@
-// Hash del testo del capitolo (regola di convivenza): il client lo
-// calcola prima di chiedere la rifinitura, la function lo restituisce nei
-// suggerimenti; se al ritorno non combacia più, i suggerimenti nascono stale.
+// Chapter text hash (coexistence rule): the client computes it before
+// requesting refinement, the function returns it in the suggestions; if on
+// return it no longer matches, the suggestions are born stale.
 //
-// CONTRATTO CON LA FUNCTION refineChapter: le Functions devono usare ESATTAMENTE questo algoritmo
-// (FNV-1a a 64 bit sui code unit UTF-16, esadecimale con prefisso di versione).
-// Non serve robustezza crittografica: serve solo accorgersi che il testo è
-// cambiato, in modo deterministico e identico sulle due sponde JS.
+// CONTRACT WITH THE refineChapter FUNCTION: the Functions must use EXACTLY this algorithm
+// (64-bit FNV-1a over UTF-16 code units, hexadecimal with a version prefix).
+// Cryptographic strength is not needed: we only need to notice that the text
+// changed, deterministically and identically on both JS sides.
 
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const MASK_64 = 0xffffffffffffffffn;
 
-/** Hash stabile di un testo, es. "v1-cbf29ce484222325". */
+/** Stable hash of a text, e.g. "v1-cbf29ce484222325". */
 export function textHash(text: string): string {
   let hash = FNV_OFFSET;
   for (let i = 0; i < text.length; i++) {

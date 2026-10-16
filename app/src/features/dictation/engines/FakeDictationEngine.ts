@@ -1,8 +1,8 @@
-// Motore finto per i test: implementa DictationEngine e si pilota in due modi.
-//  1. Emissione manuale (emitFinal, emitEnd, ...) per test passo-passo.
-//  2. Script con timing (playScript + jest fake timers) per sequenze realistiche.
-// Riproduce anche i vizi osservati sul motore reale: `duplicateEnd` fa arrivare
-// il doppio evento `end` a ogni chiusura della sessione motore.
+// Fake engine for tests: implements DictationEngine and is driven in two ways.
+//  1. Manual emission (emitFinal, emitEnd, ...) for step-by-step tests.
+//  2. Timed scripts (playScript + jest fake timers) for realistic sequences.
+// It also reproduces quirks observed on the real engine: `duplicateEnd` makes
+// the double `end` event arrive on every engine session close.
 
 import type {
   DictationEngine,
@@ -25,11 +25,11 @@ export class FakeDictationEngine implements DictationEngine {
   pauseCalls = 0;
   disposed = false;
 
-  /** Su start() emette subito onStart (come conferma del motore). */
+  /** On start() emits onStart right away (as the engine's confirmation). */
   autoEmitStart = true;
-  /** Su stop()/pause() emette onEnd, come i motori reali. */
+  /** On stop()/pause() emits onEnd, like real engines. */
   autoEmitEndOnStop = true;
-  /** Vizio del motore reale: ogni chiusura emette DUE `end`. */
+  /** Real-engine quirk: every close emits TWO `end` events. */
   duplicateEnd = false;
 
   private events: DictationEngineEvents = {};
@@ -60,7 +60,7 @@ export class FakeDictationEngine implements DictationEngine {
     this.timers = [];
   }
 
-  // --- pilotaggio manuale -------------------------------------------------
+  // --- manual driving -------------------------------------------------
 
   emitStart(): void {
     this.events.onStart?.();
@@ -74,13 +74,13 @@ export class FakeDictationEngine implements DictationEngine {
     this.events.onFinal?.(text);
   }
 
-  /** Emette `end` rispettando l'eventuale doppione configurato. */
+  /** Emits `end`, honoring the configured duplicate, if any. */
   emitEnd(): void {
     this.events.onEnd?.();
     if (this.duplicateEnd) this.events.onEnd?.();
   }
 
-  /** Emette un SOLO `end`, ignorando duplicateEnd (per casi mirati). */
+  /** Emits a SINGLE `end`, ignoring duplicateEnd (for targeted cases). */
   emitSingleEnd(): void {
     this.events.onEnd?.();
   }
@@ -89,9 +89,9 @@ export class FakeDictationEngine implements DictationEngine {
     this.events.onError?.(error);
   }
 
-  // --- pilotaggio a script ------------------------------------------------
+  // --- script driving ------------------------------------------------
 
-  /** Programma gli eventi con setTimeout: da usare con i fake timers di Jest. */
+  /** Schedules events with setTimeout: use with Jest fake timers. */
   playScript(steps: readonly FakeScriptStep[]): void {
     for (const step of steps) {
       const timer = setTimeout(() => {

@@ -4,7 +4,7 @@ import type { RefineResult, Suggestion, SuggestionKind } from '../types';
 
 const TEXT = 'Posò lentamente il bicchiere. aprì il rubinetto e un altra tazza cadde.';
 
-/** Costruisce un suggerimento pending con lo span calcolato sul frammento. */
+/** Builds a pending suggestion with the span computed from the fragment. */
 function sug(
   id: string,
   kind: SuggestionKind,
@@ -13,7 +13,7 @@ function sug(
   overrides: Partial<Suggestion> = {},
 ): Suggestion {
   const from = TEXT.indexOf(fragment);
-  if (from === -1) throw new Error(`frammento non trovato: ${fragment}`);
+  if (from === -1) throw new Error(`fragment not found: ${fragment}`);
   return {
     id,
     kind,
@@ -44,13 +44,13 @@ function newSession(suggestions: Suggestion[] = []): ReviewSession {
   return session;
 }
 
-describe('ingest (hash del testo)', () => {
-  it('con hash combaciante i suggerimenti restano pending', () => {
+describe('ingest (text hash)', () => {
+  it('with a matching hash the suggestions stay pending', () => {
     const session = newSession([STYLE_ADVERB(), GRAMMAR_LOWER()]);
     expect(session.pending).toHaveLength(2);
   });
 
-  it('con hash diverso (testo cambiato durante la rifinitura) il lotto nasce stale', () => {
+  it('with a different hash (text changed during refinement) the batch is born stale', () => {
     const session = new ReviewSession({ initialText: TEXT });
     const outcome = session.ingest({ textHash: 'v1-altro', suggestions: [STYLE_ADVERB()] });
     expect(outcome.bornStale).toBe(true);
@@ -58,7 +58,7 @@ describe('ingest (hash del testo)', () => {
     expect(session.suggestions[0].state).toBe('stale');
   });
 
-  it('un suggerimento il cui original non combacia col testo nasce stale (mai fiducia cieca)', () => {
+  it('a suggestion whose original does not match the text is born stale (never blind trust)', () => {
     const bugged = { ...STYLE_ADVERB(), original: 'Posò lentissimo', id: 's-bug' };
     bugged.span = { from: 0, to: bugged.original.length };
     const session = new ReviewSession({ initialText: TEXT });
@@ -68,11 +68,11 @@ describe('ingest (hash del testo)', () => {
   });
 });
 
-describe('accept (Command con patch verificata)', () => {
-  it('applica la variante scelta e registra la revisione', () => {
+describe('accept (Command with verified patch)', () => {
+  it('applies the chosen variant and records the revision', () => {
     const session = newSession([STYLE_ADVERB()]);
     const outcome = session.accept('s-avverbio', 1);
-    if (!outcome.ok) throw new Error('accept fallita');
+    if (!outcome.ok) throw new Error('accept failed');
     expect(outcome.text).toBe(
       'Posò, piano, il bicchiere. aprì il rubinetto e un altra tazza cadde.',
     );
@@ -86,26 +86,26 @@ describe('accept (Command con patch verificata)', () => {
     expect(accepted).toMatchObject({ state: 'accepted', acceptedProposal: 1 });
   });
 
-  it('ri-mappa gli span dei pending successivi', () => {
+  it('re-maps the spans of the following pendings', () => {
     const session = newSession([STYLE_ADVERB(), GRAMMAR_ELISION()]);
     const before = session.suggestions.find((s) => s.id === 's-elisione');
-    if (!before) throw new Error('manca il suggerimento');
+    if (!before) throw new Error('suggestion missing');
     session.accept('s-avverbio', 0); // 'Posò lentamente' → 'Posò': delta -11
     const after = session.suggestions.find((s) => s.id === 's-elisione');
     expect(after?.state).toBe('pending');
     expect(after?.span).toEqual({ from: before.span.from - 11, to: before.span.to - 11 });
-    // lo span ri-mappato punta ancora al testo giusto
+    // the re-mapped span still points at the right text
     expect(session.text.slice(after!.span.from, after!.span.to)).toBe('un altra');
   });
 
-  it('un pending sovrapposto alla patch accettata diventa stale', () => {
+  it('a pending overlapping the accepted patch becomes stale', () => {
     const overlapping = sug('s-sovrapposto', 'style', 'lentamente il', ['il']);
     const session = newSession([STYLE_ADVERB(), overlapping]);
     session.accept('s-avverbio', 0);
     expect(session.suggestions.find((s) => s.id === 's-sovrapposto')?.state).toBe('stale');
   });
 
-  it('rifiuta pulito accept su suggerimento non pending o sconosciuto', () => {
+  it('cleanly rejects accept on a non-pending or unknown suggestion', () => {
     const session = newSession([STYLE_ADVERB()]);
     session.accept('s-avverbio', 0);
     expect(session.accept('s-avverbio', 0)).toEqual({ ok: false, reason: 'not-pending' });
@@ -113,7 +113,7 @@ describe('accept (Command con patch verificata)', () => {
     expect(session.accept('s-avverbio', 9)).toEqual({ ok: false, reason: 'not-pending' });
   });
 
-  it('indice di proposta fuori range: rifiuto pulito senza toccare il testo', () => {
+  it('proposal index out of range: clean rejection without touching the text', () => {
     const session = newSession([STYLE_ADVERB()]);
     expect(session.accept('s-avverbio', 3)).toEqual({ ok: false, reason: 'invalid-proposal' });
     expect(session.text).toBe(TEXT);
@@ -121,10 +121,10 @@ describe('accept (Command con patch verificata)', () => {
 });
 
 describe('reject', () => {
-  it('marca rejected senza toccare il testo e registra la revisione', () => {
+  it('marks rejected without touching the text and records the revision', () => {
     const session = newSession([GRAMMAR_LOWER()]);
     const outcome = session.reject('s-minuscola');
-    if (!outcome.ok) throw new Error('reject fallita');
+    if (!outcome.ok) throw new Error('reject failed');
     expect(outcome.revision).toMatchObject({ before: 'aprì', after: 'Aprì', decision: 'rejected' });
     expect(session.text).toBe(TEXT);
     expect(session.suggestions[0].state).toBe('rejected');
@@ -132,8 +132,8 @@ describe('reject', () => {
   });
 });
 
-describe('acceptAll (patch dall’offset più alto al più basso)', () => {
-  it('accetta tutti i pending della categoria in un solo comando', () => {
+describe('acceptAll (patches from the highest offset to the lowest)', () => {
+  it('accepts all pendings of the category in a single command', () => {
     const session = newSession([STYLE_ADVERB(), GRAMMAR_LOWER(), GRAMMAR_ELISION()]);
     const outcome = session.acceptAll('grammar');
     expect(outcome.accepted).toBe(2);
@@ -141,17 +141,17 @@ describe('acceptAll (patch dall’offset più alto al più basso)', () => {
     expect(session.text).toBe(
       "Posò lentamente il bicchiere. Aprì il rubinetto e un'altra tazza cadde.",
     );
-    // lo stile resta pending, con lo span intatto (le patch erano più avanti)
+    // style stays pending, with its span intact (the patches were further ahead)
     expect(session.pendingOf('style')).toHaveLength(1);
-    // un solo undo li ripristina tutti e due
+    // a single undo restores both
     const undo = session.undo();
-    if (!undo.ok) throw new Error('undo fallito');
+    if (!undo.ok) throw new Error('undo failed');
     expect(undo.text).toBe(TEXT);
     expect(undo.removedRevisionIds).toHaveLength(2);
     expect(session.pendingOf('grammar')).toHaveLength(2);
   });
 
-  it('senza pending della categoria non produce comandi', () => {
+  it('without pendings in the category it produces no commands', () => {
     const session = newSession([STYLE_ADVERB()]);
     const outcome = session.acceptAll('grammar');
     expect(outcome).toMatchObject({ accepted: 0, staled: 0, revisions: [] });
@@ -159,12 +159,12 @@ describe('acceptAll (patch dall’offset più alto al più basso)', () => {
   });
 });
 
-describe('undo (LIFO sulla cronologia locale)', () => {
-  it('ripristina testo, stati e span alla situazione precedente', () => {
+describe('undo (LIFO over the local history)', () => {
+  it('restores text, states and spans to the previous situation', () => {
     const session = newSession([STYLE_ADVERB(), GRAMMAR_ELISION()]);
     session.accept('s-avverbio', 0);
     const undone = session.undo();
-    if (!undone.ok) throw new Error('undo fallito');
+    if (!undone.ok) throw new Error('undo failed');
     expect(session.text).toBe(TEXT);
     const style = session.suggestions.find((s) => s.id === 's-avverbio');
     expect(style).toMatchObject({ state: 'pending' });
@@ -173,18 +173,18 @@ describe('undo (LIFO sulla cronologia locale)', () => {
     expect(session.text.slice(elision!.span.from, elision!.span.to)).toBe('un altra');
   });
 
-  it('due accept si annullano in ordine inverso', () => {
+  it('two accepts are undone in reverse order', () => {
     const session = newSession([STYLE_ADVERB(), GRAMMAR_ELISION()]);
     session.accept('s-avverbio', 0);
     session.accept('s-elisione', 0);
-    expect(session.undo().ok).toBe(true); // annulla l'elisione
+    expect(session.undo().ok).toBe(true); // undoes the elision
     expect(session.text).toBe('Posò il bicchiere. aprì il rubinetto e un altra tazza cadde.');
-    expect(session.undo().ok).toBe(true); // annulla l'avverbio
+    expect(session.undo().ok).toBe(true); // undoes the adverb
     expect(session.text).toBe(TEXT);
     expect(session.undo()).toEqual({ ok: false, reason: 'nothing-to-undo' });
   });
 
-  it('l’undo di un reject riporta il suggerimento pending', () => {
+  it('undoing a reject returns the suggestion to pending', () => {
     const session = newSession([GRAMMAR_LOWER()]);
     session.reject('s-minuscola');
     const undone = session.undo();
@@ -193,21 +193,21 @@ describe('undo (LIFO sulla cronologia locale)', () => {
   });
 });
 
-describe('edit manuale', () => {
-  it('un edit che tocca lo span di un pending lo invalida (stale)', () => {
+describe('manual edit', () => {
+  it('an edit touching a pending span invalidates it (stale)', () => {
     const session = newSession([GRAMMAR_LOWER(), GRAMMAR_ELISION()]);
-    // l'utente corregge a mano 'aprì' → 'Aprì'
+    // the user hand-corrects 'aprì' → 'Aprì'
     const edited = TEXT.replace('. aprì', '. Aprì');
     const outcome = session.applyManualEdit(edited);
     expect(outcome).toEqual({ changed: true, staled: 1 });
     expect(session.suggestions.find((s) => s.id === 's-minuscola')?.state).toBe('stale');
-    // l'altro pending sopravvive, ri-mappato sul testo nuovo
+    // the other pending survives, re-mapped onto the new text
     const elision = session.suggestions.find((s) => s.id === 's-elisione');
     expect(elision?.state).toBe('pending');
     expect(session.text.slice(elision!.span.from, elision!.span.to)).toBe('un altra');
   });
 
-  it('un edit prima di uno span lo fa scorrere del delta', () => {
+  it('an edit before a span shifts it by the delta', () => {
     const session = newSession([GRAMMAR_ELISION()]);
     const edited = `C'era silenzio. ${TEXT}`;
     session.applyManualEdit(edited);
@@ -216,7 +216,7 @@ describe('edit manuale', () => {
     expect(session.text.slice(elision.span.from, elision.span.to)).toBe('un altra');
   });
 
-  it('azzera la cronologia undo (le inverse non descrivono più il testo)', () => {
+  it('clears the undo history (the inverses no longer describe the text)', () => {
     const session = newSession([STYLE_ADVERB()]);
     session.accept('s-avverbio', 0);
     expect(session.canUndo).toBe(true);
@@ -225,15 +225,15 @@ describe('edit manuale', () => {
     expect(session.undo()).toEqual({ ok: false, reason: 'nothing-to-undo' });
   });
 
-  it('testo identico: nessun cambiamento', () => {
+  it('identical text: no change', () => {
     const session = newSession([GRAMMAR_LOWER()]);
     expect(session.applyManualEdit(TEXT)).toEqual({ changed: false, staled: 0 });
     expect(session.canUndo).toBe(false);
   });
 });
 
-describe('un nuovo lotto azzera la cronologia (assunzione dichiarata)', () => {
-  it('dopo un ingest l’undo non è più disponibile', () => {
+describe('a new batch clears the history (stated assumption)', () => {
+  it('after an ingest undo is no longer available', () => {
     const session = newSession([STYLE_ADVERB()]);
     session.accept('s-avverbio', 0);
     expect(session.canUndo).toBe(true);

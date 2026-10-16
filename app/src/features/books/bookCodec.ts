@@ -1,5 +1,5 @@
-// Decodifica dei documenti libro al confine (Zod + upgrade-on-read).
-// Funzioni pure: i test non hanno bisogno né dell'SDK né dell'emulatore.
+// Decoding of book documents at the boundary (Zod + upgrade-on-read).
+// Pure functions: tests need neither the SDK nor the emulator.
 
 import { getLanguage } from '../../i18n';
 
@@ -7,17 +7,17 @@ import { bookDocSchema } from './types';
 import type { Book, BookDoc, CreateBookInput } from './types';
 
 /**
- * Upgrade-on-read: oggi esiste solo la v1, il passaggio è
- * l'identità; le migrazioni future (v1 → v2, …) si aggiungono qui.
+ * Upgrade-on-read: only v1 exists today, so the step is the identity;
+ * future migrations (v1 → v2, …) are added here.
  */
 export function upgradeBookData(data: Record<string, unknown>): Record<string, unknown> {
   return data;
 }
 
 /**
- * Valida (e aggiorna, se serve) i dati grezzi di un documento libro.
- * Ritorna null su payload non conformi: sta al chiamante decidere se saltare
- * la riga (liste) o considerarlo un errore (letture puntuali).
+ * Validates (and upgrades, if needed) the raw data of a book document.
+ * Returns null for non-conforming payloads: the caller decides whether to skip
+ * the row (lists) or treat it as an error (single reads).
  */
 export function decodeBookDoc(data: Record<string, unknown>): BookDoc | null {
   const parsed = bookDocSchema.safeParse(upgradeBookData(data));
@@ -29,8 +29,8 @@ export function toBook(id: string, doc: BookDoc): Book {
 }
 
 /**
- * Documento di partenza per un libro nuovo (contatori a zero).
- * Le date le mette il repository (serverTimestamp al confine).
+ * Starting document for a new book (counters at zero).
+ * Dates are set by the repository (serverTimestamp at the boundary).
  */
 export function newBookDoc(input: CreateBookInput, nowMillis: number): BookDoc {
   return {
@@ -40,7 +40,7 @@ export function newBookDoc(input: CreateBookInput, nowMillis: number): BookDoc {
     description: '',
     synopsis: '',
     genre: input.genre ?? (getLanguage() === 'it' ? 'Romanzo' : 'Novel'),
-    // un libro nuovo nasce nella lingua dell'interfaccia (l'AI risponde in quella)
+    // a new book is born in the interface language (the AI answers in that language)
     language: input.language ?? getLanguage(),
     status: 'draft',
     styleProfileId: null,

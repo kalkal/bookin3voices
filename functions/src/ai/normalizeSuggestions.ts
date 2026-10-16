@@ -1,26 +1,26 @@
-// Normalizzazione dell'output del modello in suggerimenti ancorati al testo.
-// Qui vivono le difese meccaniche del contratto:
-// - `original` che non compare nel testo o compare più di una volta → SCARTATO
-//   (mai un'applicazione cieca);
-// - proposte vuote o identiche all'original → rimosse; senza proposte → scartato;
-// - grammar con più proposte → si tiene la prima (la più conservativa per
-//   costruzione del prompt), gerarchia delle proposte;
-// - tetto di densità della Style Bible: mai più di 30 suggerimenti, in ordine
-//   di testo;
-// - span sovrapposti → si tiene il primo in ordine di testo (l'app non
-//   gestisce evidenziazioni sovrapposte).
+// Normalization of the model output into text-anchored suggestions.
+// The mechanical defenses of the contract live here:
+// - an `original` that is absent from the text or appears more than once →
+//   DISCARDED (never a blind application);
+// - empty proposals, or ones identical to the original → removed; with no
+//   proposals left → discarded;
+// - grammar with several proposals → keep the first (the most conservative by
+//   prompt design), per the proposal hierarchy;
+// - Style Bible density cap: never more than 30 suggestions, in text order;
+// - overlapping spans → keep the first in text order (the app does not handle
+//   overlapping highlights).
 
 import type { ModelOutput, Suggestion } from './refineTypes';
 
 export interface NormalizedSuggestions {
   suggestions: Suggestion[];
-  /** Quanti suggerimenti del modello sono stati scartati (diagnostica). */
+  /** How many model suggestions were discarded (diagnostics). */
   discarded: number;
 }
 
 export const MAX_SUGGESTIONS = 30;
 
-/** Tutte le occorrenze di `needle` in `haystack` (indici di partenza). */
+/** All occurrences of `needle` in `haystack` (start indices). */
 function occurrencesOf(haystack: string, needle: string): number[] {
   const result: number[] = [];
   let index = haystack.indexOf(needle);
@@ -51,7 +51,7 @@ export function normalizeSuggestions(
       occurrences = occurrencesOf(text, trimmed);
     }
     if (occurrences.length !== 1) {
-      discarded += 1; // assente o ambiguo: mai indovinare lo span
+      discarded += 1; // absent or ambiguous: never guess the span
       continue;
     }
     const from = occurrences[0] as number;

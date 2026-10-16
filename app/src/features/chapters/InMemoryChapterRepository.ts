@@ -1,6 +1,6 @@
-// Repository in memoria per test e sviluppo: contratto completo
-// (CRUD + observe*), più qualche contatore per le asserzioni sui salvataggi
-// (debounce, flush) usato dai test della Dettatura.
+// In-memory repository for tests and development: full contract
+// (CRUD + observe*), plus a few counters for assertions on saves
+// (debounce, flush) used by the Dictation tests.
 
 import { t } from '../../i18n';
 import { countWords } from '../../lib/text';
@@ -22,9 +22,9 @@ export class InMemoryChapterRepository implements ChapterRepository {
   private readonly listListeners = new Map<string, Set<(chapters: ChapterSummary[]) => void>>();
   private readonly docListeners = new Map<string, Set<(chapter: Chapter | null) => void>>();
   private nextId = 1;
-  /** Cronologia dei testi salvati, in ordine (per asserire debounce e flush). */
+  /** History of saved texts, in order (to assert debounce and flush). */
   readonly savedTexts: string[] = [];
-  /** Se impostato, il prossimo saveRawText fallisce con questo errore. */
+  /** If set, the next saveRawText fails with this error. */
   nextSaveError?: Error;
 
   async loadRawText(ref: ChapterRef): Promise<string | null> {
@@ -48,7 +48,7 @@ export class InMemoryChapterRepository implements ChapterRepository {
     this.emit(ref.bookId);
   }
 
-  /** Comodo per preparare lo stato iniziale nei test. */
+  /** Convenient for preparing the initial state in tests. */
   seed(ref: ChapterRef, rawText: string, extra?: Partial<Chapter>): Chapter {
     const chapter: Chapter = {
       ...this.blankChapter(ref),
@@ -97,7 +97,7 @@ export class InMemoryChapterRepository implements ChapterRepository {
 
   async updateChapter(ref: ChapterRef, patch: ChapterPatch): Promise<void> {
     const existing = this.chapters.get(keyFor(ref));
-    if (!existing) throw new Error(`Capitolo inesistente: ${keyFor(ref)}`);
+    if (!existing) throw new Error(`Chapter does not exist: ${keyFor(ref)}`);
     this.chapters.set(keyFor(ref), { ...existing, ...patch, updatedAt: Date.now() });
     this.emit(ref.bookId);
   }

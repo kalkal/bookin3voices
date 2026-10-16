@@ -20,8 +20,8 @@ function revision(id: string, decision: 'accepted' | 'rejected' = 'accepted'): R
   return { id, span: { from: 0, to: 4 }, before: 'Posò', after: 'Mise', decision, at: 123 };
 }
 
-describe('LocalRevisionRepository (storico, dataset per il tuning)', () => {
-  it('append + list conservano ordine e round-trip su disco', async () => {
+describe('LocalRevisionRepository (history, tuning dataset)', () => {
+  it('append + list preserve order and round-trip to disk', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalRevisionRepository(storage);
     await repo.append(REF, revision('r1'));
@@ -31,7 +31,7 @@ describe('LocalRevisionRepository (storico, dataset per il tuning)', () => {
     expect(listed[1].decision).toBe('rejected');
   });
 
-  it('remove toglie solo la revisione annullata dall’undo', async () => {
+  it('remove drops only the revision cancelled by undo', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalRevisionRepository(storage);
     await repo.append(REF, revision('r1'));
@@ -40,12 +40,12 @@ describe('LocalRevisionRepository (storico, dataset per il tuning)', () => {
     expect((await repo.list(REF)).map((r) => r.id)).toEqual(['r2']);
   });
 
-  it('capitolo mai toccato → lista vuota', async () => {
+  it('chapter never touched → empty list', async () => {
     const repo = new LocalRevisionRepository(memoryStorage().storage);
     expect(await repo.list(REF)).toEqual([]);
   });
 
-  it('payload corrotto → quarantena col timestamp, non si butta lo storico', async () => {
+  it('corrupt payload → quarantined with a timestamp, the history is not discarded', async () => {
     const { storage, data } = memoryStorage({ [KEY]: '{rotto' });
     const repo = new LocalRevisionRepository(storage);
     expect(await repo.list(REF)).toEqual([]);
@@ -54,7 +54,7 @@ describe('LocalRevisionRepository (storico, dataset per il tuning)', () => {
     expect(data.get(quarantined!)).toBe('{rotto');
   });
 
-  it('capitoli diversi non si mischiano', async () => {
+  it('different chapters do not mix', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalRevisionRepository(storage);
     await repo.append(REF, revision('r1'));

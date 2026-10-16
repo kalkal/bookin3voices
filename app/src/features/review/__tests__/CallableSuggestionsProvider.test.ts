@@ -1,6 +1,6 @@
-// Il provider vero dietro l'interfaccia della schermata Editor: chiama la callable
-// refineChapter e valida la risposta con Zod al confine. La `call` è iniettata
-// (come nei test di CallableOutlineService): qui niente rete né Firebase.
+// The real provider behind the Editor screen's interface: calls the refineChapter
+// callable and validates the response with Zod at the boundary. `call` is injected
+// (as in the CallableOutlineService tests): no network or Firebase here.
 
 import { CallableSuggestionsProvider } from '../CallableSuggestionsProvider';
 import { textHash } from '../textHash';
@@ -28,14 +28,14 @@ const SERVER_SUGGESTION = {
 };
 
 describe('CallableSuggestionsProvider', () => {
-  it('passa la richiesta alla callable e valida la risposta con Zod', async () => {
+  it('passes the request to the callable and validates the response with Zod', async () => {
     const calls: RefineRequest[] = [];
     const provider = new CallableSuggestionsProvider({
       call: async (data) => {
         calls.push(data);
         return {
           data: {
-            // campi extra del server (diagnostica): lo schema li scarta
+            // extra server fields (diagnostics): the schema drops them
             requestId: 'ref-1',
             model: 'gemini-3.5-flash',
             promptVersion: 1,
@@ -60,14 +60,14 @@ describe('CallableSuggestionsProvider', () => {
     expect(result).not.toHaveProperty('model');
   });
 
-  it('risposta non conforme → throw (mai suggerimenti non validati in UI)', async () => {
+  it('non-conforming response → throw (never unvalidated suggestions in the UI)', async () => {
     const provider = new CallableSuggestionsProvider({
       call: async () => ({ data: { suggestions: 'non-un-array' } }),
     });
     await expect(provider.refine(REQUEST)).rejects.toThrow();
   });
 
-  it('propaga gli errori della callable (la UI mostra refineFailed)', async () => {
+  it('propagates the callable errors (the UI shows refineFailed)', async () => {
     const provider = new CallableSuggestionsProvider({
       call: async () => {
         throw new Error('unavailable');

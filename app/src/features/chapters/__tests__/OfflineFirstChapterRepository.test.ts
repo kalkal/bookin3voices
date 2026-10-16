@@ -1,6 +1,6 @@
-// Regole del composito offline-first: mirror su disco prima di Firestore,
-// lettura col più recente che vince, recovery del mirror verso il remoto,
-// delta parole per l'obiettivo del giorno.
+// Rules of the offline-first composite: mirror on disk before Firestore,
+// most recent wins on read, mirror recovery toward the remote,
+// word deltas for the daily goal.
 
 import { LocalChapterRepository, type KeyValueStorage } from '../LocalChapterRepository';
 import { OfflineFirstChapterRepository } from '../OfflineFirstChapterRepository';
@@ -19,7 +19,7 @@ function memoryStorage() {
   return { storage, data };
 }
 
-/** Remoto finto: solo ciò che il composito usa davvero. */
+/** Fake remote: only what the composite really uses. */
 function fakeRemote() {
   const state: { chapter: Chapter | null; failGet: boolean } = { chapter: null, failGet: false };
   const saveRawText = jest.fn(async (ref: ChapterRef, rawText: string) => {
@@ -73,21 +73,21 @@ function makeRepo(options?: { onWordsAdded?: (delta: number) => void }) {
 }
 
 describe('OfflineFirstChapterRepository', () => {
-  it('salva prima nel mirror e poi nel remoto', async () => {
+  it('saves to the mirror first and then to the remote', async () => {
     const { repo, mirror, remote } = makeRepo();
     await repo.saveRawText(REF, 'Il faro era spento.');
     expect(await mirror.loadRawText(REF)).toBe('Il faro era spento.');
     expect(remote.saveRawText).toHaveBeenCalledWith(REF, 'Il faro era spento.');
   });
 
-  it('un remoto che fallisce non fa fallire il salvataggio (testo nel mirror)', async () => {
+  it('a failing remote does not fail the save (text is in the mirror)', async () => {
     const { repo, mirror, remote } = makeRepo();
-    remote.saveRawText.mockRejectedValueOnce(new Error('permessi'));
+    remote.saveRawText.mockRejectedValueOnce(new Error('permissions'));
     await expect(repo.saveRawText(REF, 'Testo prezioso')).resolves.toBeUndefined();
     expect(await mirror.loadRawText(REF)).toBe('Testo prezioso');
   });
 
-  it('legge dal remoto quando il mirror non ha nulla', async () => {
+  it('reads from the remote when the mirror has nothing', async () => {
     const { repo, state } = makeRepo();
     state.chapter = {
       id: REF.chapterId,
@@ -104,20 +104,20 @@ describe('OfflineFirstChapterRepository', () => {
     expect(await repo.loadRawText(REF)).toBe('Testo dal cloud');
   });
 
-  it('ripiega sul mirror quando il remoto è irraggiungibile', async () => {
+  it('falls back to the mirror when the remote is unreachable', async () => {
     const { repo, mirror, state } = makeRepo();
     await mirror.saveRawText(REF, 'Copia locale');
     state.failGet = true;
     expect(await repo.loadRawText(REF)).toBe('Copia locale');
   });
 
-  it('lancia (mai "vuoto" al posto di "rotto") se remoto giù e mirror assente', async () => {
+  it('throws (never "empty" in place of "broken") if the remote is down and the mirror absent', async () => {
     const { repo, state } = makeRepo();
     state.failGet = true;
-    await expect(repo.loadRawText(REF)).rejects.toThrow(/irraggiungibile/);
+    await expect(repo.loadRawText(REF)).rejects.toThrow(/unreachable/);
   });
 
-  it('un mirror più recente vince e viene rispinto verso il remoto (recovery)', async () => {
+  it('a more recent mirror wins and is pushed back to the remote (recovery)', async () => {
     const { repo, mirror, remote, state } = makeRepo();
     state.chapter = {
       id: REF.chapterId,
@@ -131,12 +131,12 @@ describe('OfflineFirstChapterRepository', () => {
       rawText: 'Versione vecchia',
       updatedAt: 1000,
     };
-    await mirror.saveRawText(REF, 'Versione nuova dettata offline'); // updatedAt = adesso
+    await mirror.saveRawText(REF, 'Versione nuova dettata offline'); // updatedAt = now
     expect(await repo.loadRawText(REF)).toBe('Versione nuova dettata offline');
     expect(remote.saveRawText).toHaveBeenCalledWith(REF, 'Versione nuova dettata offline');
   });
 
-  it('un remoto più recente vince senza recovery', async () => {
+  it('a more recent remote wins without recovery', async () => {
     const { repo, mirror, remote, state } = makeRepo();
     await mirror.saveRawText(REF, 'Versione vecchia locale');
     state.chapter = {
@@ -155,7 +155,7 @@ describe('OfflineFirstChapterRepository', () => {
     expect(remote.saveRawText).not.toHaveBeenCalled();
   });
 
-  it('conta per l’obiettivo del giorno solo le parole aggiunte', async () => {
+  it('counts only the added words toward the daily goal', async () => {
     const deltas: number[] = [];
     const { repo, state } = makeRepo({ onWordsAdded: (delta) => deltas.push(delta) });
     state.chapter = {
@@ -170,14 +170,14 @@ describe('OfflineFirstChapterRepository', () => {
       rawText: 'tre parole qui',
       updatedAt: 100,
     };
-    await repo.loadRawText(REF); // base: 3 parole
-    await repo.saveRawText(REF, 'tre parole qui e altre due'); // 6 parole
-    await repo.saveRawText(REF, 'tre parole'); // cancellazione: nessun delta
-    await repo.saveRawText(REF, 'tre parole più una'); // 4 parole: +2 rispetto a 2
+    await repo.loadRawText(REF); // base: 3 words
+    await repo.saveRawText(REF, 'tre parole qui e altre due'); // 6 words
+    await repo.saveRawText(REF, 'tre parole'); // deletion: no delta
+    await repo.saveRawText(REF, 'tre parole più una'); // 4 words: +2 compared to 2
     expect(deltas).toEqual([3, 2]);
   });
 
-  it('senza una lettura di base il primo salvataggio non genera delta', async () => {
+  it('without a baseline read the first save generates no delta', async () => {
     const deltas: number[] = [];
     const { repo } = makeRepo({ onWordsAdded: (delta) => deltas.push(delta) });
     await repo.saveRawText(REF, 'testo mai letto prima');

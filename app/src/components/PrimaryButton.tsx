@@ -1,5 +1,5 @@
 /**
- * Bottone primario a pillola verde biblioteca ("Rifinisci con AI" nel mockup).
+ * Primary pill button in library green ("Rifinisci con AI" in the mockup).
  */
 import { Pressable, StyleSheet, Text } from 'react-native';
 import type { ReactNode } from 'react';
@@ -10,7 +10,7 @@ interface PrimaryButtonProps {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
-  /** Elemento opzionale (icona) mostrato prima dell'etichetta. */
+  /** Optional element (icon) shown before the label. */
   icon?: ReactNode;
   testID?: string;
 }

@@ -1,9 +1,9 @@
-// Implementazione LOCALE e PROVVISORIA di SettingsRepository su AsyncStorage,
-// stesso approccio della dettatura (LocalChapterRepository): l'integrazione Firestore la sostituirà
-// con il documento Firestore `settings/app` senza toccare la UI.
+// LOCAL and TEMPORARY implementation of SettingsRepository on AsyncStorage,
+// same approach as dictation (LocalChapterRepository): the Firestore integration will replace it
+// with the `settings/app` Firestore document without touching the UI.
 //
-// A differenza dei capitoli, un payload corrotto qui NON va in quarantena:
-// le impostazioni si ricostruiscono in un tap, si riparte dai default.
+// Unlike chapters, a corrupt payload here does NOT go to quarantine:
+// settings can be rebuilt in one tap, so we start again from the defaults.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -26,7 +26,7 @@ export class LocalSettingsRepository implements SettingsRepository {
     try {
       return appSettingsSchema.parse(JSON.parse(raw));
     } catch {
-      // corrotto o schema futuro: default, mai crash all'avvio
+      // corrupt or future schema: defaults, never a crash at startup
       return DEFAULT_SETTINGS;
     }
   }

@@ -1,14 +1,14 @@
-# Flusso E2E — dettatura col motore finto (EXPO_PUBLIC_E2E=1).
-# Avvio e prerequisiti nel preambolo comune (e2e/helpers/open-e2e-app.yaml).
-# Percorso: apri dettatura → detta (script del Fake) → pausa → verifica
-# testo e contatore parole. I testID sono quelli della schermata Dettatura.
+# E2E flow — dictation with the fake engine (EXPO_PUBLIC_E2E=1).
+# Launch and prerequisites in the shared preamble (e2e/helpers/open-e2e-app.yaml).
+# Path: open dictation → dictate (Fake's script) → pause → check
+# text and word counter. The testIDs are those of the Dictation screen.
 appId: dev.kalkal.bookvoice
-name: Dettatura con FakeDictationEngine
+name: Dictation with FakeDictationEngine
 ---
 - runFlow: ../helpers/open-e2e-app.yaml
 
-# Capitolo vuoto (repository in memoria in modalità E2E) e pre-flight verde:
-# il suggerimento iniziale è visibile e la caption invita a dettare.
+# Empty chapter (in-memory repository in E2E mode) and green pre-flight:
+# the initial hint is visible and the caption invites to dictate.
 - assertVisible:
     id: "dictation-empty-hint"
 - extendedWaitUntil:
@@ -16,7 +16,7 @@ name: Dettatura con FakeDictationEngine
       text: "Tocca il microfono per dettare"
     timeout: 15000
 
-# Avvio dettatura: il motore finto recita lo script (2 frasi, 11 parole).
+# Dictation start: the fake engine plays the script (2 sentences, 11 words).
 - tapOn:
     id: "dictation-mic"
 - extendedWaitUntil:
@@ -24,13 +24,13 @@ name: Dettatura con FakeDictationEngine
       text: "In ascolto.*"
     timeout: 10000
 
-# Il testo consolidato arriva a schermo (ultima frase dello script inclusa).
+# The consolidated text reaches the screen (last sentence of the script included).
 - extendedWaitUntil:
     visible:
       text: '.*La biblioteca profumava di carta antica\..*'
     timeout: 15000
 
-# Pausa: caption dedicata, contatore parole della sessione e flush salvato.
+# Pause: dedicated caption, session word counter and saved flush.
 - tapOn:
     id: "dictation-mic"
 - extendedWaitUntil:
@@ -44,6 +44,6 @@ name: Dettatura con FakeDictationEngine
       text: "Salvato"
     timeout: 10000
 
-# Il testo dettato è ancora tutto lì dopo la pausa.
+# The dictated text is still all there after the pause.
 - assertVisible:
     text: 'Il caffè era ancora caldo\. La biblioteca profumava di carta antica\.'

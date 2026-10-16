@@ -1,32 +1,32 @@
-// Merge additivo della scaletta confermata (VINCOLANTE): la
-// rigenerazione non tocca MAI capitoli con rawText non vuoto. Le schede
-// confermate riempiono prima i capitoli vuoti esistenti (in ordine), il resto
-// diventa capitoli nuovi in coda. Niente eliminazioni: solo aggiunte/modifiche
-// agli slot vuoti — un capitolo vuoto in più resta dov'è.
+// Additive merge of the confirmed outline (BINDING): regeneration
+// NEVER touches chapters with non-empty rawText. Confirmed cards
+// first fill the existing empty chapters (in order), the rest
+// becomes new chapters at the end. No deletions: only additions/edits
+// to empty slots — an extra empty chapter stays where it is.
 //
-// Doppia difesa: il piano si calcola sui summary (wordCount === 0), ma PRIMA
-// di ogni update si rilegge il rawText vero dal repository — se nel frattempo
-// il capitolo ha preso testo, si salta (mai applicazione cieca).
+// Double defense: the plan is computed on the summaries (wordCount === 0), but BEFORE
+// every update the real rawText is re-read from the repository — if in the meantime
+// the chapter has gained text, it is skipped (never blind application).
 
 import type { ChapterOutline, ChapterRepository, ChapterSummary } from '../chapters';
 import type { OutlineCard } from './types';
 
 export interface OutlineMergePlan {
-  /** Capitoli vuoti esistenti da riempire con titolo+outline, in ordine. */
+  /** Existing empty chapters to fill with title+outline, in order. */
   updates: { chapterId: string; title: string; outline: ChapterOutline }[];
-  /** Schede in più: capitoli nuovi da creare in coda, in ordine. */
+  /** Extra cards: new chapters to create at the end, in order. */
   creates: { title: string; outline: ChapterOutline }[];
 }
 
 function toOutline(card: OutlineCard): ChapterOutline {
-  // beatsDone vuoto: una traccia (ri)generata riparte con tutti i beat da fare
+  // empty beatsDone: a (re)generated outline restarts with all beats to do
   return { summary: card.summary, beats: card.beats, beatsDone: [] };
 }
 
 /**
- * Funzione pura: dati i capitoli attuali e le schede confermate, decide chi
- * riempie quale slot. I capitoli con parole (wordCount > 0) non compaiono MAI
- * nel piano; gli slot vuoti si riempiono nell'ordine del libro.
+ * Pure function: given the current chapters and the confirmed cards, decides what
+ * fills which slot. Chapters with words (wordCount > 0) NEVER appear
+ * in the plan; empty slots are filled in the book's order.
  */
 export function planOutlineMerge(
   chapters: readonly ChapterSummary[],
@@ -52,11 +52,11 @@ export function planOutlineMerge(
 export interface OutlineMergeResult {
   updated: number;
   created: number;
-  /** Slot pianificati come vuoti ma trovati CON testo alla verifica: intoccati. */
+  /** Slots planned as empty but found WITH text on verification: untouched. */
   skipped: number;
 }
 
-/** Applica il piano via repository, rileggendo il testo prima di ogni update. */
+/** Applies the plan via the repository, re-reading the text before every update. */
 export async function applyOutlineMerge(
   repository: ChapterRepository,
   bookId: string,

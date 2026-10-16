@@ -1,56 +1,56 @@
-// Contratto dell'adapter STT: DictationEngine è un mapper SOTTILE
-// sugli eventi del motore nativo. Le politiche di sessione — riavvio automatico,
-// dedup del doppio `end`, pausa su interruzione audio —
-// vivono in DictationSession, così sono coperte dai test con il Fake.
+// STT adapter contract: DictationEngine is a THIN mapper over the native
+// engine's events. Session policies (automatic restart, dedup of the double
+// `end`, pause on audio interruption) live in DictationSession, so they are
+// covered by tests using the Fake engine.
 
 export type DictationErrorCode =
-  | 'permission-denied' // permesso microfono/riconoscimento negato
-  | 'audio-interruption' // telefonata o altra app ha preso il microfono
-  | 'no-speech' // silenzio prolungato: benigno, il motore termina da solo
-  | 'network' // il riconoscimento cloud non raggiunge la rete
+  | 'permission-denied' // microphone/recognition permission denied
+  | 'audio-interruption' // a phone call or another app took the microphone
+  | 'no-speech' // prolonged silence: benign, the engine ends on its own
+  | 'network' // cloud recognition cannot reach the network
   | 'unknown';
 
 export interface DictationError {
   code: DictationErrorCode;
   message?: string;
-  /** true se la sessione può proseguire (pausa/riavvio), false se deve fermarsi */
+  /** true if the session can continue (pause/restart), false if it must stop */
   recoverable: boolean;
 }
 
 export interface DictationEngineEvents {
-  /** Trascritto provvisorio, grezzo (nessun comando vocale applicato). */
+  /** Interim transcript, raw (no voice commands applied). */
   onPartial?(text: string): void;
-  /** Blocco consolidato dal motore, grezzo. */
+  /** Block finalized by the engine, raw. */
   onFinal?(text: string): void;
-  /** Il motore è effettivamente in ascolto. */
+  /** The engine is actually listening. */
   onStart?(): void;
   /**
-   * La sessione del motore è terminata. ATTENZIONE: su
-   * Android può arrivare DUE volte per lo stesso stop — l'adapter NON deduplica,
-   * inoltra tutto; la dedup è responsabilità di chi ascolta (DictationSession).
+   * The engine session has ended. WARNING: on Android this can fire TWICE
+   * for the same stop. The adapter does NOT deduplicate, it forwards everything;
+   * deduplication is the listener's job (DictationSession).
    */
   onEnd?(): void;
   onError?(error: DictationError): void;
 }
 
 export interface DictationStartOptions {
-  /** Lingua BCP-47, es. 'it-IT'. */
+  /** BCP-47 language, e.g. 'it-IT'. */
   lang: string;
 }
 
 export interface DictationEngine {
-  /** Avvia una sessione di riconoscimento (continuous + parziali). */
+  /** Starts a recognition session (continuous + interim results). */
   start(options: DictationStartOptions): Promise<void>;
-  /** Ferma l'ascolto lasciando consolidare gli ultimi risultati; seguirà onEnd. */
+  /** Stops listening, letting the last results finalize; onEnd follows. */
   stop(): Promise<void>;
   /**
-   * Ferma la cattura senza chiudere la sessione di dettatura (concetto del
-   * livello superiore). I motori nativi non hanno una vera pausa: equivale a
-   * stop(), la distinzione è semantica ed esiste per il chiamante.
+   * Stops capture without closing the dictation session (a higher-level
+   * concept). Native engines have no real pause: this is equivalent to
+   * stop(); the distinction is semantic and exists for the caller.
    */
   pause(): Promise<void>;
-  /** Registra i listener (una sola destinazione: la sessione). */
+  /** Registers the listeners (a single destination: the session). */
   setEvents(events: DictationEngineEvents): void;
-  /** Rilascia le risorse (subscription native). */
+  /** Releases resources (native subscriptions). */
   dispose(): void;
 }

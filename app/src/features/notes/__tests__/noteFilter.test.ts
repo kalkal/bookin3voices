@@ -21,21 +21,21 @@ const notes: Note[] = [
 ];
 
 describe('filterNotesByTag', () => {
-  it('null ("Tutte") restituisce tutte le note conservando l’ordine', () => {
+  it('null ("Tutte") returns all notes preserving the order', () => {
     expect(filterNotesByTag(notes, null).map((n) => n.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('un tag tiene solo le note con quel tag, nell’ordine originale', () => {
+  it('a tag keeps only the notes with that tag, in the original order', () => {
     expect(filterNotesByTag(notes, 'trama').map((n) => n.id)).toEqual(['a', 'd']);
     expect(filterNotesByTag(notes, 'dialogo').map((n) => n.id)).toEqual(['c']);
   });
 
-  it('un tag senza note dà lista vuota; le note senza tag non entrano mai in un filtro', () => {
+  it('a tag with no notes gives an empty list; untagged notes never match a filter', () => {
     expect(filterNotesByTag(notes, 'atmosfera')).toEqual([]);
     expect(filterNotesByTag(notes, 'dubbio')).toEqual([]);
   });
 
-  it('non muta l’array di partenza', () => {
+  it('does not mutate the input array', () => {
     const originale = [...notes];
     filterNotesByTag(notes, null).push(note('z', null));
     expect(notes).toEqual(originale);

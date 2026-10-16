@@ -1,8 +1,8 @@
-// Contratti della feature Export: la UI parla
-// solo con queste interfacce (Repository/Strategy), mai con l'SDK Firebase
-// o con i moduli nativi di condivisione. Il contratto della risposta è
-// CONDIVISO con la callable `exportBook` (functions/src/export/types.ts): se
-// una delle due parti cambia, va aggiornata anche l'altra.
+// Contracts of the Export feature: the UI talks
+// only to these interfaces (Repository/Strategy), never to the Firebase SDK
+// or to native sharing modules. The response contract is
+// SHARED with the `exportBook` callable (functions/src/export/types.ts): if
+// one of the two sides changes, the other must be updated too.
 
 import { z } from 'zod';
 
@@ -14,13 +14,13 @@ export const FORMAT_LABELS: Record<ExportFormat, string> = {
   docx: 'DOCX',
 };
 
-/** Risposta della callable, validata con Zod al confine. */
+/** Response of the callable, validated with Zod at the boundary. */
 export const exportFileSchema = z.object({
   exportId: z.string().min(1),
   format: z.enum(EXPORT_FORMATS),
   fileName: z.string().min(1),
   mimeType: z.string().min(1),
-  /** MVP senza Storage (piano Spark): il file arriva in base64. */
+  /** MVP without Storage (Spark plan): the file arrives as base64. */
   base64: z.string().min(1),
   size: z.number().int().positive(),
   createdAt: z.number(),
@@ -39,28 +39,28 @@ export type ExportFile = z.infer<typeof exportFileSchema>;
 export interface ExportRequest {
   bookId: string;
   format: ExportFormat;
-  /** Chiave di idempotenza: un retry non genera doppi export. */
+  /** Idempotency key: a retry does not generate duplicate exports. */
   requestId: string;
   /** When true the server refuses to export if the KDP preflight finds errors. */
   strict?: boolean;
 }
 
-/** Genera il file (oggi: callable `exportBook` sulle Cloud Functions). */
+/** Generates the file (today: `exportBook` callable on the Cloud Functions). */
 export interface BookExportService {
   exportBook(request: ExportRequest): Promise<ExportFile>;
 }
 
 /**
- * Conteggio dei suggerimenti pending del libro: prima
- * dell'export l'utente va avvisato che l'export li ignora.
+ * Count of the book's pending suggestions: before
+ * exporting, the user must be warned that the export ignores them.
  */
 export interface PendingSuggestionsRepository {
   countPending(bookId: string): Promise<number>;
 }
 
 /**
- * Il minimo che serve per salvare e condividere un file arrivato in base64:
- * lo soddisfano sia l'ExportFile della feature Export sia lo zip del backup della feature Backup.
+ * The minimum needed to save and share a file that arrived as base64:
+ * satisfied by both the Export feature's ExportFile and the Backup feature's backup zip.
  */
 export interface ShareableFile {
   fileName: string;
@@ -68,7 +68,7 @@ export interface ShareableFile {
   base64: string;
 }
 
-/** Salva il file in locale e apre lo share sheet. */
+/** Saves the file locally and opens the share sheet. */
 export interface ExportFileSink {
   saveAndShare(file: ShareableFile): Promise<void>;
 }

@@ -1,6 +1,6 @@
-// La risposta della callable passa da Zod al confine: payload
-// conformi passano, payload malformati o mancanti sono errori — mai dati
-// "quasi giusti" dentro l'app.
+// The callable's response goes through Zod at the boundary: conforming
+// payloads pass, malformed or missing payloads are errors — never "almost
+// right" data inside the app.
 
 import { CallableOutlineService } from '../CallableOutlineService';
 
@@ -14,7 +14,7 @@ const RISPOSTA_VALIDA = {
 };
 
 describe('CallableOutlineService', () => {
-  it('valida e restituisce la proposta', async () => {
+  it('validates and returns the proposal', async () => {
     const service = new CallableOutlineService({
       call: async () => ({ data: RISPOSTA_VALIDA }),
     });
@@ -27,7 +27,7 @@ describe('CallableOutlineService', () => {
     expect(proposal.chapters[0]?.title).toBe('La secca');
   });
 
-  it('payload malformato → errore (mai dati non validati nella UI)', async () => {
+  it('malformed payload → error (never unvalidated data in the UI)', async () => {
     const service = new CallableOutlineService({
       call: async () => ({ data: { chapters: [{ title: '' }] } }),
     });

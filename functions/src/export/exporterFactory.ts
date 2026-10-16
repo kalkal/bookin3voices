@@ -1,6 +1,5 @@
-// Factory della Strategy Exporter: un exporter per formato. Il PDF
-// paperback (fase successiva) si registrerà qui senza toccare la
-// callable.
+// Factory of the Exporter strategy: one exporter per format. The paperback PDF
+// (a later addition) will be registered here without touching the callable.
 
 import { DocxExporter } from './DocxExporter';
 import { EpubExporter } from './EpubExporter';

@@ -1,12 +1,12 @@
-// NoteRepository su Firestore (feature Taccuino). Clona le regole
-// di FirestoreChapterRepository:
-//  - Zod al confine: ogni documento letto passa da noteCodec (upgrade-on-read);
-//  - scritture ottimistiche: i metodi risolvono appena la mutazione è in coda
-//    nell'SDK (latency compensation) — attendere l'ack del server bloccherebbe
-//    per sempre offline. Gli errori consolidati arrivano su onWriteError;
-//  - niente contatori denormalizzati: le note NON entrano nel conteggio del
-//    libro (materiale a lato), quindi nessun increment su books/{bookId};
-//  - ordine cronologico: orderBy createdAt desc (più recenti in cima).
+// NoteRepository on Firestore (Notebook feature). Clones the rules
+// of FirestoreChapterRepository:
+//  - Zod at the boundary: every document read goes through noteCodec (upgrade-on-read);
+//  - optimistic writes: methods resolve as soon as the mutation is queued
+//    in the SDK (latency compensation) — awaiting the server ack would block
+//    forever when offline. Settled errors arrive on onWriteError;
+//  - no denormalized counters: notes do NOT count toward the book's
+//    word count (side material), so no increment on books/{bookId};
+//  - chronological order: orderBy createdAt desc (most recent first).
 
 import {
   collection,
@@ -36,26 +36,26 @@ import type {
 
 export interface FirestoreNoteRepositoryOptions {
   db: Firestore;
-  /** Proprietario dei dati: tutto vive sotto users/{uid}. */
+  /** Owner of the data: everything lives under users/{uid}. */
   uid: string;
   /**
-   * Notifica degli errori di scrittura consolidati dal server (es. permessi).
-   * La nota non si perde comunque: resta nella cache locale offline dell'SDK.
+   * Notification of write errors settled by the server (e.g. permissions).
+   * The note is not lost anyway: it stays in the SDK's local offline cache.
    */
   onWriteError?: (error: Error) => void;
 }
 
 /**
- * Remote che il composito offline-first (OfflineFirstNoteRepository) sa
- * ri-sincronizzare: oltre al contratto NoteRepository serve poter coniare un id
- * PRIMA di scrivere (così l'outbox durabile e il server concordano) e riscrivere
- * una nota con id/createdAt noti in modo idempotente (recovery della sessione
- * morta offline). Nessun impatto sulla UI, che dipende solo da NoteRepository.
+ * Remote that the offline-first composite (OfflineFirstNoteRepository) can
+ * re-sync: besides the NoteRepository contract it must be able to mint an id
+ * BEFORE writing (so the durable outbox and the server agree) and to rewrite
+ * a note with a known id/createdAt idempotently (recovery of a session that
+ * died offline). No impact on the UI, which depends only on NoteRepository.
  */
 export interface SyncableNoteRepository extends NoteRepository {
-  /** Conia un id documento (senza scrivere): serve all'outbox locale. */
+  /** Mints a document id (without writing): needed by the local outbox. */
   newNoteId(bookId: string): string;
-  /** (Ri)scrive una nota con id/createdAt noti; risolve all'ack del server. */
+  /** (Re)writes a note with a known id/createdAt; resolves on the server ack. */
   putNote(note: Note): Promise<void>;
 }
 
@@ -82,11 +82,11 @@ export class FirestoreNoteRepository implements SyncableNoteRepository {
     return `${ref.bookId}/${ref.noteId}`;
   }
 
-  /** Scrittura ottimistica: non si attende l'ack del server (vedi testata). */
+  /** Optimistic write: the server ack is not awaited (see header). */
   private commitInBackground(commit: Promise<unknown>): void {
     commit.catch((error) => {
       const wrapped = toError(error);
-      console.warn('Scrittura Firestore (nota) rifiutata dal server', wrapped);
+      console.warn('Firestore write (note) rejected by the server', wrapped);
       this.onWriteError?.(wrapped);
     });
   }
@@ -112,8 +112,8 @@ export class FirestoreNoteRepository implements SyncableNoteRepository {
         for (const docSnap of snapshot.docs) {
           const note = this.decodeSnapshot(docSnap, { bookId, noteId: docSnap.id });
           if (note === null) {
-            // payload non conforme: si salta la riga senza rompere la lista
-            console.warn(`Nota ${bookId}/${docSnap.id} non conforme allo schema: saltata`);
+            // non-conforming payload: skip the row without breaking the list
+            console.warn(`Note ${bookId}/${docSnap.id} does not match the schema: skipped`);
             continue;
           }
           notes.push(note);
@@ -129,8 +129,8 @@ export class FirestoreNoteRepository implements SyncableNoteRepository {
     if (!snapshot.exists()) return null;
     const note = this.decodeSnapshot(snapshot, ref);
     if (note === null) {
-      // documento presente ma illeggibile: mai confondere "vuoto" con "rotto"
-      throw new Error(`Nota ${this.keyFor(ref)} non conforme allo schema`);
+      // document present but unreadable: never confuse "empty" with "broken"
+      throw new Error(`Note ${this.keyFor(ref)} does not match the schema`);
     }
     return note;
   }
@@ -140,11 +140,11 @@ export class FirestoreNoteRepository implements SyncableNoteRepository {
   }
 
   /**
-   * Scrive il documento con id noto. `createdAt` è un valore client (millisecondi):
-   * observeNotes ordina su createdAt, quindi un valore già risolto evita che la
-   * nota "salti" in fondo finché il server non risolve il sentinel (latency
-   * compensation), e coincide con la nota restituita ottimisticamente.
-   * `updatedAt` resta serverTimestamp: è la data autorevole dell'ultima modifica.
+   * Writes the document with a known id. `createdAt` is a client value (milliseconds):
+   * observeNotes orders by createdAt, so an already-resolved value keeps the
+   * note from "jumping" to the bottom until the server resolves the sentinel
+   * (latency compensation), and it matches the optimistically returned note.
+   * `updatedAt` stays serverTimestamp: it is the authoritative last-modified date.
    */
   private writeNote(note: Note): Promise<void> {
     return setDoc(doc(this.notesCol(note.bookId), note.id), {
@@ -157,7 +157,7 @@ export class FirestoreNoteRepository implements SyncableNoteRepository {
   }
 
   async putNote(note: Note): Promise<void> {
-    // idempotente: la recovery può richiamarla senza creare duplicati (stesso id)
+    // idempotent: recovery can call it again without creating duplicates (same id)
     await this.writeNote(note);
   }
 

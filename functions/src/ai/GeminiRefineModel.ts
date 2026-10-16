@@ -1,6 +1,6 @@
-// RefineModel su Gemini: approccio REST diretto (fetch
-// diretto a generateContent con structured output, chiave come provider — mai
-// nel repo, mai nei log). Differenze volute: temperatura 0.3 e prompt della rifinitura.
+// RefineModel on Gemini: a direct REST call (plain fetch to generateContent with
+// structured output); the API key is never in the repo or in logs. Intentional
+// differences from the other callers: temperature 0.3 and the refine prompt.
 
 import {
   extractCandidateText,
@@ -22,8 +22,8 @@ export class GeminiHttpError extends Error {
   }
 }
 
-/** Errori HTTP su cui ha senso ritentare o passare al modello di riserva
- *  (i modelli flash possono rispondere 503 «high demand» nei picchi). */
+/** HTTP errors worth retrying or handing to the fallback model
+ *  (flash models can answer 503 "high demand" at peak times). */
 export function isRetryableGeminiError(error: unknown): boolean {
   return (
     (error instanceof GeminiHttpError && [408, 429, 500, 502, 503, 504].includes(error.status)) ||
@@ -32,14 +32,14 @@ export function isRetryableGeminiError(error: unknown): boolean {
 }
 
 export interface GeminiRefineModelOptions {
-  /** Nome del modello (da config, mai cablato): risolto solo a runtime. */
+  /** Model name (from config, never hard-coded): resolved only at runtime. */
   model: () => string;
-  /** La chiave si risolve a ogni chiamata (i secret esistono solo a runtime). */
+  /** The key is resolved on every call (secrets exist only at runtime). */
   apiKey: () => string;
-  /** fetch iniettabile nei test. */
+  /** fetch, injectable in tests. */
   fetchFn?: typeof fetch;
   baseUrl?: string;
-  /** Temperatura (default: quella della validazione, 0.3). */
+  /** Temperature (default: the refine temperature, 0.3). */
   temperature?: number;
   /** Network timeout per call, ms (default 80 s). */
   timeoutMs?: number;
@@ -66,7 +66,7 @@ export class GeminiRefineModel implements RefineModel {
     return this.model();
   }
 
-  /** JSON del candidato ANCORA da validare (parse, don't validate al confine). */
+  /** The candidate JSON, NOT yet validated (parse, don't validate, at the boundary). */
   async generate(prompt: RefinePrompt): Promise<unknown> {
     const response = await this.fetchFn(
       `${this.baseUrl}/models/${this.modelName}:generateContent`,

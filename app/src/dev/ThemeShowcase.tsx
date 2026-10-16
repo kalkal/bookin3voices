@@ -1,7 +1,7 @@
 /**
- * Vetrina di sviluppo del design system "biblioteca inglese elegante":
- * una demo per ogni token e componente base, per il confronto visivo col
- * mockup. Raggiungibile solo in dev da App.tsx.
+ * Development showcase of the "elegant English library" design system:
+ * one demo for every token and base component, for visual comparison with
+ * the mockup. Reachable only in dev from App.tsx.
  */
 import { ScrollView, Text, View } from 'react-native';
 import type { ReactNode } from 'react';

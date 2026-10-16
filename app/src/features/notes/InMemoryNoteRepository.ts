@@ -1,6 +1,6 @@
-// Repository del Taccuino in memoria per test e sviluppo (E2E): contratto
-// completo (CRUD + observeNotes), ordine cronologico discendente come il
-// Firestore. `seed()` prepara lo stato iniziale nei test.
+// In-memory Notebook repository for tests and development (E2E): full contract
+// (CRUD + observeNotes), descending chronological order like
+// Firestore. `seed()` sets up the initial state in tests.
 
 import type {
   CreateNoteInput,
@@ -17,14 +17,14 @@ export class InMemoryNoteRepository implements NoteRepository {
   private readonly notes = new Map<string, Note>();
   private readonly listeners = new Map<string, Set<(notes: Note[]) => void>>();
   private nextId = 1;
-  /** Orologio iniettabile per test deterministici sui timestamp/ordine. */
+  /** Injectable clock for deterministic timestamps/ordering in tests. */
   private now: () => number;
 
   constructor(now: () => number = Date.now) {
     this.now = now;
   }
 
-  /** Comodo per preparare lo stato iniziale nei test/E2E. */
+  /** Convenient for setting up the initial state in tests/E2E. */
   seed(bookId: string, input: CreateNoteInput & { id?: string; createdAt?: number }): Note {
     const at = input.createdAt ?? this.now();
     const note: Note = {
@@ -59,7 +59,7 @@ export class InMemoryNoteRepository implements NoteRepository {
 
   async updateNote(ref: NoteRef, patch: NotePatch): Promise<void> {
     const existing = this.notes.get(keyFor(ref));
-    if (!existing) throw new Error(`Nota inesistente: ${keyFor(ref)}`);
+    if (!existing) throw new Error(`Note does not exist: ${keyFor(ref)}`);
     this.notes.set(keyFor(ref), { ...existing, ...patch, updatedAt: this.now() });
     this.emit(ref.bookId);
   }
@@ -69,7 +69,7 @@ export class InMemoryNoteRepository implements NoteRepository {
     this.emit(ref.bookId);
   }
 
-  /** Note del libro, più recenti in cima (createdAt desc, id come spareggio). */
+  /** Notes of the book, most recent first (createdAt desc, id as tiebreaker). */
   private listOf(bookId: string): Note[] {
     return [...this.notes.values()]
       .filter((note) => note.bookId === bookId)

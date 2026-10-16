@@ -1,5 +1,5 @@
-// API pubblica della feature Taccuino: contratto, codec e filtro puri,
-// implementazioni (Firestore, in-memory per test/E2E) e schermata.
+// Public API of the Notebook feature: contract, pure codec and filter,
+// implementations (Firestore, in-memory for tests/E2E) and screen.
 
 export type {
   CreateNoteInput,

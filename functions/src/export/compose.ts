@@ -1,6 +1,6 @@
-// Composizione del libro per l'export: frontespizio, indice e
-// capitoli in ordine. Funzioni pure, condivise dagli exporter: qui si decide
-// COSA finisce nel file, ogni exporter decide solo COME renderlo.
+// Book composition for export: title page, index and chapters in order. Pure
+// functions shared by the exporters: this decides WHAT goes into the file,
+// each exporter decides only HOW to render it.
 
 import type { BookForExport } from './types';
 
@@ -20,10 +20,10 @@ const ROMAN_STEPS: readonly (readonly [number, string])[] = [
   [1, 'I'],
 ];
 
-/** Numerali romani come nell'app (firma visiva dei capitoli). */
+/** Roman numerals as in the app (the visual signature of chapters). */
 export function toRoman(value: number): string {
   if (!Number.isInteger(value) || value < 1 || value > 3999) {
-    throw new RangeError(`toRoman accetta interi tra 1 e 3999, ricevuto: ${value}`);
+    throw new RangeError(`toRoman accepts integers between 1 and 3999, received: ${value}`);
   }
   let rest = value;
   let out = '';
@@ -36,15 +36,15 @@ export function toRoman(value: number): string {
   return out;
 }
 
-/** Capitolo composto: titolo da mostrare + paragrafi di testo puro. */
+/** Composed chapter: display title + plain-text paragraphs. */
 export interface ComposedChapter {
   displayTitle: string;
   paragraphs: string[];
 }
 
 /**
- * Titolo del capitolo nel libro esportato: "Capitolo <romano> — <titolo>"
- * (numerali romani come nell'app). `position` è 1-based.
+ * Chapter title in the exported book: "Capitolo <roman> — <title>" (Roman
+ * numerals as in the app). `position` is 1-based.
  */
 export function chapterDisplayTitle(position: number, title: string): string {
   const base = `Capitolo ${toRoman(position)}`;
@@ -53,9 +53,10 @@ export function chapterDisplayTitle(position: number, title: string): string {
 }
 
 /**
- * Il rawText della dettatura usa i newline come confini («a capo», «nuovo
- * paragrafo»): ogni sequenza di newline apre un paragrafo nuovo. Un capitolo
- * ancora vuoto produce zero paragrafi (compare nel libro col solo titolo).
+ * The dictation rawText uses newlines as boundaries («new line», «new
+ * paragraph»): each run of newlines opens a new paragraph. A still-empty
+ * chapter produces zero paragraphs (it appears in the book with its title
+ * only).
  */
 export function splitParagraphs(rawText: string): string[] {
   return rawText
@@ -64,7 +65,7 @@ export function splitParagraphs(rawText: string): string[] {
     .filter((paragraph) => paragraph !== '');
 }
 
-/** Capitoli composti in ordine di lettura (l'ordine è già quello di `order`). */
+/** Composed chapters in reading order (the order is already that of `order`). */
 export function composeChapters(book: BookForExport): ComposedChapter[] {
   return book.chapters.map((chapter, index) => ({
     displayTitle: chapterDisplayTitle(index + 1, chapter.title),
@@ -72,7 +73,7 @@ export function composeChapters(book: BookForExport): ComposedChapter[] {
   }));
 }
 
-/** Escape HTML per i contenuti EPUB (il testo dettato è testo puro, mai HTML). */
+/** HTML escape for EPUB content (dictated text is plain text, never HTML). */
 export function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')
@@ -83,10 +84,10 @@ export function escapeHtml(text: string): string {
 }
 
 /**
- * Slug ASCII di un titolo (nomi file/cartelle degli export e del backup):
- * gli accenti si riducono alla lettera base; tutto il resto diventa trattino.
- * Un titolo senza caratteri utilizzabili produce stringa vuota: il chiamante
- * decide il ripiego.
+ * ASCII slug of a title (file/folder names of exports and backups): accents
+ * are reduced to the base letter; everything else becomes a hyphen. A title
+ * with no usable characters produces an empty string: the caller decides the
+ * fallback.
  */
 export function slugify(title: string): string {
   return title
@@ -97,13 +98,13 @@ export function slugify(title: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-/** Nome file dell'export: slug ASCII del titolo + estensione. */
+/** Export file name: ASCII title slug + extension. */
 export function exportFileName(title: string, extension: string): string {
   const slug = slugify(title);
   return `${slug === '' ? 'libro' : slug}.${extension}`;
 }
 
-/** Lingua per i metadati KDP: mai vuota (default 'it', assunzione dichiarata). */
+/** Language for KDP metadata: never empty (default 'it', a declared assumption). */
 export function exportLanguage(language: string): string {
   const trimmed = language.trim();
   return trimmed === '' ? 'it' : trimmed;

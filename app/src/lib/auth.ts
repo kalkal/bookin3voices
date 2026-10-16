@@ -1,15 +1,14 @@
-// Bootstrap dell'identità: il modello dati vive sotto users/{uid}
-// ma un flusso di login non esiste ancora nel backlog. Assunzione
-// dichiarata: accesso ANONIMO — con la persistenza su AsyncStorage la uid
-// sopravvive ai riavvii, e un eventuale login vero potrà agganciarsi qui
-// (linkWithCredential) senza toccare i repository.
+// Identity bootstrap: the data model lives under users/{uid}, but there is
+// no login flow yet. Declared assumption: ANONYMOUS sign-in — with
+// AsyncStorage persistence the uid survives restarts, and a real login can
+// later hook in here (linkWithCredential) without touching the repositories.
 
 import { onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 
 /**
- * Risolve con la uid dell'utente corrente, firmando in modo anonimo al primo
- * avvio. Rifiuta solo se anche il sign-in anonimo fallisce (es. emulatore
- * spento): il chiamante decide come presentare l'errore.
+ * Resolves with the current user's uid, signing in anonymously on first
+ * launch. Rejects only if the anonymous sign-in also fails (e.g. emulator
+ * not running): the caller decides how to present the error.
  */
 export function ensureSignedIn(auth: Auth): Promise<string> {
   return new Promise((resolve, reject) => {

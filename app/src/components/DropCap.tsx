@@ -1,8 +1,8 @@
 /**
- * Paragrafo con capolettera verde in Cormorant Garamond (editor).
- * React Native non ha il float del CSS: il capolettera è reso inline sulla
- * prima riga (colonna a sinistra solo per la prima riga tramite layout a due
- * colonne sarebbe l'alternativa, ma spezzerebbe il flusso del testo).
+ * Paragraph with a green drop cap in Cormorant Garamond (editor).
+ * React Native has no CSS float: the drop cap is rendered inline on the first
+ * line (a left column for the first line only, via a two-column layout, would
+ * be the alternative, but it would break the text flow).
  */
 import { Text } from 'react-native';
 import type { StyleProp, TextStyle } from 'react-native';
@@ -10,7 +10,7 @@ import type { StyleProp, TextStyle } from 'react-native';
 import { useTheme } from '../theme';
 
 interface DropCapProps {
-  /** Testo del paragrafo; la prima lettera diventa capolettera. */
+  /** Paragraph text; the first letter becomes the drop cap. */
   text: string;
   style?: StyleProp<TextStyle>;
   testID?: string;
@@ -18,7 +18,7 @@ interface DropCapProps {
 
 export function DropCap({ text, style, testID }: DropCapProps) {
   const { colors, typeScale, fonts } = useTheme();
-  // Primo grapheme (gestisce anche lettere accentate composte).
+  // First grapheme (also handles composed accented letters).
   const [first = '', ...rest] = Array.from(text);
 
   return (

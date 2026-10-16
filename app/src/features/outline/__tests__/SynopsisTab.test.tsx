@@ -1,5 +1,5 @@
-// Tab Sinossi: sinossi con salvataggio, generazione → anteprima
-// corkboard modificabile/eliminabile → conferma = merge additivo.
+// Synopsis tab: synopsis with save, generation → editable/deletable
+// corkboard preview → confirmation = additive merge.
 
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
@@ -58,7 +58,7 @@ async function chaptersOf(repo: InMemoryChapterRepository) {
 }
 
 describe('SynopsisTab', () => {
-  it('non mostra l’avviso della chiave di sviluppo con il provider predefinito', async () => {
+  it('does not show the development-key warning with the default provider', async () => {
     const { result } = setup();
     const screen = await result;
     await screen.findByTestId('synopsis-tab');
@@ -66,7 +66,7 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('mostra la sinossi del libro e la salva modificata', async () => {
+  it('shows the book synopsis and saves it after editing', async () => {
     const { result, books } = setup();
     const screen = await result;
 
@@ -85,7 +85,7 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('genera la scaletta e mostra l’anteprima a schede (titolo e beat)', async () => {
+  it('generates the outline and shows the card preview (title and beats)', async () => {
     const { result, outlineService } = setup();
     const screen = await result;
 
@@ -95,7 +95,7 @@ describe('SynopsisTab', () => {
     expect(card).toHaveTextContent(/La secca/);
     expect(card).toHaveTextContent(/beat 1a/);
     expect(screen.getByTestId('outline-card-1')).toHaveTextContent(/Il patto/);
-    // la sinossi inviata è quella del campo, con requestId da idempotenza
+    // the synopsis sent is the field's one, with an idempotency requestId
     expect(outlineService.requests[0]).toMatchObject({
       bookId: 'faro',
       synopsis: 'Una custode di faro e un patto antico.',
@@ -104,18 +104,18 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('le schede si possono eliminare e modificare prima della conferma', async () => {
+  it('cards can be deleted and edited before confirmation', async () => {
     const { result } = setup();
     const screen = await result;
 
     await fireEvent.press(await screen.findByTestId('synopsis-generate'));
     await screen.findByTestId('outline-card-0');
 
-    // elimina la seconda scheda
+    // delete the second card
     await fireEvent.press(screen.getByTestId('outline-card-delete-1'));
     expect(screen.queryByTestId('outline-card-1')).toBeNull();
 
-    // modifica la prima: titolo e beat (uno per riga, righe vuote scartate)
+    // edit the first: title and beats (one per line, empty lines discarded)
     await fireEvent.press(screen.getByTestId('outline-card-edit-0'));
     await fireEvent.changeText(screen.getByTestId('outline-edit-title'), 'La secca, rivista');
     await fireEvent.changeText(
@@ -131,7 +131,7 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('conferma su libro senza capitoli: crea tutti i capitoli draft con outline', async () => {
+  it('confirmation on a book without chapters: creates all draft chapters with outline', async () => {
     const { result, chapters } = setup();
     const screen = await result;
 
@@ -149,13 +149,13 @@ describe('SynopsisTab', () => {
       });
       expect(all[1]).toMatchObject({ title: 'Il patto', status: 'draft' });
     });
-    // l'anteprima si chiude e l'esito è visibile
+    // the preview closes and the outcome is visible
     expect(screen.queryByTestId('outline-card-0')).toBeNull();
     expect(await screen.findByTestId('synopsis-status')).toHaveTextContent(/2 capitoli nuovi/);
     await screen.unmount();
   });
 
-  it('merge additivo: il capitolo scritto resta intatto, lo slot vuoto si riempie, il resto va in coda', async () => {
+  it('additive merge: the written chapter stays intact, the empty slot is filled, the rest goes at the end', async () => {
     const { result, chapters } = setup({ seedChapters: true });
     const screen = await result;
 
@@ -167,19 +167,19 @@ describe('SynopsisTab', () => {
     await waitFor(async () => {
       const all = await chaptersOf(chapters);
       expect(all).toHaveLength(3);
-      // il capitolo con testo NON è stato toccato
+      // the chapter with text was NOT touched
       expect(all[0]).toMatchObject({
         title: 'Il ritorno',
         rawText: 'Testo già dettato.',
         outline: null,
       });
-      // lo slot vuoto ha preso titolo e outline della prima scheda
+      // the empty slot took the title and outline of the first card
       expect(all[1]).toMatchObject({
         title: 'La secca',
         rawText: '',
         outline: { summary: 'Riassunto uno.', beats: ['beat 1a', 'beat 1b'] },
       });
-      // la seconda scheda è un capitolo nuovo in coda
+      // the second card is a new chapter at the end
       expect(all[2]).toMatchObject({ title: 'Il patto', status: 'draft' });
     });
     expect(await screen.findByTestId('synopsis-status')).toHaveTextContent(
@@ -188,14 +188,14 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('un errore della callable diventa un messaggio leggibile', async () => {
+  it('a callable error becomes a readable message', async () => {
     const { result, outlineService } = setup();
     outlineService.nextError = new Error('Il modello non ha prodotto una scaletta valida.');
     const screen = await result;
 
     await fireEvent.press(await screen.findByTestId('synopsis-generate'));
     expect(await screen.findByTestId('synopsis-status')).toHaveTextContent(/scaletta valida/);
-    // niente anteprima su errore
+    // no preview on error
     expect(screen.queryByTestId('outline-card-0')).toBeNull();
     await screen.unmount();
   });

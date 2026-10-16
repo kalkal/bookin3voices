@@ -14,7 +14,7 @@ const VALID_RESPONSE = {
 };
 
 describe('CallableBookExportService', () => {
-  it('passa la richiesta alla callable e valida la risposta con Zod', async () => {
+  it('passes the request to the callable and validates the response with Zod', async () => {
     const call = jest.fn().mockResolvedValue({ data: VALID_RESPONSE });
     const service = new CallableBookExportService({ call });
 
@@ -24,7 +24,7 @@ describe('CallableBookExportService', () => {
     expect(file).toEqual(VALID_RESPONSE);
   });
 
-  it('rifiuta risposte malformate (parse, don’t validate al confine)', async () => {
+  it('rejects malformed responses (parse, don’t validate at the boundary)', async () => {
     const call = jest.fn().mockResolvedValue({ data: { ...VALID_RESPONSE, base64: '' } });
     const service = new CallableBookExportService({ call });
 

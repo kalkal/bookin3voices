@@ -18,8 +18,8 @@ function setup(options?: { autoEmitStart?: boolean; voiceCommands?: boolean }) {
   return { engine, session, onFlush, states, events };
 }
 
-describe('DictationSession — avvio e testo', () => {
-  it('parte da idle, avvia il motore in it-IT e passa a listening', () => {
+describe('DictationSession — start and text', () => {
+  it('starts from idle, starts the engine in it-IT and moves to listening', () => {
     const { engine, session, states } = setup();
     expect(session.state).toBe('idle');
     session.start();
@@ -28,7 +28,7 @@ describe('DictationSession — avvio e testo', () => {
     expect(states).toEqual(['listening']);
   });
 
-  it('accumula i finali applicando i comandi vocali', () => {
+  it('accumulates finals applying voice commands', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitFinal('primo blocco punto');
@@ -36,14 +36,14 @@ describe('DictationSession — avvio e testo', () => {
     expect(session.text).toBe('Primo blocco. Secondo blocco');
   });
 
-  it('con voiceCommands: false accumula i finali senza post-processing', () => {
+  it('with voiceCommands: false accumulates finals without post-processing', () => {
     const { engine, session } = setup({ voiceCommands: false });
     session.start();
     engine.emitFinal('primo blocco punto');
     expect(session.text).toBe('primo blocco punto');
   });
 
-  it('inoltra i parziali grezzi solo in listening', () => {
+  it('forwards raw interim results only while listening', () => {
     const partials: string[] = [];
     const engine = new FakeDictationEngine();
     const session = new DictationSession({
@@ -51,7 +51,7 @@ describe('DictationSession — avvio e testo', () => {
       onFlush: jest.fn(),
       onPartial: (raw) => partials.push(raw),
     });
-    engine.emitPartial('fantasma'); // in idle: ignorato
+    engine.emitPartial('fantasma'); // in idle: ignored
     session.start();
     engine.emitPartial('oggi pio');
     session.pause();
@@ -59,7 +59,7 @@ describe('DictationSession — avvio e testo', () => {
     expect(partials).toEqual(['oggi pio']);
   });
 
-  it('un nuovo start da idle azzera il buffer', () => {
+  it('a new start from idle clears the buffer', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitFinal('vecchio testo');
@@ -70,18 +70,18 @@ describe('DictationSession — avvio e testo', () => {
   });
 });
 
-describe('DictationSession — riavvii ai giunti e dedup del doppio end', () => {
-  it('riavvia il motore quando la sessione motore termina mentre si ascolta', () => {
+describe('DictationSession — restarts at seams and double-end dedup', () => {
+  it('restarts the engine when the engine session ends while listening', () => {
     const { engine, session, events } = setup();
     session.start();
-    engine.emitSingleEnd(); // giunto del motore
+    engine.emitSingleEnd(); // engine seam
     expect(session.state).toBe('listening');
     expect(engine.startCalls).toHaveLength(2);
     expect(session.restartCount).toBe(1);
     expect(events).toContainEqual({ type: 'engine-restarted', count: 1 });
   });
 
-  it('il testo sopravvive al giunto: i finali dopo il riavvio si accodano', () => {
+  it('the text survives the seam: finals after the restart are appended', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitFinal('prima del giunto punto');
@@ -90,33 +90,33 @@ describe('DictationSession — riavvii ai giunti e dedup del doppio end', () => 
     expect(session.text).toBe('Prima del giunto. Dopo il giunto');
   });
 
-  it('DEDUPLICA il doppio end: un solo riavvio, il doppione è ignorato', () => {
-    // il motore riavviato non ha ancora confermato lo start quando arriva
-    // il secondo end: è lo scenario reale osservato sul motore reale
+  it('DEDUPLICATES the double end: a single restart, the duplicate is ignored', () => {
+    // the restarted engine has not yet confirmed the start when the
+    // second end arrives: this is the scenario observed on the real engine
     const { engine, session, events } = setup({ autoEmitStart: false });
     session.start();
-    engine.emitStart(); // conferma dello start iniziale
+    engine.emitStart(); // confirmation of the initial start
     engine.duplicateEnd = true;
-    engine.emitEnd(); // emette DUE end back-to-back
-    expect(engine.startCalls).toHaveLength(2); // iniziale + UN riavvio, non due
+    engine.emitEnd(); // emits TWO back-to-back ends
+    expect(engine.startCalls).toHaveLength(2); // initial + ONE restart, not two
     expect(session.restartCount).toBe(1);
     expect(events).toContainEqual({ type: 'duplicate-end-ignored' });
-    engine.emitStart(); // il riavvio si conferma: si continua ad ascoltare
+    engine.emitStart(); // the restart is confirmed: listening continues
     expect(session.state).toBe('listening');
   });
 
-  it('tempesta di riavvii → errore fatale invece di loop infinito', () => {
+  it('restart storm → fatal error instead of an infinite loop', () => {
     const { engine, session, events, onFlush } = setup();
     session.start();
     for (let i = 0; i < 6; i += 1) engine.emitSingleEnd();
     expect(session.state).toBe('error');
     expect(events).toContainEqual({ type: 'restart-storm' });
-    expect(onFlush).toHaveBeenCalled(); // anche su errore il testo si flusha
+    expect(onFlush).toHaveBeenCalled(); // the text is flushed even on error
   });
 });
 
-describe('DictationSession — pausa e flush (regola di convivenza 3)', () => {
-  it('pause(): flush del testo corrente, stop del motore, stato paused', () => {
+describe('DictationSession — pause and flush', () => {
+  it('pause(): flushes the current text, stops the engine, state paused', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.emitFinal('testo dettato');
@@ -126,16 +126,16 @@ describe('DictationSession — pausa e flush (regola di convivenza 3)', () => {
     expect(engine.stopCalls).toBe(1);
   });
 
-  it('gli end (anche doppi) dopo la pausa NON riavviano il motore', () => {
+  it('ends (even doubled) after the pause do NOT restart the engine', () => {
     const { engine, session } = setup();
     engine.duplicateEnd = true;
     session.start();
-    session.pause(); // lo stop del fake emette i due end
+    session.pause(); // the fake's stop emits the two ends
     expect(engine.startCalls).toHaveLength(1);
     expect(session.state).toBe('paused');
   });
 
-  it('un finale ritardatario dopo la pausa viene accodato e riflushato', () => {
+  it('a late final after the pause is appended and flushed again', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.emitFinal('prima parte');
@@ -146,30 +146,30 @@ describe('DictationSession — pausa e flush (regola di convivenza 3)', () => {
     expect(onFlush).toHaveBeenCalledWith('Prima parte coda consolidata dopo lo stop');
   });
 
-  it('la ripresa da paused è solo esplicita e conserva il testo', () => {
+  it('resuming from paused is explicit only and keeps the text', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitFinal('testo da conservare');
     session.pause();
-    expect(engine.startCalls).toHaveLength(1); // nessuna ripresa automatica
+    expect(engine.startCalls).toHaveLength(1); // no automatic resume
     session.start();
     expect(session.state).toBe('listening');
     expect(engine.startCalls).toHaveLength(2);
     expect(session.text).toBe('Testo da conservare');
   });
 
-  it('flush() esplicito (es. passaggio in background) persiste il testo corrente', () => {
+  it('explicit flush() (e.g. moving to background) persists the current text', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.emitFinal('testo a metà');
     session.flush();
     expect(onFlush).toHaveBeenCalledWith('Testo a metà');
-    expect(session.state).toBe('listening'); // il flush non cambia stato
+    expect(session.state).toBe('listening'); // flush does not change state
   });
 });
 
-describe('DictationSession — interruzione audio', () => {
-  it('telefonata: pausa automatica con flush, mai ripartire da soli', () => {
+describe('DictationSession — audio interruption', () => {
+  it('phone call: automatic pause with flush, never restart by itself', () => {
     const { engine, session, onFlush, events } = setup();
     session.start();
     engine.emitFinal('dettato prima della telefonata');
@@ -177,20 +177,20 @@ describe('DictationSession — interruzione audio', () => {
     expect(session.state).toBe('paused');
     expect(onFlush).toHaveBeenCalledWith('Dettato prima della telefonata');
     expect(events).toContainEqual(expect.objectContaining({ type: 'audio-interruption' }));
-    // il motore muore per l'interruzione: nessun riavvio automatico
+    // the engine dies from the interruption: no automatic restart
     engine.emitEnd();
     expect(engine.startCalls).toHaveLength(1);
     expect(session.state).toBe('paused');
   });
 
-  it('rete assente (riconoscimento cloud): stessa pausa automatica', () => {
+  it('network down (cloud recognition): same automatic pause', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitError({ code: 'network', recoverable: true });
     expect(session.state).toBe('paused');
   });
 
-  it('errore benigno (silenzio): nessuna pausa, il ciclo end→riavvio prosegue', () => {
+  it('benign error (silence): no pause, the end→restart cycle continues', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitError({ code: 'no-speech', recoverable: true });
@@ -200,8 +200,8 @@ describe('DictationSession — interruzione audio', () => {
   });
 });
 
-describe('DictationSession — stop, errori fatali e ripristino', () => {
-  it('stop() da listening: flush, chiusura motore e ritorno a idle', () => {
+describe('DictationSession — stop, fatal errors and recovery', () => {
+  it('stop() from listening: flush, engine close and return to idle', () => {
     const { engine, session, onFlush, states } = setup();
     session.start();
     engine.emitFinal('capitolo finito');
@@ -209,10 +209,10 @@ describe('DictationSession — stop, errori fatali e ripristino', () => {
     expect(onFlush).toHaveBeenCalledWith('Capitolo finito');
     expect(engine.stopCalls).toBe(1);
     expect(states).toEqual(['listening', 'committing', 'idle']);
-    expect(session.text).toBe('Capitolo finito'); // leggibile anche dopo lo stop
+    expect(session.text).toBe('Capitolo finito'); // readable even after the stop
   });
 
-  it('stop() da paused (motore già fermo): flush e idle senza attese', () => {
+  it('stop() from paused (engine already stopped): flush and idle with no waiting', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.emitFinal('testo');
@@ -221,10 +221,10 @@ describe('DictationSession — stop, errori fatali e ripristino', () => {
     session.stop();
     expect(session.state).toBe('idle');
     expect(onFlush).toHaveBeenCalledWith('Testo');
-    expect(engine.stopCalls).toBe(1); // solo quello della pausa
+    expect(engine.stopCalls).toBe(1); // only the one from the pause
   });
 
-  it('errore fatale: stato error con flush, poi reset() → idle', () => {
+  it('fatal error: error state with flush, then reset() → idle', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.emitFinal('da salvare');
@@ -237,33 +237,33 @@ describe('DictationSession — stop, errori fatali e ripristino', () => {
     expect(session.error).toBeUndefined();
   });
 
-  it('start del motore fallito → errore fatale', async () => {
+  it('engine start failure → fatal error', async () => {
     const engine = new FakeDictationEngine();
     engine.start = jest.fn().mockRejectedValue(new Error('kaputt'));
     const session = new DictationSession({ engine, onFlush: jest.fn() });
     session.start();
-    await Promise.resolve(); // lascia propagare il rifiuto della promise
+    await Promise.resolve(); // let the promise rejection propagate
     expect(session.state).toBe('error');
   });
 
-  it('dispose() rilascia il motore', () => {
+  it('dispose() releases the engine', () => {
     const { engine, session } = setup();
     session.dispose();
     expect(engine.disposed).toBe(true);
   });
 });
 
-describe('DictationSession — scenario a script con timing (Fake pilotato)', () => {
+describe('DictationSession — timed scripted scenario (driven Fake)', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it('dettatura realistica: parziali, finali, giunto con riavvio, pausa', () => {
+  it('realistic dictation: interim results, finals, seam with restart, pause', () => {
     const { engine, session, onFlush } = setup();
     session.start();
     engine.playScript([
       { atMs: 100, type: 'partial', text: 'oggi' },
       { atMs: 300, type: 'final', text: 'oggi piove punto' },
-      { atMs: 900, type: 'end' }, // giunto del motore → riavvio automatico
+      { atMs: 900, type: 'end' }, // engine seam → automatic restart
       { atMs: 1400, type: 'final', text: 'domani vedremo virgola forse' },
     ]);
     jest.advanceTimersByTime(2000);

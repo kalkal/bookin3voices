@@ -11,16 +11,16 @@ const BASE = {
   textHash: 'v1-0000000000000000',
 };
 
-describe('suggestionSchema (contratto condiviso con la callable refineChapter)', () => {
-  it('accetta un suggerimento di stile con varianti', () => {
+describe('suggestionSchema (contract shared with the refineChapter callable)', () => {
+  it('accepts a style suggestion with variants', () => {
     expect(() => suggestionSchema.parse(BASE)).not.toThrow();
   });
 
-  it('rifiuta più di 3 varianti', () => {
+  it('rejects more than 3 variants', () => {
     expect(() => suggestionSchema.parse({ ...BASE, proposals: ['a', 'b', 'c', 'd'] })).toThrow();
   });
 
-  it('grammatica vuole UNA sola proposta; il ritmo ha varianti come lo stile (gerarchia delle proposte)', () => {
+  it('grammar takes a SINGLE proposal; pacing has variants like style (proposal hierarchy)', () => {
     const grammar = { ...BASE, kind: 'grammar' as const, proposals: ['una', 'due'] };
     expect(() => suggestionSchema.parse(grammar)).toThrow();
     expect(() => suggestionSchema.parse({ ...grammar, proposals: ['una'] })).not.toThrow();
@@ -29,7 +29,7 @@ describe('suggestionSchema (contratto condiviso con la callable refineChapter)',
     ).not.toThrow();
   });
 
-  it('rifiuta proposte vuote e span vuoti o rovesciati', () => {
+  it('rejects empty proposals and empty or reversed spans', () => {
     expect(() => suggestionSchema.parse({ ...BASE, proposals: [''] })).toThrow();
     expect(() =>
       suggestionSchema.parse({ ...BASE, span: { from: 5, to: 5 }, original: '' }),
@@ -37,11 +37,11 @@ describe('suggestionSchema (contratto condiviso con la callable refineChapter)',
     expect(() => suggestionSchema.parse({ ...BASE, span: { from: 20, to: 5 } })).toThrow();
   });
 
-  it('original deve essere lungo esattamente quanto lo span', () => {
+  it('original must be exactly as long as the span', () => {
     expect(() => suggestionSchema.parse({ ...BASE, original: 'posò' })).toThrow();
   });
 
-  it('acceptedProposal deve puntare a una proposta esistente', () => {
+  it('acceptedProposal must point to an existing proposal', () => {
     expect(() => suggestionSchema.parse({ ...BASE, acceptedProposal: 1 })).not.toThrow();
     expect(() => suggestionSchema.parse({ ...BASE, acceptedProposal: 2 })).toThrow();
   });

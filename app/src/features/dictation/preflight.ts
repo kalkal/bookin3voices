@@ -1,8 +1,8 @@
-// Pre-flight di inizio sessione: verifica permesso microfono,
-// disponibilità del riconoscimento e pacchetto lingua offline, con messaggi
-// chiari PRIMA che l'utente si trovi davanti a un motore che tace.
-// La logica è pura e riceve i controlli come dipendenza iniettabile: la UI usa
-// createNativePreflightChecks(), i test passano un fake.
+// Session-start pre-flight: checks microphone permission, recognition
+// availability and the offline language pack, with clear messages BEFORE the
+// user faces a silent engine.
+// The logic is pure and receives the checks as an injectable dependency: the UI
+// uses createNativePreflightChecks(), tests pass a fake.
 
 import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
@@ -13,7 +13,7 @@ export interface PreflightChecks {
   isRecognitionAvailable(): boolean;
   getPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }>;
   requestPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }>;
-  /** Lingue del servizio di riconoscimento; `installedLocales` = uso offline. */
+  /** Languages of the recognition service; `installedLocales` = offline use. */
   getSupportedLocales(): Promise<{ locales: string[]; installedLocales: string[] }>;
   platform: typeof Platform.OS;
 }
@@ -21,12 +21,12 @@ export interface PreflightChecks {
 export type PreflightIssueId =
   'recognition-unavailable' | 'permission-denied' | 'offline-language-missing';
 
-/** Azione proposta all'utente accanto al messaggio. */
+/** Action offered to the user next to the message. */
 export type PreflightAction = 'open-settings' | 'download-offline-model';
 
 export interface PreflightIssue {
   id: PreflightIssueId;
-  /** blocker = niente dettatura; warning = si detta, ma con un rischio noto. */
+  /** blocker = no dictation; warning = dictation works, with a known risk. */
   severity: 'blocker' | 'warning';
   title: string;
   detail: string;
@@ -34,7 +34,7 @@ export interface PreflightIssue {
 }
 
 export interface PreflightReport {
-  /** true se non ci sono blocker (i warning non fermano la dettatura). */
+  /** true if there are no blockers (warnings do not stop dictation). */
   ok: boolean;
   issues: PreflightIssue[];
 }
@@ -52,7 +52,7 @@ export async function runPreflight(
       title: t('dictation.preflight.unavailable.title'),
       detail: t('dictation.preflight.unavailable.detail'),
     });
-    // senza servizio, gli altri controlli non hanno senso
+    // without the service, the other checks make no sense
     return { ok: false, issues };
   }
 
@@ -73,9 +73,9 @@ export async function runPreflight(
     return { ok: false, issues };
   }
 
-  // pacchetto lingua offline: segnale affidabile solo su Android 13+ con il
-  // servizio Google; se la lista non è leggibile si resta in silenzio (nessun
-  // falso allarme). Su iOS il controllo non si applica.
+  // offline language pack: a reliable signal only on Android 13+ with the
+  // Google service; if the list is unreadable we stay silent (no false
+  // alarm). The check does not apply on iOS.
   if (checks.platform === 'android') {
     try {
       const { installedLocales } = await checks.getSupportedLocales();
@@ -91,7 +91,7 @@ export async function runPreflight(
         });
       }
     } catch {
-      // servizio che non espone le lingue: nessun segnale, nessun avviso
+      // service that does not expose languages: no signal, no warning
     }
   }
 
@@ -100,7 +100,7 @@ export async function runPreflight(
 
 const normalizeLocale = (locale: string) => locale.replace('_', '-').toLowerCase();
 
-/** Controlli reali su expo-speech-recognition (usati dalla schermata). */
+/** Real checks on expo-speech-recognition (used by the screen). */
 export function createNativePreflightChecks(): PreflightChecks {
   return {
     isRecognitionAvailable: () => ExpoSpeechRecognitionModule.isRecognitionAvailable(),
@@ -112,9 +112,9 @@ export function createNativePreflightChecks(): PreflightChecks {
 }
 
 /**
- * Avvia il download del modello offline per la lingua (Android 13+).
- * Fire-and-forget dal punto di vista della UI: al termine si può rieseguire
- * il pre-flight per far sparire l'avviso.
+ * Starts the offline model download for the language (Android 13+).
+ * Fire-and-forget from the UI's point of view: when it finishes, the
+ * pre-flight can be rerun to clear the warning.
  */
 export async function downloadOfflineModel(lang = 'it-IT'): Promise<void> {
   await ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({ locale: lang });

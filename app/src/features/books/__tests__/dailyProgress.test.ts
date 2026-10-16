@@ -25,34 +25,34 @@ function memoryStorage(initial: Record<string, string> = {}) {
 const KEY = 'bookvoice/daily-progress';
 
 describe('localDateKey', () => {
-  it('usa il giorno locale in formato YYYY-MM-DD', () => {
+  it('uses the local day in YYYY-MM-DD format', () => {
     expect(localDateKey(new Date(2026, 8, 5, 23, 59))).toBe('2026-09-05');
     expect(localDateKey(new Date(2026, 0, 1, 0, 0))).toBe('2026-01-01');
   });
 });
 
 describe('shiftDateKey', () => {
-  it('scala i giorni gestendo cambio mese e anno', () => {
+  it('shifts days across month and year changes', () => {
     expect(shiftDateKey('2026-09-05', -1)).toBe('2026-09-04');
     expect(shiftDateKey('2026-09-01', -1)).toBe('2026-08-31');
     expect(shiftDateKey('2026-01-01', -1)).toBe('2025-12-31');
-    expect(shiftDateKey('2026-03-01', -1)).toBe('2026-02-28'); // 2026 non bisestile
+    expect(shiftDateKey('2026-03-01', -1)).toBe('2026-02-28'); // 2026 is not a leap year
     expect(shiftDateKey('2026-09-05', +2)).toBe('2026-09-07');
   });
 });
 
-describe('upgradeStoredProgress (migrazione v1/v2 → v3)', () => {
-  it('conserva il dato di un payload v1 spostandolo in days[date]', () => {
+describe('upgradeStoredProgress (v1/v2 → v3 migration)', () => {
+  it('keeps the data of a v1 payload by moving it into days[date]', () => {
     const v3 = upgradeStoredProgress({ schemaVersion: 1, date: '2026-09-05', words: 320 });
     expect(v3).toEqual({ schemaVersion: 3, days: { '2026-09-05': 320 } });
   });
 
-  it('porta un payload v2 a v3 conservando lo storico (serie da ricostruire)', () => {
+  it('upgrades a v2 payload to v3 keeping the history (streak to be rebuilt)', () => {
     const days = { '2026-09-04': 100, '2026-09-05': 250 };
     expect(upgradeStoredProgress({ schemaVersion: 2, days })).toEqual({ schemaVersion: 3, days });
   });
 
-  it('lascia intatto un payload già v3 (storico + serie)', () => {
+  it('leaves an already-v3 payload intact (history + streak)', () => {
     const v3 = {
       schemaVersion: 3 as const,
       days: { '2026-09-05': 250 },
@@ -61,7 +61,7 @@ describe('upgradeStoredProgress (migrazione v1/v2 → v3)', () => {
     expect(upgradeStoredProgress(v3)).toEqual(v3);
   });
 
-  it('un payload irriconoscibile diventa storico vuoto (nessun lancio)', () => {
+  it('an unrecognizable payload becomes an empty history (no throw)', () => {
     expect(upgradeStoredProgress({ pippo: true })).toEqual({ schemaVersion: 3, days: {} });
     expect(upgradeStoredProgress(null)).toEqual({ schemaVersion: 3, days: {} });
     expect(upgradeStoredProgress({ schemaVersion: 2, days: { x: -3 } })).toEqual({
@@ -72,36 +72,36 @@ describe('upgradeStoredProgress (migrazione v1/v2 → v3)', () => {
 });
 
 describe('daysBetween', () => {
-  it('conta i giorni interi tra due chiavi, anche a cavallo di mese/anno', () => {
+  it('counts whole days between two keys, even across month/year boundaries', () => {
     expect(daysBetween('2026-09-05', '2026-09-05')).toBe(0);
     expect(daysBetween('2026-09-05', '2026-09-06')).toBe(1);
     expect(daysBetween('2026-08-31', '2026-09-05')).toBe(5);
     expect(daysBetween('2025-12-31', '2026-01-01')).toBe(1);
-    expect(daysBetween('2026-09-10', '2026-08-01')).toBe(-40); // oltre la finestra dei 35
+    expect(daysBetween('2026-09-10', '2026-08-01')).toBe(-40); // beyond the 35-day window
   });
 });
 
 describe('pruneDays', () => {
-  it('tiene solo gli ultimi N giorni registrati, i più recenti', () => {
+  it('keeps only the last N recorded days, the most recent ones', () => {
     const days: Record<string, number> = {};
-    // 40 giorni consecutivi e reali fino al 2026-09-10
+    // 40 consecutive real days up to 2026-09-10
     for (let i = 0; i < 40; i++) days[shiftDateKey('2026-09-10', -i)] = i;
     const pruned = pruneDays(days, 35);
     expect(Object.keys(pruned)).toHaveLength(35);
-    // i 5 giorni più vecchi (offset 39..35) sono potati, il resto tenuto
-    expect(pruned['2026-09-10']).toBe(0); // oggi (offset 0) tenuto
-    expect(pruned[shiftDateKey('2026-09-10', -34)]).toBe(34); // il più vecchio tenuto
-    expect(pruned[shiftDateKey('2026-09-10', -35)]).toBeUndefined(); // primo potato
+    // the 5 oldest days (offset 39..35) are pruned, the rest kept
+    expect(pruned['2026-09-10']).toBe(0); // today (offset 0) kept
+    expect(pruned[shiftDateKey('2026-09-10', -34)]).toBe(34); // the oldest one kept
+    expect(pruned[shiftDateKey('2026-09-10', -35)]).toBeUndefined(); // first one pruned
   });
 
-  it('non tocca uno storico più corto del limite', () => {
+  it('leaves a history shorter than the limit untouched', () => {
     const days = { '2026-09-04': 10, '2026-09-05': 20 };
     expect(pruneDays(days, 35)).toEqual(days);
   });
 });
 
 describe('buildHistory', () => {
-  it('torna n giorni fino a oggi, dal più vecchio, con zero-fill dei buchi', () => {
+  it('returns n days up to today, oldest first, with gaps zero-filled', () => {
     const days = { '2026-09-03': 100, '2026-09-05': 400 };
     const history = buildHistory(days, 4, '2026-09-05');
     expect(history).toEqual([
@@ -112,7 +112,7 @@ describe('buildHistory', () => {
     ]);
   });
 
-  it('storico vuoto: tutti zero, ordine crescente, oggi in coda', () => {
+  it('empty history: all zeros, ascending order, today last', () => {
     const history = buildHistory({}, 3, '2026-01-01');
     expect(history).toEqual([
       { date: '2025-12-30', words: 0 },
@@ -122,68 +122,68 @@ describe('buildHistory', () => {
   });
 });
 
-describe('computeStreak (giorni consecutivi con parole >= obiettivo)', () => {
+describe('computeStreak (consecutive days with words >= goal)', () => {
   const goal = 500;
 
-  it('storico vuoto: nessuna serie', () => {
+  it('empty history: no streak', () => {
     expect(computeStreak({}, goal, '2026-09-05')).toBe(0);
   });
 
-  it('obiettivo raggiunto oggi e nei giorni prima: conta anche oggi', () => {
+  it('goal met today and on the previous days: today counts too', () => {
     const days = { '2026-09-03': 500, '2026-09-04': 600, '2026-09-05': 700 };
     expect(computeStreak(days, goal, '2026-09-05')).toBe(3);
   });
 
-  it('oggi non ancora raggiunto NON azzera: la serie regge da ieri', () => {
+  it('today not yet met does NOT reset: the streak holds from yesterday', () => {
     const days = { '2026-09-03': 500, '2026-09-04': 600, '2026-09-05': 120 };
     expect(computeStreak(days, goal, '2026-09-05')).toBe(2);
   });
 
-  it('oggi sotto e ieri sotto: serie a zero', () => {
+  it('today below and yesterday below: streak is zero', () => {
     const days = { '2026-09-04': 100, '2026-09-05': 120 };
     expect(computeStreak(days, goal, '2026-09-05')).toBe(0);
   });
 
-  it('un giorno bucato interrompe la serie', () => {
+  it('a missing day breaks the streak', () => {
     const days = { '2026-09-01': 500, '2026-09-02': 500, '2026-09-04': 500, '2026-09-05': 500 };
-    // 05 e 04 ok, 03 mancante → stop
+    // 05 and 04 ok, 03 missing → stop
     expect(computeStreak(days, goal, '2026-09-05')).toBe(2);
   });
 
-  it('la serie attraversa il cambio di mese', () => {
+  it('the streak crosses a month change', () => {
     const days = { '2026-08-30': 500, '2026-08-31': 500, '2026-09-01': 500 };
     expect(computeStreak(days, goal, '2026-09-01')).toBe(3);
   });
 
-  it('obiettivo esattamente raggiunto (>=) conta', () => {
+  it('goal met exactly (>=) counts', () => {
     const days = { '2026-09-05': 500 };
     expect(computeStreak(days, goal, '2026-09-05')).toBe(1);
   });
 
-  it('obiettivo non valido (<= 0) non genera serie infinite', () => {
+  it('invalid goal (<= 0) does not produce infinite streaks', () => {
     const days = { '2026-09-04': 0, '2026-09-05': 0 };
     expect(computeStreak(days, 0, '2026-09-05')).toBe(0);
   });
 });
 
-describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () => {
+describe('reconcileStreak (unpruned streak, beyond the 35-day cap)', () => {
   const goal = 500;
   const TODAY = '2026-09-10';
 
-  /** Storico di `n` giorni consecutivi sopra l'obiettivo terminanti in `end`. */
+  /** History of `n` consecutive days above the goal ending on `end`. */
   function run(end: string, n: number, words = 600): Record<string, number> {
     const days: Record<string, number> = {};
     for (let i = 0; i < n; i++) days[shiftDateKey(end, -i)] = words;
     return days;
   }
 
-  it('senza record parte dallo storico visibile (comportamento di computeStreak)', () => {
+  it('without a record it starts from the visible history (computeStreak behavior)', () => {
     const days = run(TODAY, 3);
     expect(reconcileStreak(null, days, goal, TODAY)).toEqual({ count: 3, lastGoalMetDate: TODAY });
   });
 
-  it('SUPERA il tetto di 35: record a ieri + oggi raggiunto → +1 oltre la finestra', () => {
-    // storico potato a 35 giorni, ma la serie reale è 40: il record la porta avanti
+  it('EXCEEDS the 35 cap: record at yesterday + today met → +1 beyond the window', () => {
+    // history pruned to 35 days, but the real streak is 40: the record carries it forward
     const days = run(TODAY, 35);
     const stored = { count: 39, lastGoalMetDate: shiftDateKey(TODAY, -1) };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({
@@ -192,7 +192,7 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
     });
   });
 
-  it('idempotente: rileggere lo stesso giorno non incrementa', () => {
+  it('idempotent: re-reading the same day does not increment', () => {
     const days = run(TODAY, 35);
     const stored = { count: 40, lastGoalMetDate: TODAY };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({
@@ -201,8 +201,8 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
     });
   });
 
-  it('recupera i giorni saltati dalla lettura ma scritti (avanza di tutto il tratto)', () => {
-    // scritto ogni giorno (storico pieno) ma non riconciliato per 4 giorni
+  it('recovers days skipped by reading but written (advances the whole stretch)', () => {
+    // written every day (full history) but not reconciled for 4 days
     const days = run(TODAY, 35);
     const stored = { count: 36, lastGoalMetDate: shiftDateKey(TODAY, -4) };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({
@@ -211,8 +211,8 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
     });
   });
 
-  it('buco OLTRE i 35 giorni: record vecchio staccato → la serie riparte', () => {
-    // lo storico visibile mostra solo oggi; il record vecchio (gennaio) non è contiguo
+  it('gap BEYOND 35 days: old record detached → the streak restarts', () => {
+    // the visible history shows only today; the old record (January) is not contiguous
     const days = { [TODAY]: 600 };
     const stored = { count: 50, lastGoalMetDate: '2026-01-01' };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({
@@ -221,7 +221,7 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
     });
   });
 
-  it('oggi in corso (non ancora raggiunto): la serie regge fino a ieri', () => {
+  it('today in progress (not yet met): the streak holds up to yesterday', () => {
     const days = { ...run(shiftDateKey(TODAY, -1), 35), [TODAY]: 100 };
     const stored = { count: 40, lastGoalMetDate: shiftDateKey(TODAY, -1) };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({
@@ -230,21 +230,21 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
     });
   });
 
-  it('serie spenta (né oggi né ieri raggiunti): zero', () => {
+  it('streak ended (neither today nor yesterday met): zero', () => {
     const days = { [shiftDateKey(TODAY, -1)]: 100, [TODAY]: 120 };
     const stored = { count: 12, lastGoalMetDate: shiftDateKey(TODAY, -3) };
     expect(reconcileStreak(stored, days, goal, TODAY)).toEqual({ count: 0, lastGoalMetDate: null });
   });
 
-  it('obiettivo alzato: non ricalcola la storia ma spezza dentro la finestra visibile', () => {
-    // ieri 520 raggiungeva 500 ma non 800; con obiettivo 800 la serie visibile è solo oggi
+  it('raised goal: does not recompute history but breaks inside the visible window', () => {
+    // yesterday's 520 met 500 but not 800; with goal 800 the visible streak is only today
     const days = { [shiftDateKey(TODAY, -1)]: 520, [TODAY]: 900 };
     const stored = { count: 10, lastGoalMetDate: shiftDateKey(TODAY, -1) };
-    // il record a ieri NON è più contiguo (ieri non raggiunge 800) → riparte da oggi
+    // the record at yesterday is NO longer contiguous (yesterday does not reach 800) → restarts from today
     expect(reconcileStreak(stored, days, 800, TODAY)).toEqual({ count: 1, lastGoalMetDate: TODAY });
   });
 
-  it('obiettivo non valido (<= 0): nessuna serie', () => {
+  it('invalid goal (<= 0): no streak', () => {
     expect(reconcileStreak({ count: 9, lastGoalMetDate: TODAY }, run(TODAY, 3), 0, TODAY)).toEqual({
       count: 0,
       lastGoalMetDate: null,
@@ -253,17 +253,17 @@ describe('reconcileStreak (serie non potata, oltre il tetto dei 35 giorni)', () 
 });
 
 describe('LocalDailyProgressRepository', () => {
-  it('parte da zero e accumula i delta positivi', async () => {
+  it('starts from zero and accumulates positive deltas', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalDailyProgressRepository(storage, () => '2026-09-05');
     expect((await repo.getToday()).words).toBe(0);
     await repo.addWords(120);
-    await repo.addWords(-40); // le cancellazioni non tolgono motivazione
+    await repo.addWords(-40); // deletions do not take away motivation
     await repo.addWords(30);
     expect(await repo.getToday()).toEqual({ date: '2026-09-05', words: 150 });
   });
 
-  it('riparte da zero al cambio di giorno ma NON perde lo storico', async () => {
+  it('restarts from zero when the day changes but does NOT lose the history', async () => {
     const { storage } = memoryStorage();
     let today = '2026-09-05';
     const repo = new LocalDailyProgressRepository(storage, () => today);
@@ -272,7 +272,7 @@ describe('LocalDailyProgressRepository', () => {
     expect(await repo.getToday()).toEqual({ date: '2026-09-06', words: 0 });
     await repo.addWords(80);
     expect((await repo.getToday()).words).toBe(80);
-    // il giorno prima è ancora nello storico
+    // the previous day is still in the history
     const history = await repo.getHistory(2);
     expect(history).toEqual([
       { date: '2026-09-05', words: 500 },
@@ -280,21 +280,21 @@ describe('LocalDailyProgressRepository', () => {
     ]);
   });
 
-  it('legge (upgrade-on-read) un payload v1 senza perderlo', async () => {
+  it('reads (upgrade-on-read) a v1 payload without losing it', async () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({ schemaVersion: 1, date: '2026-09-05', words: 640 }),
     });
     const repo = new LocalDailyProgressRepository(storage, () => '2026-09-05');
     expect((await repo.getToday()).words).toBe(640);
-    // e continuando ad accumulare il dato v1 resta
+    // and while continuing to accumulate, the v1 data remains
     await repo.addWords(60);
     expect((await repo.getToday()).words).toBe(700);
   });
 
-  it('alla scrittura pota agli ultimi 35 giorni', async () => {
+  it('on write it prunes to the last 35 days', async () => {
     const seed: Record<string, number> = {};
     for (let d = 1; d <= 34; d++) seed[`2026-08-${String(d > 31 ? 31 : d).padStart(2, '0')}`] = 10;
-    // storico ampio e sparso su più mesi
+    // wide history spread over several months
     const wide: Record<string, number> = {};
     for (let i = 0; i < 40; i++) wide[shiftDateKey('2026-09-10', -i)] = 10;
     const { storage, data } = memoryStorage({
@@ -304,11 +304,11 @@ describe('LocalDailyProgressRepository', () => {
     await repo.addWords(5);
     const stored = JSON.parse(data.get(KEY) as string);
     expect(Object.keys(stored.days).length).toBeLessThanOrEqual(35);
-    // oggi è tra i tenuti
+    // today is among the kept ones
     expect(stored.days['2026-09-10']).toBe(15);
   });
 
-  it('getHistory zero-riempie i giorni senza scrittura', async () => {
+  it('getHistory zero-fills the days without writing', async () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({ schemaVersion: 2, days: { '2026-09-08': 200, '2026-09-10': 300 } }),
     });
@@ -320,15 +320,15 @@ describe('LocalDailyProgressRepository', () => {
     ]);
   });
 
-  it('un payload corrotto riparte da zero senza lanciare', async () => {
+  it('a corrupt payload restarts from zero without throwing', async () => {
     const { storage } = memoryStorage({ [KEY]: '{rotto' });
     const repo = new LocalDailyProgressRepository(storage, () => '2026-09-05');
     expect((await repo.getToday()).words).toBe(0);
     expect(await repo.getHistory(1)).toEqual([{ date: '2026-09-05', words: 0 }]);
   });
 
-  it('getStreak: una serie oltre i 35 giorni sopravvive alla potatura dello storico', async () => {
-    // storico legacy lungo (40 giorni consecutivi sopra l'obiettivo, non potato)
+  it('getStreak: a streak beyond 35 days survives the history pruning', async () => {
+    // long legacy history (40 consecutive days above the goal, unpruned)
     const wide: Record<string, number> = {};
     for (let i = 0; i < 40; i++) wide[shiftDateKey('2026-09-10', -i)] = 600;
     const { storage, data } = memoryStorage({
@@ -336,42 +336,42 @@ describe('LocalDailyProgressRepository', () => {
     });
     const repo = new LocalDailyProgressRepository(storage, () => '2026-09-10');
 
-    // prima lettura: la serie coglie tutti i 40 giorni visibili e la persiste
+    // first read: the streak picks up all 40 visible days and persists it
     expect(await repo.getStreak(500)).toBe(40);
-    // una scrittura pota lo storico a 35, ma il record della serie resta 40…
+    // a write prunes the history to 35, but the streak record stays at 40…
     await repo.addWords(50);
     const stored = JSON.parse(data.get(KEY) as string);
     expect(Object.keys(stored.days).length).toBeLessThanOrEqual(35);
     expect(stored.streak.count).toBe(40);
-    // …e la rilettura la conferma a 40 (idempotente, nessun doppio conteggio)
+    // …and re-reading confirms 40 (idempotent, no double counting)
     expect(await repo.getStreak(500)).toBe(40);
     expect(await repo.getStreak(500)).toBe(40);
   });
 
-  it('getStreak: migrazione v2 → v3 conserva lo storico e ricostruisce la serie in corso', async () => {
+  it('getStreak: v2 → v3 migration keeps the history and rebuilds the running streak', async () => {
     const days = { '2026-09-08': 600, '2026-09-09': 600, '2026-09-10': 600 };
     const { storage, data } = memoryStorage({
       [KEY]: JSON.stringify({ schemaVersion: 2, days }),
     });
     const repo = new LocalDailyProgressRepository(storage, () => '2026-09-10');
 
-    expect(await repo.getStreak(500)).toBe(3); // serie esistente ricostruita
+    expect(await repo.getStreak(500)).toBe(3); // existing streak rebuilt
     const stored = JSON.parse(data.get(KEY) as string);
     expect(stored.schemaVersion).toBe(3);
-    expect(stored.days).toEqual(days); // storico non perso
+    expect(stored.days).toEqual(days); // history not lost
     expect(stored.streak).toEqual({ count: 3, lastGoalMetDate: '2026-09-10' });
   });
 
-  it('getStreak: il giorno dopo, raggiunto l’obiettivo, la serie sale di uno', async () => {
+  it('getStreak: the next day, once the goal is met, the streak goes up by one', async () => {
     const days = { '2026-09-09': 600, '2026-09-10': 600 };
     const { storage } = memoryStorage({ [KEY]: JSON.stringify({ schemaVersion: 3, days }) });
     let today = '2026-09-10';
     const repo = new LocalDailyProgressRepository(storage, () => today);
     expect(await repo.getStreak(500)).toBe(2);
-    // nuovo giorno: prima nulla di scritto → la serie regge a 2 (giornata in corso)
+    // new day: nothing written yet → the streak holds at 2 (day in progress)
     today = '2026-09-11';
     expect(await repo.getStreak(500)).toBe(2);
-    // scrive e raggiunge l'obiettivo → 3
+    // writes and reaches the goal → 3
     await repo.addWords(600);
     expect(await repo.getStreak(500)).toBe(3);
   });

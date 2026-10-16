@@ -1,6 +1,6 @@
-// BookExportService sulla callable `exportBook` (functions): l'unico punto
-// dell'app che parla con le Cloud Functions per l'export. La risposta passa
-// da Zod al confine: mai fidarsi dei dati che arrivano da fuori.
+// BookExportService on the `exportBook` callable (functions): the only point
+// of the app that talks to the Cloud Functions for export. The response goes
+// through Zod at the boundary: never trust data coming from outside.
 
 import { httpsCallable, type Functions } from 'firebase/functions';
 
@@ -15,7 +15,7 @@ type CallExport = (data: ExportRequest) => Promise<{ data: unknown }>;
 
 export type CallableBookExportServiceDeps =
   | { functions: Functions }
-  /** Iniettabile nei test al posto di httpsCallable. */
+  /** Injectable in tests in place of httpsCallable. */
   | { call: CallExport };
 
 export class CallableBookExportService implements BookExportService {

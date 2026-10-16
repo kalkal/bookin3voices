@@ -1,4 +1,4 @@
-// Mock automatico di expo-haptics per Jest (modulo nativo assente nei test).
+// Automatic expo-haptics mock for Jest (native module absent in tests).
 
 export const impactAsync = jest.fn(async () => {});
 export const notificationAsync = jest.fn(async () => {});

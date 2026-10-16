@@ -1,5 +1,5 @@
 /**
- * Card su carta con filetto e angoli quasi vivi (3px), come nel mockup.
+ * Paper card with a hairline border and nearly sharp corners (3px), as in the mockup.
  */
 import { View } from 'react-native';
 import type { StyleProp, ViewProps, ViewStyle } from 'react-native';

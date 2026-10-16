@@ -1,12 +1,12 @@
 // Callable `generateOutline(bookId, synopsis, requestId)`:
-// sinossi → modello AI (structured output) → scaletta capitoli
-// {titolo, riassunto, beat[]} VALIDATA con Zod. La callable NON scrive capitoli:
-// restituisce la proposta, l'anteprima corkboard e il merge additivo (che non
-// tocca mai capitoli con testo) sono dell'app.
+// synopsis → AI model (structured output) → chapter outline
+// {title, summary, beats[]} VALIDATED with Zod. The callable does NOT write
+// chapters: it returns the proposal; the corkboard preview and the additive
+// merge (which never touches chapters that have text) belong to the app.
 //
-// Idempotenza: il requestId è l'id del documento
-// users/{uid}/outlines/{requestId} — un retry di rete riusa l'outline già
-// generato (stessa risposta, nessuna seconda chiamata a Gemini).
+// Idempotency: the requestId is the id of the document
+// users/{uid}/outlines/{requestId}; a network retry reuses the outline already
+// generated (same response, no second call to the model).
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
@@ -30,17 +30,17 @@ import {
 export interface GenerateOutlineDeps {
   db: Firestore;
   model: OutlineModel;
-  /** Orologio iniettabile nei test; default Date.now. */
+  /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
-  /** Tetti d'uso giornalieri; default DEFAULT_USAGE_LIMITS. */
+  /** Daily usage caps; defaults to DEFAULT_USAGE_LIMITS. */
   usageLimits?: Record<UsageAction, UsageLimit>;
 }
 
 /**
- * Ripulisce il candidato PRIMA della validazione: trim dei testi e beat vuoti
- * scartati. Solo igiene strutturale deterministica — tutto il resto (limiti,
- * campi mancanti, tipi) resta allo schema Zod: un candidato che non passa
- * dopo la pulizia è un output non conforme.
+ * Cleans the candidate BEFORE validation: texts are trimmed and empty beats
+ * dropped. Deterministic structural hygiene only; everything else (limits,
+ * missing fields, types) is left to the Zod schema: a candidate that fails
+ * after cleaning is non-conforming output.
  */
 export function sanitizeOutlineCandidate(candidate: unknown): unknown {
   if (typeof candidate !== 'object' || candidate === null) return candidate;
@@ -67,27 +67,30 @@ export function sanitizeOutlineCandidate(candidate: unknown): unknown {
   };
 }
 
-/** Legge il libro (contesto del prompt) o solleva errori parlanti. */
+/** Reads the book (prompt context) or throws descriptive errors. */
 async function readBookForOutline(db: Firestore, uid: string, bookId: string) {
   const bookRef = db.doc(`users/${uid}/books/${bookId}`);
   const bookSnap = await bookRef.get();
   if (!bookSnap.exists) {
-    throw new HttpsError('not-found', 'Libro inesistente.');
+    throw new HttpsError('not-found', 'Book not found.');
   }
   const parsed = bookForOutlineSchema.safeParse(bookSnap.data());
   if (!parsed.success) {
-    throw new HttpsError('failed-precondition', 'Documento libro non valido per la scaletta.');
+    throw new HttpsError('failed-precondition', 'Book document is not valid for the outline.');
   }
 
-  // Capitoli con testo = contesto intoccabile: entrano nel
-  // prompt come "già scritti, non riproporre". Un capitolo malformato blocca:
-  // meglio un errore chiaro che una scaletta costruita su contesto monco.
+  // Chapters with text are untouchable context: they enter the prompt as
+  // "already written, do not propose again". A malformed chapter blocks the
+  // call: a clear error beats an outline built on incomplete context.
   const chaptersSnap = await bookRef.collection('chapters').orderBy('order').get();
   const writtenChapterTitles: string[] = [];
   for (const doc of chaptersSnap.docs) {
     const chapter = chapterForOutlineSchema.safeParse(doc.data());
     if (!chapter.success) {
-      throw new HttpsError('failed-precondition', `Capitolo ${doc.id} non valido per la scaletta.`);
+      throw new HttpsError(
+        'failed-precondition',
+        `Chapter ${doc.id} is not valid for the outline.`,
+      );
     }
     if (chapter.data.rawText.trim() !== '') {
       writtenChapterTitles.push(chapter.data.title);
@@ -97,7 +100,7 @@ async function readBookForOutline(db: Firestore, uid: string, bookId: string) {
   return { book: parsed.data, writtenChapterTitles };
 }
 
-/** Chiama il modello con UN retry sull'output non conforme. */
+/** Calls the model with ONE retry on non-conforming output. */
 async function generateValidatedOutline(
   model: OutlineModel,
   prompt: ReturnType<typeof buildOutlinePrompt>,
@@ -108,7 +111,7 @@ async function generateValidatedOutline(
     try {
       candidate = await model.generate(prompt);
     } catch (error) {
-      // errore di trasporto o JSON illeggibile: stesso trattamento del non conforme
+      // transport error or unreadable JSON: treated like non-conforming output
       lastIssue = error instanceof Error ? error.message : String(error);
       logger.warn('generateOutline: model call failed', {
         model: model.modelName,
@@ -119,11 +122,11 @@ async function generateValidatedOutline(
     }
     const parsed = outlineSchema.safeParse(sanitizeOutlineCandidate(candidate));
     if (parsed.success) return parsed.data;
-    lastIssue = parsed.error.issues[0]?.message ?? 'schema non rispettato';
+    lastIssue = parsed.error.issues[0]?.message ?? 'schema not respected';
   }
   throw new HttpsError(
     'unavailable',
-    `Il modello non ha prodotto una scaletta valida: ${lastIssue.slice(0, 200)}. Riprova.`,
+    `The model did not produce a valid outline: ${lastIssue.slice(0, 200)}. Try again.`,
   );
 }
 
@@ -138,7 +141,7 @@ function toResponse(requestId: string, doc: OutlineRegistryDoc): GenerateOutline
   };
 }
 
-/** Cuore della callable, testabile direttamente contro l'emulatore Firestore. */
+/** Core of the callable, testable directly against the Firestore emulator. */
 export async function runGenerateOutline(
   deps: GenerateOutlineDeps,
   uid: string,
@@ -147,34 +150,34 @@ export async function runGenerateOutline(
   const { db, model, now = Date.now, usageLimits } = deps;
   const registryRef = db.doc(`users/${uid}/outlines/${input.requestId}`);
 
-  // Retry di rete: se il registro esiste già si riusa l'outline salvato,
-  // senza seconda chiamata al modello. Stesso requestId su un altro libro =
-  // errore del client (come exportBook).
+  // Network retry: if the registry document already exists, reuse the saved
+  // outline without a second model call. The same requestId on another book is
+  // a client error (as in exportBook).
   const existingSnap = await registryRef.get();
   if (existingSnap.exists) {
     const existing = outlineRegistryDocSchema.safeParse(existingSnap.data());
     if (!existing.success || existing.data.bookId !== input.bookId) {
-      throw new HttpsError('already-exists', 'requestId già usato per un’altra scaletta.');
+      throw new HttpsError('already-exists', 'requestId already used for another outline.');
     }
     return toResponse(input.requestId, existing.data);
   }
 
-  // Tetto anti-abuso: dopo lo short-circuit di idempotenza (il retry
-  // riusa l'outline salvato, budget zero) e prima della chiamata a Gemini Pro.
+  // Anti-abuse cap: after the idempotency short-circuit (a retry reuses the
+  // saved outline, zero budget) and before the call to the Pro model.
   await enforceUsageLimit({ db, uid, action: 'generateOutline', now, limits: usageLimits });
 
   const { book, writtenChapterTitles } = await readBookForOutline(db, uid, input.bookId);
   const prompt = buildOutlinePrompt({ synopsis: input.synopsis, book, writtenChapterTitles });
   const outline = await generateValidatedOutline(model, prompt);
 
-  // Due chiamate concorrenti con lo stesso requestId: vince la prima scritta,
-  // l'altra restituisce quella (la risposta resta identica per il client).
+  // Two concurrent calls with the same requestId: the first write wins and the
+  // other returns it (the response stays identical for the client).
   const doc = await db.runTransaction<OutlineRegistryDoc>(async (tx) => {
     const snap = await tx.get(registryRef);
     if (snap.exists) {
       const existing = outlineRegistryDocSchema.safeParse(snap.data());
       if (!existing.success || existing.data.bookId !== input.bookId) {
-        throw new HttpsError('already-exists', 'requestId già usato per un’altra scaletta.');
+        throw new HttpsError('already-exists', 'requestId already used for another outline.');
       }
       return existing.data;
     }
@@ -193,18 +196,18 @@ export async function runGenerateOutline(
   return toResponse(input.requestId, doc);
 }
 
-/** Handler della callable: auth + validazione input, poi runGenerateOutline. */
+/** Callable handler: auth + input validation, then runGenerateOutline. */
 export function createGenerateOutlineHandler(
   deps: GenerateOutlineDeps,
 ): (request: CallableRequest<unknown>) => Promise<GenerateOutlineResponse> {
   return async (request) => {
     const uid = request.auth?.uid;
     if (uid === undefined) {
-      throw new HttpsError('unauthenticated', 'Accesso richiesto.');
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
     }
     const parsed = generateOutlineInputSchema.safeParse(request.data);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', 'Attesi { bookId, synopsis, requestId }.');
+      throw new HttpsError('invalid-argument', 'Expected { bookId, synopsis, requestId }.');
     }
     return runGenerateOutline(deps, uid, parsed.data);
   };

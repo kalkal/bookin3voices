@@ -1,14 +1,14 @@
-// Tipi e schemi Zod di refineChapter.
+// Types and Zod schemas for refineChapter.
 //
-// Il CONTRATTO di risposta è definito dall'app in
-// app/src/features/review/types.ts (refineResultSchema): la risposta della
-// callable deve validare ANCHE lì. Non esiste un pacchetto condiviso tra
-// app/ e functions/, quindi qui vive la copia server (più stretta: è la
-// verità sui documenti scritti in Firestore) — chi tocca uno dei due file
-// aggiorna l'altro nello stesso task.
+// The response CONTRACT is defined by the app in
+// app/src/features/review/types.ts (refineResultSchema): the callable's
+// response must validate there TOO. There is no package shared between app/
+// and functions/, so the server copy lives here (stricter: it is the truth for
+// the documents written to Firestore); whoever touches one of the two files
+// updates the other in the same change.
 //
-// Gerarchia delle proposte (assunzione validata):
-// grammar = esattamente 1 proposta; style e pacing = fino a 3 varianti.
+// Proposal hierarchy:
+// grammar = exactly 1 proposal; style and pacing = up to 3 variants.
 
 import { z } from 'zod';
 
@@ -16,10 +16,10 @@ export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
 
 /**
- * Ciò che chiediamo al MODELLO (structured output): niente offset numerici —
- * i modelli sbagliano a contare i caratteri — ma il testo esatto dello span
- * (`original`), che il server localizza nel capitolo. Un `original` che non
- * combacia col testo (assente o ambiguo) viene scartato lato server.
+ * What we ask of the MODEL (structured output): no numeric offsets, since
+ * models miscount characters, but the exact text of the span (`original`),
+ * which the server locates in the chapter. An `original` that does not match
+ * the text (absent or ambiguous) is discarded server-side.
  */
 export const modelSuggestionSchema = z.object({
   original: z.string().min(1).max(2000),
@@ -35,10 +35,10 @@ export const modelOutputSchema = z.object({
 export type ModelOutput = z.infer<typeof modelOutputSchema>;
 
 /**
- * Valida la risposta del modello tenendo i suggerimenti buoni: un solo
- * elemento malformato (es. `proposals: []`) non deve buttare via tutta la
- * risposta. Ritorna null solo se non resta nessun suggerimento valido
- * (allora conviene ritentare) o se manca proprio l'array `suggestions`.
+ * Validates the model response while keeping the good suggestions: a single
+ * malformed element (e.g. `proposals: []`) must not throw away the whole
+ * response. Returns null only if no valid suggestion remains (so a retry is
+ * worthwhile) or if the `suggestions` array is missing altogether.
  */
 export function parseModelOutput(
   candidate: unknown,
@@ -57,12 +57,12 @@ export function parseModelOutput(
   return { output: { suggestions: output }, dropped: raw.length - output.length };
 }
 
-/** Span di caratteri [from, to) su rawText — come nell'app. */
+/** Character span [from, to) over rawText, as in the app. */
 export const spanSchema = z
   .object({ from: z.number().int().min(0), to: z.number().int().min(0) })
-  .refine((span) => span.to > span.from, { message: 'span vuoto o rovesciato' });
+  .refine((span) => span.to > span.from, { message: 'empty or reversed span' });
 
-/** Suggerimento normalizzato: forma del documento Firestore e della risposta. */
+/** Normalized suggestion: shape of the Firestore document and of the response. */
 export const suggestionSchema = z
   .object({
     id: z.string().min(1),
@@ -78,14 +78,14 @@ export const suggestionSchema = z
     if (sug.kind === 'grammar' && sug.proposals.length !== 1) {
       ctx.addIssue({
         code: 'custom',
-        message: 'grammar: una sola proposta (gerarchia)',
+        message: 'grammar: exactly one proposal',
         path: ['proposals'],
       });
     }
     if (sug.original.length !== sug.span.to - sug.span.from) {
       ctx.addIssue({
         code: 'custom',
-        message: 'original non lungo quanto lo span',
+        message: 'original length differs from the span length',
         path: ['original'],
       });
     }
@@ -93,35 +93,35 @@ export const suggestionSchema = z
 
 export type Suggestion = z.infer<typeof suggestionSchema>;
 
-/** Input della callable (specchio di RefineRequest nell'app). */
+/** Callable input (mirrors RefineRequest in the app). */
 export const refineChapterInputSchema = z.object({
   bookId: z.string().min(1),
   chapterId: z.string().min(1),
-  /** Testo del capitolo COME LO VEDE L'UTENTE: durante una sessione l'editor
-   *  locale è il master, quindi fa fede il testo del client,
-   *  non il rawText su Firestore (che il debounce può far restare indietro). */
+  /** Chapter text AS THE USER SEES IT: during a session the local editor is the
+   *  master, so the client's text is authoritative, not the rawText on
+   *  Firestore (which the debounce can leave behind). */
   text: z.string().min(1).max(500_000),
-  /** Hash di `text` (stesso algoritmo di textHash.ts): verifica di integrità. */
+  /** Hash of `text` (same algorithm as textHash.ts): integrity check. */
   textHash: z.string().min(1),
-  /** Idempotenza: stesso requestId ⇒ stessa risposta, zero doppioni. */
+  /** Idempotency: same requestId ⇒ same response, no duplicates. */
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
 });
 
 export type RefineChapterInput = z.infer<typeof refineChapterInputSchema>;
 
-/** Risposta della callable: valida anche con refineResultSchema dell'app. */
+/** Callable response: also valid against the app's refineResultSchema. */
 export interface RefineChapterResponse {
   requestId: string;
   textHash: string;
   model: string;
   promptVersion: number;
   suggestions: Suggestion[];
-  /** Suggerimenti del modello scartati dal server (original non combaciante,
-   *  ambiguo o proposte vuote): solo diagnostica, l'app può ignorarlo. */
+  /** Model suggestions discarded by the server (non-matching or ambiguous
+   *  original, or empty proposals): diagnostics only, the app may ignore it. */
   discarded: number;
 }
 
-/** Documento registro di idempotenza users/{uid}/refines/{requestId}. */
+/** Idempotency registry document users/{uid}/refines/{requestId}. */
 export const refineRegistryDocSchema = z.object({
   schemaVersion: z.literal(1),
   bookId: z.string().min(1),
@@ -136,7 +136,7 @@ export const refineRegistryDocSchema = z.object({
 
 export type RefineRegistryDoc = z.infer<typeof refineRegistryDocSchema>;
 
-/** Sottoinsieme del documento libro utile al contesto del prompt. */
+/** Subset of the book document useful as prompt context. */
 export const bookForRefineSchema = z.object({
   title: z.string().catch(''),
   genre: z.string().catch(''),
@@ -146,7 +146,7 @@ export const bookForRefineSchema = z.object({
   styleProfileId: z.string().nullable().catch(null),
 });
 
-/** Sottoinsieme del documento capitolo: titolo e outline (seconda metà). */
+/** Subset of the chapter document: title and outline. */
 export const chapterForRefineSchema = z.object({
   title: z.string().catch(''),
   outline: z
@@ -159,8 +159,8 @@ export const chapterForRefineSchema = z.object({
 });
 
 /**
- * Strategy del modello di rifinitura (come OutlineModel): implementazioni
- * vere su Gemini, finte nei test d'integrazione.
+ * Strategy for the refinement model (like OutlineModel): real implementations
+ * on the providers, fakes in the integration tests.
  */
 export interface RefineModel {
   readonly modelName: string;

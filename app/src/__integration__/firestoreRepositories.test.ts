@@ -1,14 +1,13 @@
 /**
- * Test d'integrazione dei repository Firestore contro l'EMULATORE
- * (mai progetti reali), con le REGOLE VERE del repo (firestore.rules
- * della fase delle regole Firestore): oltre al comportamento dei repository si verifica così che ogni
- * loro scrittura rispetti le validazioni di forma delle rules (schemaVersion
- * su create/update). Il projectId demo-* garantisce che nessuna chiamata possa
- * raggiungere il cloud.
+ * Integration test of the Firestore repositories against the EMULATOR
+ * (never real projects), with the repo's REAL RULES (firestore.rules):
+ * besides the repositories' behavior, this checks that every write they make
+ * respects the rules' shape validations (schemaVersion on create/update).
+ * The demo-* projectId guarantees that no call can reach the cloud.
  *
- * Copre anche la verifica (offline → sync): la rete si "spegne" con
- * disableNetwork() dell'SDK — l'unico modo sensato in un test — e si riaccende
- * con enableNetwork(), controllando che le scritture accodate arrivino.
+ * It also covers the offline → sync check: the network is "switched off" with
+ * the SDK's disableNetwork() — the only sensible way in a test — and back on
+ * with enableNetwork(), checking that the queued writes arrive.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,7 +35,7 @@ import type { Chapter, ChapterSummary } from '../features/chapters/types';
 const PROJECT_ID = 'demo-bookvoice-app';
 const UID = 'jane-test';
 
-// Le regole vere del repo (root): i repository devono conviverci.
+// The repo's real rules (root): the repositories must coexist with them.
 const RULES = readFileSync(join(__dirname, '..', '..', '..', 'firestore.rules'), 'utf8');
 
 function emulatorHostAndPort(): { host: string; port: number } {
@@ -51,7 +50,7 @@ function emulatorHostAndPort(): { host: string; port: number } {
 let env: RulesTestEnvironment;
 let db: Firestore;
 
-/** Attende che una condizione sugli observe* diventi vera. */
+/** Waits for a condition on the observe* streams to become true. */
 function waitUntil<T>(
   subscribe: (onChange: (value: T) => void) => () => void,
   predicate: (value: T) => boolean,
@@ -61,7 +60,7 @@ function waitUntil<T>(
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       unsubscribe();
-      reject(new Error(`Timeout in attesa di: ${label}`));
+      reject(new Error(`Timed out waiting for: ${label}`));
     }, timeoutMs);
     const unsubscribe = subscribe((value) => {
       if (!predicate(value)) return;
@@ -87,14 +86,14 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await env.clearFirestore();
-  // istanza NUOVA per ogni test: il client Firestore accumula stato (stream,
-  // backoff dopo errori) e sui runner CI lenti un'istanza condivisa faceva
-  // appendere a vuoto le letture dei test successivi
+  // a NEW instance for every test: the Firestore client accumulates state (streams,
+  // backoff after errors) and on slow CI runners a shared instance made the
+  // reads of later tests hang
   db = env.authenticatedContext(UID).firestore() as unknown as Firestore;
 });
 
 afterEach(async () => {
-  // niente scritture di fondo a cavallo del clearFirestore del test dopo
+  // no background writes straddling the next test's clearFirestore
   await waitForPendingWrites(db).catch(() => {});
 });
 
@@ -103,7 +102,7 @@ afterAll(async () => {
 });
 
 describe('FirestoreBookRepository', () => {
-  it('createBook scrive un documento conforme allo schema e observeBooks lo emette', async () => {
+  it('createBook writes a schema-conforming document and observeBooks emits it', async () => {
     const { bookRepository } = makeRepos();
     const created = await bookRepository.createBook({ title: 'Il custode del faro' });
     expect(created).toMatchObject({
@@ -117,7 +116,7 @@ describe('FirestoreBookRepository', () => {
     const books = await waitUntil<Book[]>(
       (cb) => bookRepository.observeBooks(cb),
       (list) => list.length === 1,
-      'observeBooks emette il libro creato',
+      'observeBooks emits the created book',
     );
     expect(books[0]).toMatchObject({ id: created.id, title: 'Il custode del faro' });
 
@@ -127,7 +126,7 @@ describe('FirestoreBookRepository', () => {
     expect(typeof fetched?.createdAt).toBe('number');
   });
 
-  it('updateBook aggiorna i metadati e deleteBook porta via anche i capitoli', async () => {
+  it('updateBook updates the metadata and deleteBook also removes the chapters', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Racconti del molo' });
     const chapter = await chapterRepository.createChapter(book.id, { title: 'Il pontile' });
@@ -146,7 +145,7 @@ describe('FirestoreBookRepository', () => {
     ).toBeNull();
   });
 
-  it('un documento non conforme: observeBooks lo salta, getBook lancia', async () => {
+  it('a non-conforming document: observeBooks skips it, getBook throws', async () => {
     const { bookRepository } = makeRepos();
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     try {
@@ -161,10 +160,10 @@ describe('FirestoreBookRepository', () => {
       const books = await waitUntil<Book[]>(
         (cb) => bookRepository.observeBooks(cb),
         (list) => list.length === 1,
-        'observeBooks salta il documento rotto',
+        'observeBooks skips the broken document',
       );
       expect(books[0].id).toBe(good.id);
-      await expect(bookRepository.getBook('rotto')).rejects.toThrow(/non conforme/);
+      await expect(bookRepository.getBook('rotto')).rejects.toThrow(/does not match the schema/);
     } finally {
       warn.mockRestore();
     }
@@ -181,7 +180,7 @@ describe('FirestoreBookRepository', () => {
     );
     await waitForPendingWrites(db);
 
-    // si storpiano i contatori come farebbe una sessione morta offline
+    // the counters are corrupted as a session that died offline would do
     await setDoc(
       doc(db, 'users', UID, 'books', book.id),
       { wordCount: 999, chapterCount: 7 },
@@ -197,7 +196,7 @@ describe('FirestoreBookRepository', () => {
 });
 
 describe('FirestoreChapterRepository', () => {
-  it('createChapter accoda con order crescente e incrementa chapterCount', async () => {
+  it('createChapter appends with increasing order and increments chapterCount', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Il custode del faro' });
     const primo = await chapterRepository.createChapter(book.id, { title: 'Le chiavi di casa' });
@@ -208,7 +207,7 @@ describe('FirestoreChapterRepository', () => {
     const chapters = await waitUntil<ChapterSummary[]>(
       (cb) => chapterRepository.observeChapters(book.id, cb),
       (list) => list.length === 2,
-      'observeChapters emette i due capitoli',
+      'observeChapters emits the two chapters',
     );
     expect(chapters.map((c) => c.title)).toEqual(['Le chiavi di casa', 'La bassa marea']);
 
@@ -216,7 +215,7 @@ describe('FirestoreChapterRepository', () => {
     expect(await bookRepository.getBook(book.id)).toMatchObject({ chapterCount: 2 });
   });
 
-  it('saveRawText aggiorna wordCount del capitolo e del libro (denormalizzato)', async () => {
+  it('saveRawText updates wordCount of the chapter and of the book (denormalized)', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Il custode del faro' });
     const chapter = await chapterRepository.createChapter(book.id, { title: 'La marea' });
@@ -230,13 +229,13 @@ describe('FirestoreChapterRepository', () => {
     });
     expect(await bookRepository.getBook(book.id)).toMatchObject({ wordCount: 7 });
 
-    // secondo salvataggio: il libro riceve il DELTA, non la somma cieca
+    // second save: the book receives the DELTA, not the blind sum
     await chapterRepository.saveRawText(ref, 'Il faro era spento.');
     await waitForPendingWrites(db);
     expect(await bookRepository.getBook(book.id)).toMatchObject({ wordCount: 4 });
   });
 
-  it('outline: round-trip su create e update, null per i capitoli senza', async () => {
+  it('outline: round-trip on create and update, null for chapters without one', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Con scaletta' });
     const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'], beatsDone: [] };
@@ -255,8 +254,8 @@ describe('FirestoreChapterRepository', () => {
       await chapterRepository.getChapter({ bookId: book.id, chapterId: senzaOutline.id }),
     ).toMatchObject({ outline: null });
 
-    // il merge additivo riempie uno slot vuoto: titolo + outline via updateChapter;
-    // beatsDone non vuoto: round-trip anche dei beat spuntati in dettatura
+    // the additive merge fills an empty slot: title + outline via updateChapter;
+    // non-empty beatsDone: round-trip also of the beats ticked during dictation
     const nuova = { summary: 'Tutto cambia.', beats: ['Il patto'], beatsDone: [0] };
     await chapterRepository.updateChapter(
       { bookId: book.id, chapterId: senzaOutline.id },
@@ -268,7 +267,7 @@ describe('FirestoreChapterRepository', () => {
     ).toMatchObject({ title: 'Il patto', outline: nuova });
   });
 
-  it('reorderChapters riscrive gli order 0..n-1 e rifiuta riordini parziali', async () => {
+  it('reorderChapters rewrites the orders 0..n-1 and rejects partial reorders', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Riordino' });
     const a = await chapterRepository.createChapter(book.id, { title: 'A' });
@@ -280,7 +279,7 @@ describe('FirestoreChapterRepository', () => {
     const chapters = await waitUntil<ChapterSummary[]>(
       (cb) => chapterRepository.observeChapters(book.id, cb),
       (list) => list.length === 3 && list[0].id === c.id,
-      'observeChapters emette il nuovo ordine',
+      'observeChapters emits the new order',
     );
     expect(chapters.map((ch) => [ch.title, ch.order])).toEqual([
       ['C', 0],
@@ -316,7 +315,7 @@ describe('FirestoreChapterRepository', () => {
     });
   });
 
-  it('loadRawText distingue capitolo mai salvato (null) da documento rotto (errore)', async () => {
+  it('loadRawText tells a never-saved chapter (null) from a broken document (error)', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Vuoto vs rotto' });
     expect(await chapterRepository.loadRawText({ bookId: book.id, chapterId: 'mai-visto' })).toBe(
@@ -329,12 +328,12 @@ describe('FirestoreChapterRepository', () => {
     });
     await expect(
       chapterRepository.loadRawText({ bookId: book.id, chapterId: 'rotto' }),
-    ).rejects.toThrow(/non conforme/);
+    ).rejects.toThrow(/does not match the schema/);
   });
 });
 
-describe('verifica offline → sync', () => {
-  it('le modifiche fatte a rete spenta si sincronizzano alla riaccensione', async () => {
+describe('offline → sync check', () => {
+  it('changes made with the network off sync on reconnection', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Il custode del faro' });
     const chapter = await chapterRepository.createChapter(book.id, { title: 'La marea' });
@@ -342,25 +341,25 @@ describe('verifica offline → sync', () => {
     await chapterRepository.saveRawText(ref, 'Prima riga dettata online.');
     await waitForPendingWrites(db);
 
-    // ── rete SPENTA (equivalente di modalità aereo per l'SDK) ──
+    // ── network OFF (the SDK's equivalent of airplane mode) ──
     await disableNetwork(db);
     await chapterRepository.saveRawText(ref, 'Prima riga dettata online. Poi il buio.');
 
-    // l'app continua a vedere il testo aggiornato (latency compensation):
-    // l'observe emette dalla cache locale anche senza rete
+    // the app keeps seeing the updated text (latency compensation):
+    // observe emits from the local cache even without network
     const visto = await waitUntil<Chapter>(
       (cb) => chapterRepository.observeChapter(ref, (c) => c !== null && cb(c)),
       (c) => c.rawText.includes('Poi il buio.'),
-      'observeChapter emette la modifica offline',
+      'observeChapter emits the offline change',
     );
     expect(visto.wordCount).toBe(7);
 
-    // ── rete RIACCESA: la coda di scritture raggiunge l'emulatore ──
+    // ── network ON: the write queue reaches the emulator ──
     await enableNetwork(db);
     await waitForPendingWrites(db);
 
-    // verifica da un ALTRO client (nuovo contesto = niente cache condivisa):
-    // il testo è davvero sul server, non solo nella cache del primo
+    // check from ANOTHER client (new context = no shared cache):
+    // the text is really on the server, not just in the first one's cache
     const altroClient = env.authenticatedContext(UID).firestore() as unknown as Firestore;
     const snapshot = await getDoc(
       doc(altroClient, 'users', UID, 'books', book.id, 'chapters', chapter.id),
@@ -369,8 +368,8 @@ describe('verifica offline → sync', () => {
   });
 });
 
-describe('regole per-utente (firestore.rules della fase delle regole Firestore)', () => {
-  it('un altro utente non legge i libri di Jane', async () => {
+describe('per-user rules (the repo’s firestore.rules)', () => {
+  it('another user cannot read Jane’s books', async () => {
     const { bookRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Privato' });
     await waitForPendingWrites(db);

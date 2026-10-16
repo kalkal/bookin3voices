@@ -1,10 +1,10 @@
 /**
- * Editor capitolo: testo con capolettera
- * ed evidenziazioni inline per categoria, chip contatore dei suggerimenti che
- * apre la Review, bottone «Rifinisci con AI» che invoca il provider (oggi il
- * finto, con la callable). La matita passa in modalità edit manuale:
- * alla conferma il controller ri-mappa/invalida gli span.
- * Tutta la logica vive in useChapterReview; qui solo la resa.
+ * Chapter editor: text with a drop cap
+ * and inline per-category highlights, a suggestion counter chip that
+ * opens the Review, and a «Rifinisci con AI» button that invokes the provider
+ * (a fake today, the callable later). The pencil switches to manual edit mode:
+ * on confirm the controller re-maps/invalidates the spans.
+ * All logic lives in useChapterReview; only rendering is here.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
@@ -29,11 +29,11 @@ import type { ChapterReviewController } from './useChapterReview';
 
 export interface ChapterEditorScreenProps {
   controller: ChapterReviewController;
-  /** Intestazione, es. "VII · La marea". */
+  /** Header, e.g. "VII · La marea". */
   chapterTitle?: string;
-  /** Apre la schermata Review. */
+  /** Opens the Review screen. */
   onOpenReview: () => void;
-  /** Se presente, mostra il chevron di ritorno al Libro. */
+  /** If present, shows the back chevron to the Book. */
   onBack?: () => void;
 }
 

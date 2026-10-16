@@ -1,13 +1,13 @@
-// Autosave con debounce verso il repository (regola di convivenza 3):
-// il repository riceve poco spesso (3–5 s), ma flushNow() salva SUBITO su
-// pausa/background/chiusura. Le due regole convivono: qui il debounce, in
-// DictationSession il testo che non vive mai solo in RAM.
+// Debounced autosave to the repository: the repository is written
+// infrequently (3-5 s), but flushNow() saves IMMEDIATELY on
+// pause/background/close. The two rules coexist: debounce here, and in
+// DictationSession the guarantee that text never lives only in RAM.
 
 export type SaveStatus = 'saved' | 'pending' | 'saving' | 'error';
 
 export interface DebouncedSaverOptions {
   save: (text: string) => Promise<void>;
-  /** Debounce verso il repository; range tipico 3–5 s. */
+  /** Debounce toward the repository; typical range 3-5 s. */
   delayMs?: number;
   onStatus?: (status: SaveStatus) => void;
 }
@@ -26,7 +26,7 @@ export class DebouncedSaver {
     this.delayMs = options.delayMs ?? 3000;
   }
 
-  /** Nuovo testo da salvare: riparte il timer di debounce. */
+  /** New text to save: restarts the debounce timer. */
   schedule(text: string): void {
     if (this.disposed) return;
     this.latestText = text;
@@ -40,8 +40,8 @@ export class DebouncedSaver {
   }
 
   /**
-   * Salvataggio immediato, saltando il debounce (pausa/background/chiusura).
-   * Senza argomento salva l'ultimo testo schedulato, se c'è qualcosa in sospeso.
+   * Immediate save, skipping the debounce (pause/background/close).
+   * Without an argument it saves the last scheduled text, if anything is pending.
    */
   flushNow(text?: string): void {
     if (this.disposed) return;
@@ -53,7 +53,7 @@ export class DebouncedSaver {
     void this.run();
   }
 
-  /** Ferma i timer. Non salva: chi chiude deve prima chiamare flushNow(). */
+  /** Stops the timers. Does not save: whoever closes must call flushNow() first. */
   dispose(): void {
     this.disposed = true;
     this.clearTimer();
@@ -67,7 +67,7 @@ export class DebouncedSaver {
   }
 
   private async run(): Promise<void> {
-    // un salvataggio è già in corsa: al suo ritorno ripartirà da solo se dirty
+    // a save is already in flight: on return it will rerun by itself if dirty
     if (this.saving || !this.dirty || this.latestText === undefined) return;
     this.saving = true;
     this.dirty = false;
@@ -77,7 +77,7 @@ export class DebouncedSaver {
       await this.options.save(text);
       if (!this.dirty) this.options.onStatus?.('saved');
     } catch {
-      // testo conservato: si ritenta al prossimo giro di debounce
+      // text kept: retried on the next debounce round
       this.dirty = true;
       this.options.onStatus?.('error');
       if (!this.disposed && this.timer === undefined) {
@@ -88,7 +88,7 @@ export class DebouncedSaver {
       }
     } finally {
       this.saving = false;
-      // arrivato altro testo (o un flush) mentre si salvava: si riparte subito
+      // more text (or a flush) arrived while saving: run again right away
       if (this.dirty && this.timer === undefined && !this.disposed) void this.run();
     }
   }

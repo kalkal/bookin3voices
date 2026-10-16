@@ -1,5 +1,5 @@
 /**
- * Numerale romano di capitolo in Cormorant Garamond oro (firma visiva).
+ * Chapter Roman numeral in gold Cormorant Garamond (visual signature).
  */
 import { Text } from 'react-native';
 import type { StyleProp, TextStyle } from 'react-native';
@@ -8,11 +8,11 @@ import { toRoman } from '../lib/roman';
 import { useTheme } from '../theme';
 
 interface RomanNumeralProps {
-  /** Numero del capitolo (1–3999). */
+  /** Chapter number (1–3999). */
   value: number;
-  /** Dimensione in px; default: scala `heading` (elenco capitoli). */
+  /** Size in px; default: `heading` scale (chapter list). */
   size?: number;
-  /** Colore alternativo (es. inchiostro nei titoli di schermata). */
+  /** Alternative color (e.g. ink in screen titles). */
   color?: string;
   style?: StyleProp<TextStyle>;
   testID?: string;

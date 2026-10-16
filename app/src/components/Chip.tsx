@@ -1,8 +1,8 @@
 /**
- * Chip a pillola del mockup, in tre usi:
- * - filtro (Review): selezionato = verde pieno, altrimenti bordo oro attenuato;
- * - tag di categoria (card suggerimento): maiuscoletto con bordo oro o verde;
- * - comando vocale (Dettatura): corsivo tra virgolette basse «così».
+ * Pill chip from the mockup, in three uses:
+ * - filter (Review): selected = solid green, otherwise muted gold border;
+ * - category tag (suggestion card): small caps with a gold or green border;
+ * - voice command (Dictation): italic between guillemets «like this».
  */
 import { Pressable, Text } from 'react-native';
 
@@ -13,13 +13,13 @@ export type ChipTone = 'gold' | 'green';
 interface ChipProps {
   label: string;
   onPress?: () => void;
-  /** Filtro attivo: sfondo verde pieno. */
+  /** Active filter: solid green background. */
   selected?: boolean;
-  /** Colore di bordo/testo quando non selezionato. */
+  /** Border/text color when not selected. */
   tone?: ChipTone;
-  /** Maiuscoletto spaziato (tag di categoria). */
+  /** Letter-spaced small caps (category tag). */
   uppercase?: boolean;
-  /** Corsivo (comandi vocali). */
+  /** Italic (voice commands). */
   italic?: boolean;
   testID?: string;
 }

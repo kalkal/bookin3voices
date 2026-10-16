@@ -1,14 +1,14 @@
-// Callable `exportBackup(bookId?, requestId)`: backup
-// Markdown del testo grezzo — un file per capitolo (frontmatter con
-// titolo/ordine/stato/parole) più un indice per libro, consegnati come zip in
-// base64. Senza bookId si esporta TUTTA la biblioteca: è la via d'uscita
-// indipendente da Firebase/Gemini. Storage non è attivo nell'MVP
-// (piano Spark): come per exportBook il file torna nella risposta; la
-// variante Storage per backup oltre il tetto callable è annotata come lavoro futuro.
+// Callable `exportBackup(bookId?, requestId)`: Markdown backup of the raw
+// text - one file per chapter (frontmatter with title/order/status/word count)
+// plus one index per book, delivered as a base64 zip. Without bookId the WHOLE
+// library is exported: it is the exit route that is independent of
+// Firebase/Gemini. Storage is not enabled in the MVP (Spark plan): as with
+// exportBook, the file is returned in the response; the Storage variant for
+// backups above the callable limit is noted as future work.
 //
-// Idempotenza: requestId = id del documento
-// users/{uid}/exports/{requestId}; un retry riusa il registro (stessa
-// createdAt) e rigenera gli stessi byte (date dello zip fissate a createdAt).
+// Idempotency: requestId = id of the document users/{uid}/exports/{requestId};
+// a retry reuses the registry entry (same createdAt) and regenerates the same
+// bytes (zip dates are pinned to createdAt).
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
@@ -32,16 +32,16 @@ import {
 } from './types';
 
 /**
- * Tetto sullo zip PRIMA della codifica base64: 7 MiB × 4/3 ≈ 9,3 MB, sotto il
- * limite di risposta delle callable (~10 MB). Iniettabile nei test.
+ * Cap on the zip BEFORE base64 encoding: 7 MiB x 4/3 ~ 9.3 MB, under the
+ * callable response limit (~10 MB). Injectable in tests.
  */
 export const DEFAULT_MAX_ZIP_BYTES = 7 * 1024 * 1024;
 
 export interface ExportBackupDeps {
   db: Firestore;
-  /** Orologio iniettabile nei test; default Date.now. */
+  /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
-  /** Tetto sui byte dello zip; default DEFAULT_MAX_ZIP_BYTES. */
+  /** Cap on zip bytes; defaults to DEFAULT_MAX_ZIP_BYTES. */
   maxZipBytes?: number;
 }
 
@@ -57,17 +57,17 @@ async function readBookChapters(
   return chaptersSnap.docs.map((doc) => {
     const parsed = chapterBackupDocSchema.safeParse(doc.data());
     if (!parsed.success) {
-      throw new HttpsError('failed-precondition', `Capitolo ${doc.id} non valido per il backup.`);
+      throw new HttpsError('failed-precondition', `Chapter ${doc.id} is not valid for backup.`);
     }
     return parsed.data;
   });
 }
 
 /**
- * Legge i libri da salvare: uno solo se `bookId` è indicato, altrimenti tutti.
- * A differenza dell'export un libro SENZA capitoli non è un errore: il
- * backup non deve fallire perché un libro è appena nato (compare col solo
- * indice). Errore solo se non c'è proprio nulla da salvare.
+ * Reads the books to back up: just one if `bookId` is given, otherwise all.
+ * Unlike export, a book WITHOUT chapters is not an error: the backup must not
+ * fail because a book was just created (it appears with its index only).
+ * It is an error only if there is nothing at all to back up.
  */
 async function readBooksForBackup(
   db: Firestore,
@@ -82,20 +82,20 @@ async function readBooksForBackup(
       : await (async () => {
           const snap = await booksRef.doc(bookId).get();
           if (!snap.exists) {
-            throw new HttpsError('not-found', 'Libro inesistente.');
+            throw new HttpsError('not-found', 'Book not found.');
           }
           return [snap];
         })();
 
   if (bookDocs.length === 0) {
-    throw new HttpsError('failed-precondition', 'Nessun libro da salvare.');
+    throw new HttpsError('failed-precondition', 'No books to back up.');
   }
 
   return Promise.all(
     bookDocs.map(async (doc) => {
       const parsed = bookBackupDocSchema.safeParse(doc.data());
       if (!parsed.success) {
-        throw new HttpsError('failed-precondition', `Libro ${doc.id} non valido per il backup.`);
+        throw new HttpsError('failed-precondition', `Book ${doc.id} is not valid for backup.`);
       }
       return { ...parsed.data, chapters: await readBookChapters(db, uid, doc.id) };
     }),
@@ -103,9 +103,10 @@ async function readBooksForBackup(
 }
 
 /**
- * Riserva (o riusa) il registro del backup in transazione, come in
- * exportBook: primo giro crea il documento, un retry con lo stesso requestId
- * riusa createdAt, lo stesso requestId su una richiesta DIVERSA è un errore.
+ * Reserves (or reuses) the backup registry entry in a transaction, as in
+ * exportBook: the first call creates the document, a retry with the same
+ * requestId reuses createdAt, the same requestId on a DIFFERENT request is an
+ * error.
  */
 async function reserveBackup(
   db: Firestore,
@@ -119,7 +120,7 @@ async function reserveBackup(
     if (snap.exists) {
       const existing = backupRegistryDocSchema.safeParse(snap.data());
       if (!existing.success || existing.data.bookId !== (input.bookId ?? null)) {
-        throw new HttpsError('already-exists', 'requestId già usato per un altro export.');
+        throw new HttpsError('already-exists', 'requestId already used for another export.');
       }
       return existing.data.createdAt;
     }
@@ -128,14 +129,14 @@ async function reserveBackup(
       schemaVersion: 1,
       format: 'backup-md',
       bookId: input.bookId ?? null,
-      storagePath: null, // MVP senza Storage
+      storagePath: null, // MVP without Storage
       createdAt,
     });
     return createdAt;
   });
 }
 
-/** Zip deterministico: date dei file fissate a createdAt, ordine stabile. */
+/** Deterministic zip: file dates pinned to createdAt, stable order. */
 async function buildZip(books: BookForBackup[], generatedAt: Date): Promise<Buffer> {
   const zip = new JSZip();
   const usedFolders = new Set<string>();
@@ -160,7 +161,7 @@ async function buildZip(books: BookForBackup[], generatedAt: Date): Promise<Buff
   });
 }
 
-/** Cuore della callable, testabile direttamente contro l'emulatore Firestore. */
+/** Core of the callable, testable directly against the Firestore emulator. */
 export async function runExportBackup(
   deps: ExportBackupDeps,
   uid: string,
@@ -175,8 +176,8 @@ export async function runExportBackup(
   const registryRef = db.doc(`users/${uid}/exports/${input.requestId}`);
 
   if (buffer.length > maxZipBytes) {
-    // il libro è cresciuto oltre il tetto della risposta callable: niente
-    // registro orfano, e il messaggio indica la strada (variante Storage)
+    // the book outgrew the callable response cap: no orphaned registry entry,
+    // and the message points to the way forward (Storage variant)
     await registryRef.delete();
     throw new HttpsError(
       'resource-exhausted',
@@ -199,18 +200,18 @@ export async function runExportBackup(
   };
 }
 
-/** Handler della callable: auth + validazione input, poi runExportBackup. */
+/** Callable handler: auth + input validation, then runExportBackup. */
 export function createExportBackupHandler(
   deps: ExportBackupDeps,
 ): (request: CallableRequest<unknown>) => Promise<ExportBackupResponse> {
   return async (request) => {
     const uid = request.auth?.uid;
     if (uid === undefined) {
-      throw new HttpsError('unauthenticated', 'Accesso richiesto.');
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
     }
     const parsed = exportBackupInputSchema.safeParse(request.data);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', 'Attesi { bookId?, requestId }.');
+      throw new HttpsError('invalid-argument', 'Expected { bookId?, requestId }.');
     }
     return runExportBackup(deps, uid, parsed.data);
   };

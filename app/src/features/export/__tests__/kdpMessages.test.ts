@@ -1,14 +1,14 @@
 import { kdpMessageIt, preflightNote } from '../kdpMessages';
 
 describe('kdpMessages', () => {
-  it('traduce i codici noti e ripiega sul messaggio del server per gli altri', () => {
+  it('translates known codes and falls back to the server message for the others', () => {
     expect(kdpMessageIt({ code: 'author_missing', message: 'The book has no author name.' })).toBe(
       'Manca il nome dell’autore.',
     );
     expect(kdpMessageIt({ code: 'new_rule', message: 'Server text.' })).toBe('Server text.');
   });
 
-  it('riepiloga il controllo KDP in italiano', () => {
+  it('summarizes the KDP check in Italian', () => {
     expect(preflightNote({})).toBe('');
     expect(preflightNote({ preflight: { errors: [], warnings: [] } })).toBe(
       ' Controllo KDP: tutto a posto.',

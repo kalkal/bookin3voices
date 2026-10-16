@@ -1,13 +1,13 @@
-// Backup Markdown: contratti e logica pura della
-// sezione Dati delle Impostazioni. Il contratto della risposta è CONDIVISO con
-// la callable `exportBackup` (functions/src/backup/types.ts): se una delle due
-// parti cambia, va aggiornata anche l'altra.
+// Markdown backup: contracts and pure logic of the
+// Data section of Settings. The response contract is SHARED with
+// the `exportBackup` callable (functions/src/backup/types.ts): if one of the two
+// sides changes, the other must be updated too.
 //
-// Promemoria (scelta dichiarata): niente expo-notifications — non è tra le
-// dipendenze e una notifica locale non vale una dipendenza nativa in più. La
-// frequenza scelta pilota un SOLLECITO VISIVO: "ultimo backup: X giorni fa",
-// evidenziato quando l'età supera la frequenza. Il backup automatico
-// server-side vero richiede lo scheduler (Blaze) → annotato come lavoro futuro.
+// Reminder (declared choice): no expo-notifications — it is not among the
+// dependencies and a local notification is not worth an extra native dependency. The
+// chosen frequency drives a VISUAL NUDGE: "last backup: X days ago",
+// highlighted when the age exceeds the frequency. A real server-side
+// automatic backup requires the scheduler (Blaze) → noted as future work.
 
 import { z } from 'zod';
 
@@ -15,12 +15,12 @@ import { t, tn } from '../../i18n';
 
 import type { BackupFrequency } from './types';
 
-/** Risposta della callable, validata con Zod al confine. */
+/** Response of the callable, validated with Zod at the boundary. */
 export const backupFileSchema = z.object({
   exportId: z.string().min(1),
   fileName: z.string().min(1),
   mimeType: z.string().min(1),
-  /** MVP senza Storage (piano Spark): lo zip arriva in base64. */
+  /** MVP without Storage (Spark plan): the zip arrives as base64. */
   base64: z.string().min(1),
   size: z.number().int().positive(),
   createdAt: z.number(),
@@ -30,18 +30,18 @@ export const backupFileSchema = z.object({
 export type BackupFile = z.infer<typeof backupFileSchema>;
 
 export interface BackupRequest {
-  /** Senza bookId la callable esporta TUTTI i libri (il caso delle Impostazioni). */
+  /** Without bookId the callable exports ALL books (the Settings case). */
   bookId?: string;
-  /** Chiave di idempotenza: un retry non genera doppi backup. */
+  /** Idempotency key: a retry does not generate duplicate backups. */
   requestId: string;
 }
 
-/** Genera lo zip del backup (oggi: callable `exportBackup` sulle Functions). */
+/** Generates the backup zip (today: `exportBackup` callable on the Functions). */
 export interface BackupService {
   exportBackup(request: BackupRequest): Promise<BackupFile>;
 }
 
-/** Fake per test di componente e modalità E2E Maestro (App.tsx). */
+/** Fake for component tests and Maestro E2E mode (App.tsx). */
 export class InMemoryBackupService implements BackupService {
   readonly requests: BackupRequest[] = [];
 
@@ -59,7 +59,7 @@ export class InMemoryBackupService implements BackupService {
   }
 }
 
-/** Età massima (in giorni) prima del sollecito, per frequenza scelta. */
+/** Maximum age (in days) before the nudge, per chosen frequency. */
 export const BACKUP_FREQUENCY_DAYS: Record<BackupFrequency, number> = {
   daily: 1,
   weekly: 7,
@@ -69,13 +69,13 @@ export const BACKUP_FREQUENCY_DAYS: Record<BackupFrequency, number> = {
 const DAY_MS = 86_400_000;
 
 export interface BackupStatus {
-  /** Riga informativa: "Nessun backup ancora" / "Ultimo backup: oggi/ieri/N giorni fa". */
+  /** Info row: "Nessun backup ancora" / "Ultimo backup: oggi/ieri/N giorni fa". */
   label: string;
-  /** true = sollecito visivo: mai fatto un backup, o più vecchio della frequenza. */
+  /** true = visual nudge: never backed up, or older than the frequency. */
   overdue: boolean;
 }
 
-/** Stato del promemoria backup: puro e deterministico, `now` iniettato. */
+/** Backup reminder state: pure and deterministic, `now` injected. */
 export function backupStatus(
   lastBackupAt: number | null,
   frequency: BackupFrequency,

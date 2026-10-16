@@ -1,14 +1,14 @@
-// Contratti della scaletta capitoli: la risposta
-// della callable passa da Zod al confine e il servizio è
-// un'interfaccia — la UI non importa mai l'SDK Firebase (Repository/Strategy).
+// Contracts of the chapter outline: the callable's
+// response goes through Zod at the boundary and the service is
+// an interface — the UI never imports the Firebase SDK (Repository/Strategy).
 
 import { z } from 'zod';
 
 /**
- * Una scheda della scaletta proposta (anteprima corkboard): titolo,
- * riassunto e beat. È la forma con cui la proposta vive nella UI, modificabile
- * ed eliminabile PRIMA della conferma; alla conferma diventa un capitolo
- * `status: draft` con campo `outline` (merge additivo).
+ * A card of the proposed outline (corkboard preview): title,
+ * summary and beats. It is the shape in which the proposal lives in the UI, editable
+ * and deletable BEFORE confirmation; on confirmation it becomes a chapter
+ * `status: draft` with an `outline` field (additive merge).
  */
 export const outlineCardSchema = z.object({
   title: z.string().trim().min(1),
@@ -18,7 +18,7 @@ export const outlineCardSchema = z.object({
 
 export type OutlineCard = z.infer<typeof outlineCardSchema>;
 
-/** Risposta della callable generateOutline, validata al confine. */
+/** Response of the generateOutline callable, validated at the boundary. */
 export const outlineProposalSchema = z.object({
   requestId: z.string(),
   bookId: z.string(),
@@ -30,14 +30,14 @@ export const outlineProposalSchema = z.object({
 
 export type OutlineProposal = z.infer<typeof outlineProposalSchema>;
 
-/** Input della callable: il requestId è la chiave di idempotenza. */
+/** Input of the callable: requestId is the idempotency key. */
 export interface GenerateOutlineRequest {
   bookId: string;
   synopsis: string;
   requestId: string;
 }
 
-/** Il servizio che genera la scaletta (callable in produzione, fake nei test/E2E). */
+/** The service that generates the outline (callable in production, fake in tests/E2E). */
 export interface OutlineService {
   generateOutline(request: GenerateOutlineRequest): Promise<OutlineProposal>;
 }

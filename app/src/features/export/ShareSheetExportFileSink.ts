@@ -1,6 +1,6 @@
-// ExportFileSink reale: scrive il file nella cache dell'app (expo-file-system)
-// e apre lo share sheet di sistema (expo-sharing) — Il file resta
-// in cache: niente permessi di storage, e il sistema può ripulirla da sé.
+// Real ExportFileSink: writes the file to the app cache (expo-file-system)
+// and opens the system share sheet (expo-sharing) — The file stays
+// in cache: no storage permissions, and the system can clean it up on its own.
 
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';

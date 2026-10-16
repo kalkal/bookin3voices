@@ -1,10 +1,10 @@
 /**
- * Schermata Dettatura (la schermata cuore):
- * testo live a schermo intero (parziali in grigio attenuato, consolidato in
- * inchiostro), pannello inferiore con contatore parole di sessione, indicatore
- * di salvataggio e offline, chip dei comandi vocali «così» e microfono
- * dominante a tre stati. Il pre-flight appare come card sopra il testo.
- * Tutta la logica vive in useDictationController; qui solo la resa.
+ * Dictation screen (the core screen):
+ * full-screen live text (interim results dimmed grey, finalized text in
+ * ink), a bottom panel with the session word counter, save and offline
+ * indicators, voice-command chips and a dominant three-state microphone.
+ * The pre-flight appears as a card above the text.
+ * All logic lives in useDictationController; only rendering is here.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useNetworkState } from 'expo-network';
@@ -25,27 +25,27 @@ import { useDictationController } from './useDictationController';
 
 export interface DictationScreenProps {
   chapter: ChapterRef;
-  /** Intestazione della schermata, es. "Capitolo I". */
+  /** Screen header, e.g. "Capitolo I". */
   chapterTitle?: string;
   repository: ChapterTextRepository;
-  /** Motore STT; default ExpoDictationEngine. I test passano il Fake. */
+  /** STT engine; defaults to ExpoDictationEngine. Tests pass the Fake. */
   engine?: DictationEngine;
   preflightChecks?: PreflightChecks;
   debounceMs?: number;
   lang?: string;
-  /** Se presente, mostra il chevron di ritorno al Libro. */
+  /** If present, shows the back chevron to the Book. */
   onBack?: () => void;
   /**
-   * Se presente e il capitolo ha un `outline`, mostra la traccia
-   * richiudibile coi beat. Assente (o capitolo senza outline): niente
-   * pannello, la schermata resta quella di sempre.
+   * If present and the chapter has an `outline`, shows the collapsible
+   * track with the beats. Absent (or chapter without an outline): no
+   * panel, the screen stays as it always was.
    */
   outlineRepository?: OutlineTrackRepository;
-  /** Storage dello stato apri/chiuso della traccia; default AsyncStorage. */
+  /** Storage for the track's open/closed state; defaults to AsyncStorage. */
   outlineStateStorage?: KeyValueStorage;
 }
 
-/** Comandi vocali riconosciuti, mostrati tra virgolette basse. */
+/** Recognized voice commands, shown in guillemets. */
 const VOICE_COMMAND_HINTS = ['«punto»', '«virgola»', '«a capo»', '«nuovo paragrafo»'];
 
 const ERROR_MESSAGE_KEYS: Record<DictationError['code'], string> = {
@@ -72,10 +72,10 @@ export function DictationScreen({
   const scrollRef = useRef<ScrollView>(null);
   const [dismissedWarnings, setDismissedWarnings] = useState<ReadonlySet<string>>(new Set());
 
-  // il motore nativo si crea una sola volta, e solo se non è stato iniettato
+  // the native engine is created only once, and only if none was injected
   const resolvedEngine = useMemo<DictationEngine>(
     () => engine ?? new ExpoDictationEngine(),
-    // fisso per la vita della schermata
+    // fixed for the screen's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -146,8 +146,8 @@ export function DictationScreen({
         <OutlineTrack
           chapter={chapter}
           repository={outlineRepository}
-          // dall'intestazione "Capitolo VII · Titolo" al pannello resta solo
-          // "Capitolo VII" (etichetta del mockup: "Traccia · Capitolo VII")
+          // from the header "Capitolo VII · Titolo" only "Capitolo VII" reaches
+          // the panel (mockup label: "Traccia · Capitolo VII")
           chapterLabel={chapterTitle?.split('·')[0]?.trim()}
           storage={outlineStateStorage}
         />

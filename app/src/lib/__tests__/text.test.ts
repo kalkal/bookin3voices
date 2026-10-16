@@ -1,31 +1,31 @@
 import { appendText, countWords } from '../text';
 
 describe('countWords', () => {
-  it('conta le parole separate da spazi', () => {
+  it('counts words separated by spaces', () => {
     expect(countWords('la porta era chiusa')).toBe(4);
   });
 
-  it('ignora spazi multipli, a capo e bordi', () => {
+  it('ignores multiple spaces, newlines and edges', () => {
     expect(countWords('  la  porta\nera   chiusa  ')).toBe(4);
   });
 
-  it('restituisce 0 per testo vuoto o solo spazi', () => {
+  it('returns 0 for empty or whitespace-only text', () => {
     expect(countWords('')).toBe(0);
     expect(countWords('   \n ')).toBe(0);
   });
 });
 
 describe('appendText', () => {
-  it('unisce due blocchi con uno spazio', () => {
+  it('joins two blocks with a space', () => {
     expect(appendText('prima frase.', 'Seconda frase')).toBe('prima frase. Seconda frase');
   });
 
-  it('non raddoppia la separazione se il testo base finisce con spazio o a capo', () => {
+  it('does not double the separation if the base text ends with a space or newline', () => {
     expect(appendText('paragrafo.\n\n', 'Nuovo paragrafo')).toBe('paragrafo.\n\nNuovo paragrafo');
     expect(appendText('parola ', 'dopo')).toBe('parola dopo');
   });
 
-  it('gestisce i bordi vuoti senza spazi vaganti', () => {
+  it('handles empty edges without stray spaces', () => {
     expect(appendText('', 'solo aggiunta')).toBe('solo aggiunta');
     expect(appendText('solo base', '')).toBe('solo base');
     expect(appendText('', '')).toBe('');

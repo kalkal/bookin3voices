@@ -1,7 +1,7 @@
-// Regole del composito offline-first delle note: l'outbox durabile
-// prima di Firestore, la nota che compare anche quando il remoto rifiuta, la
-// recovery al ritorno del remoto e la sopravvivenza dell'outbox al riavvio
-// dell'app (nuovo repository sullo STESSO storage).
+// Rules of the offline-first note composite: the durable outbox
+// before Firestore, the note that shows up even when the remote rejects, the
+// recovery when the remote returns and the outbox surviving an app restart
+// (new repository on the SAME storage).
 
 import { LocalNoteRepository, type KeyValueStorage } from '../LocalNoteRepository';
 import { OfflineFirstNoteRepository } from '../OfflineFirstNoteRepository';
@@ -22,9 +22,9 @@ function memoryStorage() {
 }
 
 /**
- * Remote finto = un mini-Firestore in memoria con un interruttore `online`.
- * Offline: putNote rifiuta (come una scrittura non consegnata) e observe non
- * emette la nota. Online: putNote memorizza ed emette. newNoteId conia id unici.
+ * Fake remote = an in-memory mini-Firestore with an `online` switch.
+ * Offline: putNote rejects (like an undelivered write) and observe does not
+ * emit the note. Online: putNote stores and emits. newNoteId mints unique ids.
  */
 function fakeRemote() {
   const store = new Map<string, Note>();
@@ -82,7 +82,7 @@ function fakeRemote() {
   };
 }
 
-/** Attende che i microtask della coda (putNote in background) si svuotino. */
+/** Waits for the queued microtasks (background putNote) to drain. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 let clock = 1000;
@@ -93,10 +93,10 @@ beforeEach(() => {
 });
 
 describe('OfflineFirstNoteRepository', () => {
-  it('crea offline: la nota è nell’outbox durabile e compare, benché il remoto rifiuti', async () => {
+  it('creates offline: the note is in the durable outbox and shows up, though the remote rejects', async () => {
     const { storage } = memoryStorage();
     const mirror = new LocalNoteRepository(storage);
-    const { remote } = fakeRemote(); // resta offline
+    const { remote } = fakeRemote(); // stays offline
 
     const repo = new OfflineFirstNoteRepository({ remote, mirror, now: tickingClock });
     const emissions: Note[][] = [];
@@ -106,15 +106,15 @@ describe('OfflineFirstNoteRepository', () => {
     const created = await repo.createNote(BOOK, { text: 'idea offline', tag: 'trama' });
     await flush();
 
-    // outbox durabile: la nota è su "disco"
+    // durable outbox: the note is on "disk"
     expect(await mirror.listPending(BOOK)).toEqual([expect.objectContaining({ id: created.id })]);
-    // e compare nella vista, pur avendo il remoto rifiutato la scrittura
+    // and shows up in the view, even though the remote rejected the write
     const last = emissions[emissions.length - 1];
     expect(last.map((n) => n.text)).toContain('idea offline');
     expect(remote.putNote).toHaveBeenCalled();
   });
 
-  it('quando il remoto torna, la recovery ri-sincronizza e svuota l’outbox', async () => {
+  it('when the remote returns, recovery re-syncs and empties the outbox', async () => {
     const { storage } = memoryStorage();
     const mirror = new LocalNoteRepository(storage);
     const fake = fakeRemote(); // offline
@@ -127,24 +127,24 @@ describe('OfflineFirstNoteRepository', () => {
     expect(await mirror.listPending(BOOK)).toHaveLength(1);
     unsub();
 
-    // il remoto torna: riaprendo il Taccuino (nuova observe) parte la recovery
+    // the remote returns: reopening the Notebook (new observe) starts recovery
     fake.setOnline(true);
     const emissions: Note[][] = [];
     repo.observeNotes(BOOK, (notes) => emissions.push(notes));
     await flush();
     await flush();
 
-    // la nota è ora sul remoto e l'outbox è vuoto (stesso id, niente doppioni)
+    // the note is now on the remote and the outbox is empty (same id, no duplicates)
     expect(fake.store.has(`${BOOK}/${created.id}`)).toBe(true);
     expect(await mirror.listPending(BOOK)).toHaveLength(0);
     const last = emissions[emissions.length - 1];
     expect(last.filter((n) => n.text === 'da sincronizzare')).toHaveLength(1);
   });
 
-  it('app riavviata: l’outbox su disco sopravvive e la nota si sincronizza al ritorno online', async () => {
-    const { storage } = memoryStorage(); // storage condiviso tra i due "avvii"
+  it('app restarted: the on-disk outbox survives and the note syncs when back online', async () => {
+    const { storage } = memoryStorage(); // storage shared between the two "launches"
 
-    // avvio 1: offline, si crea una nota; il repository muore con l'app
+    // launch 1: offline, a note is created; the repository dies with the app
     const fake1 = fakeRemote();
     const repo1 = new OfflineFirstNoteRepository({
       remote: fake1.remote,
@@ -156,7 +156,7 @@ describe('OfflineFirstNoteRepository', () => {
     await repo1.createNote(BOOK, { text: 'sopravvissuta al riavvio' });
     await flush();
 
-    // avvio 2: nuovo repository + nuovo mirror sullo STESSO storage, remoto online
+    // launch 2: new repository + new mirror on the SAME storage, remote online
     const fake2 = fakeRemote();
     fake2.setOnline(true);
     const repo2 = new OfflineFirstNoteRepository({
@@ -169,13 +169,13 @@ describe('OfflineFirstNoteRepository', () => {
     await flush();
     await flush();
 
-    // la nota c'era anche prima di toccare il remoto, e ora è sincronizzata
+    // the note was there even before touching the remote, and is now synced
     expect(emissions.some((e) => e.some((n) => n.text === 'sopravvissuta al riavvio'))).toBe(true);
     expect([...fake2.store.values()].some((n) => n.text === 'sopravvissuta al riavvio')).toBe(true);
     expect(await new LocalNoteRepository(storage).listPending(BOOK)).toHaveLength(0);
   });
 
-  it('online: la creazione arriva al remoto senza duplicati nella vista', async () => {
+  it('online: creation reaches the remote without duplicates in the view', async () => {
     const { storage } = memoryStorage();
     const mirror = new LocalNoteRepository(storage);
     const fake = fakeRemote();
@@ -193,10 +193,10 @@ describe('OfflineFirstNoteRepository', () => {
     expect(await mirror.listPending(BOOK)).toHaveLength(0);
   });
 
-  it('deleteNote toglie la nota dall’outbox e la propaga al remoto', async () => {
+  it('deleteNote removes the note from the outbox and propagates it to the remote', async () => {
     const { storage } = memoryStorage();
     const mirror = new LocalNoteRepository(storage);
-    const fake = fakeRemote(); // offline: la nota resta in outbox
+    const fake = fakeRemote(); // offline: the note stays in the outbox
 
     const repo = new OfflineFirstNoteRepository({ remote: fake.remote, mirror, now: tickingClock });
     repo.observeNotes(BOOK, () => {});

@@ -9,18 +9,18 @@ const validDoc = {
 };
 
 describe('noteCodec', () => {
-  it('decodifica un documento conforme', () => {
+  it('decodes a conforming document', () => {
     expect(decodeNoteDoc(validDoc)).toEqual(validDoc);
   });
 
-  it('normalizza il tag assente a null (campo additivo, upgrade-on-read)', () => {
+  it('normalizes an absent tag to null (additive field, upgrade-on-read)', () => {
     const { tag, ...senzaTag } = validDoc;
     void tag;
     expect(decodeNoteDoc(senzaTag)).toEqual({ ...senzaTag, tag: null });
     expect(decodeNoteDoc({ ...validDoc, tag: null })).toEqual({ ...validDoc, tag: null });
   });
 
-  it('rifiuta payload non conformi senza lanciare (decide il chiamante)', () => {
+  it('rejects non-conforming payloads without throwing (the caller decides)', () => {
     expect(decodeNoteDoc({})).toBeNull();
     expect(decodeNoteDoc({ ...validDoc, schemaVersion: 99 })).toBeNull();
     expect(decodeNoteDoc({ ...validDoc, tag: 'sconosciuto' })).toBeNull();
@@ -28,11 +28,11 @@ describe('noteCodec', () => {
     expect(decodeNoteDoc({ ...validDoc, createdAt: 'ieri' })).toBeNull();
   });
 
-  it('upgradeNoteData è oggi l’identità (una sola versione di schema)', () => {
+  it('upgradeNoteData is the identity today (a single schema version)', () => {
     expect(upgradeNoteData(validDoc)).toEqual(validDoc);
   });
 
-  it('toNote aggiunge le coordinate id/bookId', () => {
+  it('toNote adds the id/bookId coordinates', () => {
     const doc = decodeNoteDoc(validDoc);
     expect(doc).not.toBeNull();
     expect(toNote('nota-1', 'libro-1', doc!)).toEqual({

@@ -14,7 +14,7 @@ const BRANO =
   'Irene posò lentamente il bicchiere nel lavello. aprì il rubinetto e mentre ' +
   'beveva sentì che qualcosa non andava. Prese un altra tazza dallo scolapiatti.';
 
-/** Suggerimenti che il provider finto genererà su BRANO (id deterministici). */
+/** Suggestions the fake provider will generate on BRANO (deterministic ids). */
 async function previewSuggestions(): Promise<RefineResult> {
   return new FakeSuggestionsProvider().refine({
     ...CHAPTER,
@@ -43,32 +43,32 @@ async function setup(initialText = BRANO) {
 }
 
 describe('ChapterReviewFlow (editor + review)', () => {
-  it('Rifinisci genera i suggerimenti: chip contatore ed evidenziazioni inline', async () => {
+  it('Rifinisci generates the suggestions: counter chip and inline highlights', async () => {
     const { screen } = await setup();
     const preview = await previewSuggestions();
     expect(preview.suggestions.length).toBeGreaterThanOrEqual(4);
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
 
     const chip = await screen.findByTestId('editor-suggestions-chip');
     expect(chip).toHaveTextContent(`${preview.suggestions.length} suggerimenti`);
     for (const suggestion of preview.suggestions) {
       expect(screen.getByTestId(`highlight-${suggestion.id}`)).toHaveTextContent(
-        // il glifo del capolettera può stare nello stesso Text: basta il contenuto
+        // the drop-cap glyph may live in the same Text: the content is enough
         new RegExp(escapeRegExp(suggestion.original.trim())),
       );
     }
     await screen.unmount();
   });
 
-  it('accettare una card aggiorna il testo, persiste e scrive la revisione; undo la annulla', async () => {
+  it('accepting a card updates the text, persists and writes the revision; undo reverts it', async () => {
     const { screen, chapterRepository, revisionRepository } = await setup();
     const preview = await previewSuggestions();
     const elision = preview.suggestions.find((s) => s.original === 'un altra');
-    if (!elision) throw new Error('manca il suggerimento di elisione');
+    if (!elision) throw new Error('elision suggestion missing');
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
 
@@ -94,13 +94,13 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
-  it('rifiutare una card scrive la revisione rejected senza toccare il testo', async () => {
+  it('rejecting a card writes the rejected revision without touching the text', async () => {
     const { screen, chapterRepository, revisionRepository } = await setup();
     const preview = await previewSuggestions();
     const elision = preview.suggestions.find((s) => s.original === 'un altra');
-    if (!elision) throw new Error('manca il suggerimento di elisione');
+    if (!elision) throw new Error('elision suggestion missing');
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId(`review-reject-${elision.id}`));
@@ -113,14 +113,14 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
-  it('le varianti di stile si scelgono a chip: accettare applica quella scelta', async () => {
+  it('style variants are chosen via chips: accepting applies the chosen one', async () => {
     const { screen, chapterRepository } = await setup();
     const preview = await previewSuggestions();
     const adverb = preview.suggestions.find((s) => s.original === 'posò lentamente');
-    if (!adverb) throw new Error('manca il suggerimento sull’avverbio');
+    if (!adverb) throw new Error('adverb suggestion missing');
     expect(adverb.proposals).toHaveLength(3);
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
 
@@ -132,10 +132,10 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
-  it('«accetta tutti» della categoria applica tutte le patch grammaticali', async () => {
+  it('«accetta tutti» of the category applies all the grammar patches', async () => {
     const { screen, chapterRepository, revisionRepository } = await setup();
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId('review-filter-grammar'));
@@ -148,7 +148,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
     });
     const revisions = await revisionRepository.list(CHAPTER);
     expect(revisions.filter((r) => r.decision === 'accepted')).toHaveLength(2);
-    // un solo undo li annulla tutti e due (comando composito)
+    // a single undo reverts both (composite command)
     await fireEvent.press(await screen.findByTestId('review-undo'));
     await waitFor(async () => {
       expect(await chapterRepository.loadRawText(CHAPTER)).toBe(BRANO);
@@ -156,29 +156,29 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
-  it('un edit manuale che tocca uno span invalida il suggerimento (stale)', async () => {
+  it('a manual edit touching a span invalidates the suggestion (stale)', async () => {
     const { screen } = await setup();
     const preview = await previewSuggestions();
     const elision = preview.suggestions.find((s) => s.original === 'un altra');
-    if (!elision) throw new Error('manca il suggerimento di elisione');
+    if (!elision) throw new Error('elision suggestion missing');
 
-    await screen.findByTestId('editor-text-p0'); // capitolo caricato: bottone attivo
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
 
-    // l'utente corregge a mano proprio lì: 'un altra' → 'una nuova'
+    // the user hand-corrects exactly there: 'un altra' → 'una nuova'
     await fireEvent.press(await screen.findByTestId('editor-edit-toggle'));
     const input = await screen.findByTestId('editor-input');
     await fireEvent.changeText(input, BRANO.replace('un altra', 'una nuova'));
     await fireEvent.press(await screen.findByTestId('editor-edit-toggle'));
 
-    // l'evidenziazione dell'elisione sparisce, le altre restano
+    // the elision highlight disappears, the others stay
     await waitFor(() => {
       expect(screen.queryByTestId(`highlight-${elision.id}`)).toBeNull();
     });
     const adverb = preview.suggestions.find((s) => s.original === 'posò lentamente');
     expect(screen.getByTestId(`highlight-${adverb!.id}`)).toBeOnTheScreen();
 
-    // e in Review compare la nota sui suggerimenti non più applicabili
+    // and the Review shows the note about suggestions no longer applicable
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     expect(await screen.findByTestId('review-stale-note')).toHaveTextContent(
       /non è più applicabile/,
@@ -186,7 +186,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
-  it('capitolo vuoto: Rifinisci disabilitato e invito a dettare', async () => {
+  it('empty chapter: Rifinisci disabled and prompt to dictate', async () => {
     const { screen } = await setup('');
     expect(await screen.findByTestId('editor-empty-hint')).toBeOnTheScreen();
     const refine = await screen.findByTestId('editor-refine');

@@ -1,25 +1,25 @@
-// Golden-set runner — IL freno di regressione dei prompt.
+// Golden-set runner — the prompt regression brake.
 //
-// Esegue TUTTI i brani di content/style-profiles/suspense/golden-set/
-// contro il prompt corrente (buildRefinePrompt = Style Bible + few-shot +
-// regole di formato) e verifica MECCANICAMENTE ciò che è verificabile
+// Runs ALL the passages in content/style-profiles/suspense/golden-set/
+// against the current prompt (buildRefinePrompt = Style Bible + few-shot +
+// format rules) and MECHANICALLY verifies whatever can be verified
 // (quality priorities):
-//   - formato valido (Zod) e original localizzabile una sola volta nel brano;
-//   - una sola proposta per i suggerimenti grammar;
-//   - densità dentro i limiti del brano (checks.json) e tetto assoluto 30;
-//   - zero span che toccano le zone «NON DEVE» (checks.json): un suggerimento
-//     che attraversa una zona protetta è sano solo se OGNI proposta riporta
-//     il testo protetto INVARIATO;
-//   - copertura dei «DEVE» (riportata come diagnostica: il giudizio di
-//     qualità resta umano, il runner conta).
+//   - valid format (Zod) and original locatable exactly once in the passage;
+//   - a single proposal for grammar suggestions;
+//   - density within the passage limits (checks.json) and an absolute cap of 30;
+//   - zero spans touching the "MUST NOT" zones (checks.json): a suggestion
+//     crossing a protected zone is fine only if EVERY proposal carries
+//     the protected text UNCHANGED;
+//   - coverage of the "MUST" items (reported as a diagnostic: the quality
+//     judgment stays human, the runner counts).
 //
-// Va rigiocato a OGNI modifica di Style Bible / few-shot / prompt / modello.
-// Il giudizio finale sulla qualità resta umano: il runner blocca solo
-// le regressioni meccaniche.
+// Must be re-run on EVERY change to the Style Bible / few-shot / prompt / model.
+// The final quality judgment stays human: the runner only blocks
+// mechanical regressions.
 //
-// Uso:  npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md]
-// Chiave: env GEMINI_API_KEY. SOLO brani fittizi col tier free.
-// La chiave non viene mai stampata.
+// Usage: npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md]
+// Key: env GEMINI_API_KEY. Fictitious passages ONLY on the free tier.
+// The key is never printed.
 
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
@@ -34,11 +34,11 @@ import { textHash } from '../ai/textHash';
 // ---------- checks.json ----------
 
 interface ProtectedRegionSpec {
-  /** Citazione dal brano; «…» separa i frammenti di una zona estesa. */
+  /** Quote from the passage; «…» separates the fragments of an extended zone. */
   quote: string;
-  /** Categorie ammesse a intersecare la zona (es. grammar sul paragrafo-fiume). */
+  /** Categories allowed to intersect the zone (e.g. grammar on the run-on paragraph). */
   allow?: string[];
-  /** 'fail' (default) fa fallire il run; 'warn' segnala per il giudizio umano. */
+  /** 'fail' (default) fails the run; 'warn' flags it for human judgment. */
   level?: 'fail' | 'warn';
   note?: string;
 }
@@ -49,7 +49,7 @@ interface ExpectedSpec {
 }
 
 interface BranoChecks {
-  /** [min, max] della «Densità attesa» del brano: sopra il max è FAIL. */
+  /** [min, max] of the passage's expected density: above the max is a FAIL. */
   expectedRange: [number, number];
   protected: ProtectedRegionSpec[];
   expected: ExpectedSpec[];
@@ -62,14 +62,14 @@ interface Region {
   to: number;
 }
 
-/** Localizza una citazione (con frammenti «…») nel brano. Errore se non c'è:
- *  vuol dire che checks.json e brano sono andati fuori sincrono. */
+/** Locates a quote (with «…» fragments) in the passage. Throws if it is absent:
+ *  that means checks.json and the passage have gone out of sync. */
 function locateRegions(text: string, quote: string, file: string): Region[] {
   const fragments = quote
     .split('…')
     .map((f) => f.trim())
     .filter((f) => f !== '');
-  if (fragments.length === 0) throw new Error(`${file}: citazione vuota in checks.json`);
+  if (fragments.length === 0) throw new Error(`${file}: empty quote in checks.json`);
 
   if (fragments.length === 1) {
     const fragment = fragments[0] as string;
@@ -80,34 +80,34 @@ function locateRegions(text: string, quote: string, file: string): Region[] {
       index = text.indexOf(fragment, index + 1);
     }
     if (regions.length === 0) {
-      throw new Error(`${file}: citazione non trovata nel brano: «${fragment.slice(0, 60)}»`);
+      throw new Error(`${file}: quote not found in the passage: «${fragment.slice(0, 60)}»`);
     }
     return regions;
   }
 
   const first = fragments[0] as string;
   const from = text.indexOf(first);
-  if (from === -1) throw new Error(`${file}: frammento non trovato: «${first.slice(0, 60)}»`);
+  if (from === -1) throw new Error(`${file}: fragment not found: «${first.slice(0, 60)}»`);
   let cursor = from + first.length;
   for (const fragment of fragments.slice(1)) {
     const at = text.indexOf(fragment, cursor);
     if (at === -1)
       throw new Error(
-        `${file}: frammento non trovato dopo il precedente: «${fragment.slice(0, 60)}»`,
+        `${file}: fragment not found after the previous one: «${fragment.slice(0, 60)}»`,
       );
     cursor = at + fragment.length;
   }
   return [{ from, to: cursor }];
 }
 
-// ---------- estrazione brano ----------
+// ---------- passage extraction ----------
 
 function extractBrano(markdown: string, file: string): string {
   const match = /## Brano\s*\n([\s\S]*?)\n## /.exec(markdown);
-  if (match === null) throw new Error(`${file}: sezione «## Brano» non trovata`);
-  // I .md vanno a capo a ~90 colonne per leggibilità: dentro un paragrafo gli
-  // a-capo singoli sono formattazione, non testo. Si srotolano (come farebbe
-  // la dettatura), i paragrafi (riga vuota) restano.
+  if (match === null) throw new Error(`${file}: section «## Brano» not found`);
+  // The .md files wrap at ~90 columns for readability: inside a paragraph,
+  // single line breaks are formatting, not text. They are unrolled (as
+  // dictation would do); paragraphs (blank line) are kept.
   return (match[1] as string)
     .trim()
     .split(/\n{2,}/)
@@ -119,7 +119,7 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter((w) => w !== '').length;
 }
 
-// ---------- chiave API ----------
+// ---------- API key ----------
 
 function resolveApiKey(): string {
   const fromEnv = process.env.GEMINI_API_KEY;
@@ -127,7 +127,7 @@ function resolveApiKey(): string {
   throw new Error('Set the GEMINI_API_KEY environment variable.');
 }
 
-// ---------- verifica di un brano ----------
+// ---------- checking a passage ----------
 
 interface Violation {
   level: 'fail' | 'warn';
@@ -161,14 +161,14 @@ function checkBrano(
   const words = countWords(text);
   const violations: Violation[] = [];
 
-  // grammar con più proposte: violazione di formato PRIMA della normalizzazione
+  // grammar with more than one proposal: format violation BEFORE normalization
   const grammarMultiProposal = raw.suggestions.filter(
     (s) => s.kind === 'grammar' && s.proposals.length > 1,
   ).length;
   if (grammarMultiProposal > 0) {
     violations.push({
       level: 'fail',
-      message: `${grammarMultiProposal} suggerimento/i grammar con più di una proposta`,
+      message: `${grammarMultiProposal} grammar suggestion(s) with more than one proposal`,
     });
   }
 
@@ -176,34 +176,34 @@ function checkBrano(
   if (discarded > 0) {
     violations.push({
       level: 'warn',
-      message: `${discarded} suggerimento/i scartato/i (original assente/ambiguo o proposte vuote)`,
+      message: `${discarded} suggestion(s) discarded (original missing/ambiguous or empty proposals)`,
     });
   }
 
-  // densità: FAIL oltre il tetto meccanico (il maggiore tra il massimo del
-  // brano e 1 ogni ~50 parole della Style Bible, mai oltre 30); WARN se fuori
-  // dalla griglia umana del brano.
+  // density: FAIL above the mechanical cap (the larger of the passage maximum
+  // and 1 per ~50 words from the Style Bible, never above 30); WARN if outside
+  // the passage's human-set range.
   const [minExpected, maxExpected] = checks.expectedRange;
   const failThreshold = Math.min(Math.max(maxExpected, Math.ceil(words / 50)), MAX_SUGGESTIONS);
   const densityOk = suggestions.length <= failThreshold;
   if (!densityOk) {
     violations.push({
       level: 'fail',
-      message: `densità fuori tetto: ${suggestions.length} suggerimenti (tetto ${failThreshold})`,
+      message: `density over the cap: ${suggestions.length} suggestions (cap ${failThreshold})`,
     });
   } else if (suggestions.length > maxExpected) {
     violations.push({
       level: 'warn',
-      message: `densità sopra la griglia del brano: ${suggestions.length} > ${maxExpected}`,
+      message: `density above the passage range: ${suggestions.length} > ${maxExpected}`,
     });
   } else if (suggestions.length < minExpected) {
     violations.push({
       level: 'warn',
-      message: `densità sotto l'attesa: ${suggestions.length} < ${minExpected}`,
+      message: `density below expectation: ${suggestions.length} < ${minExpected}`,
     });
   }
 
-  // zone protette (NON DEVE)
+  // protected zones (MUST NOT)
   for (const spec of checks.protected) {
     const level = spec.level ?? 'fail';
     const allow = spec.allow ?? [];
@@ -219,7 +219,7 @@ function checkBrano(
         violations.push({
           level,
           message:
-            `zona protetta toccata («${spec.quote.slice(0, 50)}»): ` +
+            `protected zone touched («${spec.quote.slice(0, 50)}»): ` +
             `[${sug.kind}] «${sug.original.slice(0, 60)}» → «${(sug.proposals[0] ?? '').slice(0, 60)}»` +
             (spec.note === undefined ? '' : ` — ${spec.note}`),
         });
@@ -227,7 +227,7 @@ function checkBrano(
     }
   }
 
-  // copertura DEVE (diagnostica)
+  // MUST coverage (diagnostic)
   const covered: string[] = [];
   const missed: string[] = [];
   for (const expected of checks.expected) {
@@ -238,7 +238,7 @@ function checkBrano(
     (hit ? covered : missed).push(expected.label);
   }
   if (missed.length > 0) {
-    violations.push({ level: 'warn', message: `DEVE non coperti: ${missed.join('; ')}` });
+    violations.push({ level: 'warn', message: `MUST items not covered: ${missed.join('; ')}` });
   }
 
   return {
@@ -258,7 +258,7 @@ function checkBrano(
   };
 }
 
-// ---------- chiamata modello con retry e riserva ----------
+// ---------- model call with retry and fallback ----------
 
 async function generateWithRetry(
   models: GeminiRefineModel[],
@@ -273,13 +273,13 @@ async function generateWithRetry(
     } catch (error) {
       lastError = error;
       const label = error instanceof Error ? error.message.slice(0, 160) : String(error);
-      console.warn(`  tentativo fallito su ${model.modelName}: ${label}`);
+      console.warn(`  attempt failed on ${model.modelName}: ${label}`);
       if (
         !isRetryableGeminiError(error) &&
         !(error instanceof Error && error.name === 'ZodError')
       ) {
-        // errori non ritentabili (es. 400): inutile insistere sullo stesso input
-        if (error instanceof SyntaxError) continue; // JSON rotto: riprova
+        // non-retryable errors (e.g. 400): no point insisting on the same input
+        if (error instanceof SyntaxError) continue; // broken JSON: retry
         throw error;
       }
     }
@@ -292,13 +292,13 @@ async function generateWithRetry(
 function renderReport(reports: BranoReport[], startedAt: Date): string {
   const lines: string[] = [];
   const failed = reports.filter((r) => r.failed);
-  lines.push(`# Golden set — report del ${startedAt.toISOString().slice(0, 16).replace('T', ' ')}`);
+  lines.push(`# Golden set — report of ${startedAt.toISOString().slice(0, 16).replace('T', ' ')}`);
   lines.push('');
   lines.push(
-    `Esito: ${failed.length === 0 ? 'VERDE ✅' : `ROSSO ❌ (${failed.length} brani con FAIL)`}`,
+    `Result: ${failed.length === 0 ? 'GREEN ✅' : `RED ❌ (${failed.length} passages with FAIL)`}`,
   );
   lines.push('');
-  lines.push('| Brano | Parole | Modello | Sugg. | Range atteso | DEVE coperti | FAIL | WARN |');
+  lines.push('| Passage | Words | Model | Sugg. | Expected range | MUST covered | FAIL | WARN |');
   lines.push('|---|---|---|---|---|---|---|---|');
   for (const r of reports) {
     const fails = r.violations.filter((v) => v.level === 'fail').length;
@@ -311,11 +311,11 @@ function renderReport(reports: BranoReport[], startedAt: Date): string {
   for (const r of reports) {
     lines.push('', `## ${r.file} — ${r.failed ? 'FAIL ❌' : 'ok ✅'}`);
     lines.push(
-      `${r.count} suggerimenti tenuti (${r.rawCount} dal modello, ${r.discarded} scartati) su ${r.words} parole.`,
+      `${r.count} suggestions kept (${r.rawCount} from the model, ${r.discarded} discarded) over ${r.words} words.`,
     );
     for (const v of r.violations) lines.push(`- **${v.level.toUpperCase()}** ${v.message}`);
-    if (r.coverage.missed.length === 0 && r.violations.length === 0) lines.push('- nessun rilievo');
-    lines.push('', '<details><summary>Suggerimenti</summary>', '');
+    if (r.coverage.missed.length === 0 && r.violations.length === 0) lines.push('- no findings');
+    lines.push('', '<details><summary>Suggestions</summary>', '');
     for (const s of r.suggestions) {
       lines.push(
         `- [${s.kind}] «${s.original}» → ${s.proposals.map((p) => `«${p}»`).join(' / ')} — ${s.rationale}`,
@@ -335,10 +335,10 @@ function argValue(name: string): string | undefined {
 
 async function main(): Promise<void> {
   const startedAt = new Date();
-  // Default ALLINEATI alla produzione (functions/.env, ai/models.ts): senza
-  // argomenti il runner deve giocare il modello DAVVERO deployato, altrimenti
-  // il freno di regressione darebbe un verde su un modello diverso da quello in
-  // esercizio. Stessi nomi di env var della config (GEMINI_MODEL_REFINE*).
+  // Defaults ALIGNED with production (functions/.env, ai/models.ts): without
+  // arguments the runner must exercise the model that is ACTUALLY deployed,
+  // otherwise the regression brake would report green on a model other than
+  // the one in service. Same env var names as the config (GEMINI_MODEL_REFINE*).
   const primaryName = argValue('model') ?? process.env.GEMINI_MODEL_REFINE ?? 'gemini-3.5-flash';
   const fallbackName =
     argValue('fallback') ?? process.env.GEMINI_MODEL_REFINE_FALLBACK ?? 'gemini-3.6-flash';
@@ -371,21 +371,21 @@ async function main(): Promise<void> {
     .filter((f) => /^\d\d-.*\.md$/.test(f))
     .filter((f) => (only === undefined ? true : f.includes(only)))
     .sort();
-  if (files.length === 0) throw new Error('nessun brano selezionato');
+  if (files.length === 0) throw new Error('no passage selected');
 
   const reports: BranoReport[] = [];
   for (const file of files) {
     const checks = checksFile[file];
-    if (checks === undefined) throw new Error(`${file}: manca la voce in checks.json`);
+    if (checks === undefined) throw new Error(`${file}: entry missing from checks.json`);
     const markdown = readFileSync(path.join(goldenDir, file), 'utf8');
     const text = extractBrano(markdown, file);
 
-    console.log(`\n▶ ${file} (${countWords(text)} parole)…`);
+    console.log(`\n▶ ${file} (${countWords(text)} words)…`);
     if (dry) {
-      // solo validazione checks ↔ brano (locateRegions esplode se disallineati)
+      // only validates checks ↔ passage (locateRegions throws if misaligned)
       for (const spec of checks.protected) locateRegions(text, spec.quote, file);
       for (const spec of checks.expected) locateRegions(text, spec.quote, file);
-      console.log('  checks allineati al brano ✓');
+      console.log('  checks aligned with the passage ✓');
       continue;
     }
     const prompt = buildRefinePrompt({
@@ -400,20 +400,20 @@ async function main(): Promise<void> {
     reports.push(report);
     const fails = report.violations.filter((v) => v.level === 'fail');
     console.log(
-      `  ${report.count} suggerimenti (${report.discarded} scartati), DEVE ${report.coverage.covered.length}/${report.coverage.covered.length + report.coverage.missed.length}, ${fails.length} FAIL`,
+      `  ${report.count} suggestions (${report.discarded} discarded), MUST ${report.coverage.covered.length}/${report.coverage.covered.length + report.coverage.missed.length}, ${fails.length} FAIL`,
     );
     for (const v of report.violations) console.log(`  ${v.level.toUpperCase()}: ${v.message}`);
   }
 
   if (dry) {
-    console.log('\nDry run: checks.json e brani allineati.');
+    console.log('\nDry run: checks.json and passages aligned.');
     return;
   }
 
   const rendered = renderReport(reports, startedAt);
   if (out !== undefined) {
     writeFileSync(out, rendered, 'utf8');
-    console.log(`\nReport scritto in ${out}`);
+    console.log(`\nReport written to ${out}`);
   }
   console.log(`\n${rendered}`);
 

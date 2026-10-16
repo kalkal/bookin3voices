@@ -1,9 +1,9 @@
-// BookRepository su Firestore. Stesse regole del
-// FirestoreChapterRepository: Zod al confine (bookCodec, upgrade-on-read),
-// scritture ottimistiche (mai attendere l'ack del server: offline non arriva),
-// contatori denormalizzati sul documento libro. reconcileCounters è il
-// self-healing dei contatori: ricalcola dai capitoli e corregge le derive
-// lasciate dagli increment saltati (avvii offline a freddo, sessioni morte).
+// BookRepository on Firestore. Same rules as
+// FirestoreChapterRepository: Zod at the boundary (bookCodec, upgrade-on-read),
+// optimistic writes (never wait for the server ack: it does not arrive offline),
+// denormalized counters on the book document. reconcileCounters is the
+// counters' self-healing: it recomputes from the chapters and fixes the drift
+// left by skipped increments (cold offline starts, dead sessions).
 
 import {
   collection,
@@ -26,14 +26,14 @@ import type { Unsubscribe } from '../chapters';
 import { decodeBookDoc, newBookDoc, toBook } from './bookCodec';
 import type { Book, BookPatch, BookRepository, CreateBookInput } from './types';
 
-/** I batch Firestore accettano al massimo 500 operazioni. */
+/** Firestore batches accept at most 500 operations. */
 const BATCH_LIMIT = 500;
 
 export interface FirestoreBookRepositoryOptions {
   db: Firestore;
-  /** Proprietario dei dati: tutto vive sotto users/{uid}. */
+  /** Owner of the data: everything lives under users/{uid}. */
   uid: string;
-  /** Notifica degli errori di scrittura consolidati dal server (es. permessi). */
+  /** Notification of write errors settled by the server (e.g. permissions). */
   onWriteError?: (error: Error) => void;
 }
 
@@ -60,11 +60,11 @@ export class FirestoreBookRepository implements BookRepository {
     return collection(this.bookRef(bookId), 'chapters');
   }
 
-  /** Scrittura ottimistica: non si attende l'ack del server (vedi testata). */
+  /** Optimistic write: the server ack is not awaited (see header). */
   private commitInBackground(commit: Promise<unknown>): void {
     commit.catch((error) => {
       const wrapped = toError(error);
-      console.warn('Scrittura Firestore rifiutata dal server', wrapped);
+      console.warn('Firestore write rejected by the server', wrapped);
       this.onWriteError?.(wrapped);
     });
   }
@@ -85,8 +85,8 @@ export class FirestoreBookRepository implements BookRepository {
         for (const docSnap of snapshot.docs) {
           const book = this.decodeSnapshot(docSnap);
           if (book === null) {
-            // payload non conforme: si salta la riga senza rompere la Libreria
-            console.warn(`Libro ${docSnap.id} non conforme allo schema: saltato`);
+            // non-conforming payload: skip the row without breaking the Library
+            console.warn(`Book ${docSnap.id} does not match the schema: skipped`);
             continue;
           }
           books.push(book);
@@ -114,8 +114,8 @@ export class FirestoreBookRepository implements BookRepository {
     if (!snapshot.exists()) return null;
     const book = this.decodeSnapshot(snapshot);
     if (book === null) {
-      // documento presente ma illeggibile: mai confondere "vuoto" con "rotto"
-      throw new Error(`Libro ${bookId} non conforme allo schema`);
+      // document present but unreadable: never confuse "empty" with "broken"
+      throw new Error(`Book ${bookId} does not match the schema`);
     }
     return book;
   }
@@ -140,7 +140,7 @@ export class FirestoreBookRepository implements BookRepository {
   }
 
   async deleteBook(bookId: string): Promise<void> {
-    // le sottocollezioni non si eliminano da sole: prima i capitoli, a lotti
+    // subcollections are not deleted automatically: chapters first, in batches
     const chapters = await getDocs(this.chaptersCol(bookId));
     const refs = [...chapters.docs.map((docSnap) => docSnap.ref), this.bookRef(bookId)];
     for (let start = 0; start < refs.length; start += BATCH_LIMIT) {
@@ -172,7 +172,7 @@ export class FirestoreBookRepository implements BookRepository {
     };
     if (data.wordCount === wordCount && data.chapterCount === chapterCount) return;
 
-    // niente updatedAt: è manutenzione, non deve riordinare la Libreria
+    // no updatedAt: this is maintenance, it must not reorder the Library
     this.commitInBackground(updateDoc(this.bookRef(bookId), { wordCount, chapterCount }));
   }
 }

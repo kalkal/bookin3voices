@@ -1,13 +1,13 @@
 /**
- * Schermata Libro: intestazione con titolo e
- * contatori denormalizzati, tre tab. *Capitoli*: lista ordinata con numerale
- * romano, stato a colore (bozza/rifinito/finale), conteggio parole, mic sulla
- * riga (→ Dettatura) e tap sulla riga (→ Editor); riordino con press lungo
- * (frecce su/giù — il drag&drop vero arriverà con una gesture library);
- * "+ Nuovo capitolo" in coda. *Sinossi*: sinossi + scaletta generata con
- * anteprima corkboard (features/outline). *Export*: metadati KDP,
- * formato e generazione con share sheet (features/export).
- * All'apertura parte la riconciliazione self-healing dei contatori.
+ * Book screen: header with title and denormalized counters, three tabs.
+ * *Chapters*: ordered list with Roman numeral, color-coded status
+ * (draft/refined/final), word count, mic on the row (→ Dictation) and tap on
+ * the row (→ Editor); reordering with long press (up/down arrows — real
+ * drag & drop will arrive with a gesture library); "+ New chapter" at the end.
+ * *Synopsis*: synopsis + generated outline with corkboard preview
+ * (features/outline). *Export*: KDP metadata, format and generation with the
+ * share sheet (features/export).
+ * On open, the self-healing reconciliation of the counters starts.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
@@ -35,11 +35,11 @@ export interface BookScreenProps {
   exportFileSink: ExportFileSink;
   outlineService: OutlineService;
   onBack: () => void;
-  /** Tap sulla riga: apre l'Editor capitolo. `position` è 1-based. */
+  /** Tap on the row: opens the chapter Editor. `position` is 1-based. */
   onOpenChapter: (chapter: ChapterSummary, position: number) => void;
-  /** Mic sulla riga: apre la Dettatura su quel capitolo. `position` è 1-based. */
+  /** Mic on the row: opens Dictation on that chapter. `position` is 1-based. */
   onDictateChapter: (chapter: ChapterSummary, position: number) => void;
-  /** Azione nell'header: apre il Taccuino del libro. Riceve il titolo. */
+  /** Header action: opens the book's Notebook. Receives the title. */
   onOpenNotes?: (bookTitle: string) => void;
 }
 
@@ -77,8 +77,8 @@ export function BookScreen({
     return chapterRepository.observeChapters(bookId, setChapters, () => {});
   }, [chapterRepository, bookId]);
 
-  // self-healing dei contatori denormalizzati: all'apertura del libro,
-  // in background — la UI vive comunque degli observe*
+  // self-healing of the denormalized counters: when the book opens,
+  // in the background — the UI lives off the observe* subscriptions anyway
   useEffect(() => {
     bookRepository.reconcileCounters(bookId).catch(() => {});
   }, [bookRepository, bookId]);

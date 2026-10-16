@@ -1,78 +1,78 @@
-// Dominio dei suggerimenti AI (sottocollezione `suggestions`; per
-// la gerarchia delle proposte). Questi tipi sono il CONTRATTO condiviso con la
-// function `refineChapter`: gli schemi Zod validano al confine sia
-// l'output del provider (oggi finto, domani la callable) sia i documenti letti
-// da disco/Firestore. Se la callable refineChapter tocca questo schema, va aggiornato QUI e
-// riesportato, mai duplicato lato functions.
+// AI suggestion domain (`suggestions` subcollection; the proposal
+// hierarchy). These types are the CONTRACT shared with the
+// `refineChapter` function: the Zod schemas validate at the boundary both
+// the provider output (a fake today, the callable tomorrow) and the documents
+// read from disk/Firestore. If the refineChapter callable touches this schema, update it HERE
+// and re-export it, never duplicate it on the functions side.
 
 import { z } from 'zod';
 
 import { t } from '../../i18n';
 
-/** Categorie dei suggerimenti: stile, grammatica/refusi, ritmo. */
+/** Suggestion categories: style, grammar/slips, pacing. */
 export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
 
 /**
- * Stati del ciclo di vita (regola di convivenza):
- * `stale` = lo span non combacia più col testo (edit manuale, testo cambiato
- * durante la rifinitura, patch concorrente): non applicabile, mai in cieco.
+ * Lifecycle states (coexistence rule):
+ * `stale` = the span no longer matches the text (manual edit, text changed
+ * during refinement, concurrent patch): not applicable, never blindly.
  */
 export const SUGGESTION_STATES = ['pending', 'accepted', 'rejected', 'stale'] as const;
 export type SuggestionState = (typeof SUGGESTION_STATES)[number];
 
-/** Intervallo di caratteri [from, to) su `rawText`. Mai vuoto. */
+/** Character range [from, to) over `rawText`. Never empty. */
 export const spanSchema = z
   .object({
     from: z.number().int().min(0),
     to: z.number().int().min(0),
   })
-  .refine((span) => span.to > span.from, { message: 'span vuoto o rovesciato' });
+  .refine((span) => span.to > span.from, { message: 'empty or reversed span' });
 
 export type Span = z.infer<typeof spanSchema>;
 
 /**
- * Suggerimento come nel documento Firestore , più `textHash`
- * (regola): l'hash del `rawText` su cui il suggerimento è nato — se al
- * ritorno il testo è cambiato, il suggerimento nasce `stale`.
- * Gerarchia delle proposte: grammatica UNA proposta,
- * stile E ritmo fino a 3 varianti — come da Style Bible.
+ * Suggestion as in the Firestore document, plus `textHash`:
+ * the hash of the `rawText` the suggestion was born on; if the text changed
+ * on return, the suggestion is born `stale`.
+ * Proposal hierarchy: grammar ONE proposal,
+ * style AND pacing up to 3 variants, as per the Style Bible.
  */
 export const suggestionSchema = z
   .object({
     id: z.string().min(1),
     kind: z.enum(SUGGESTION_KINDS),
     span: spanSchema,
-    /** Testo attuale allo span: la patch verifica che combaci prima di applicarsi. */
+    /** Current text at the span: the patch verifies it matches before applying. */
     original: z.string().min(1),
-    /** 1–3 alternative; l'indice scelto finisce in `acceptedProposal`. */
+    /** 1-3 alternatives; the chosen index ends up in `acceptedProposal`. */
     proposals: z.array(z.string().min(1)).min(1).max(3),
-    /** Motivazione in una riga. */
+    /** One-line rationale. */
     rationale: z.string().min(1),
     state: z.enum(SUGGESTION_STATES),
     acceptedProposal: z.number().int().min(0).optional(),
-    /** Hash del rawText di riferimento (stesso algoritmo di textHash.ts). */
+    /** Hash of the reference rawText (same algorithm as textHash.ts). */
     textHash: z.string().min(1),
   })
   .superRefine((sug, ctx) => {
     if (sug.kind === 'grammar' && sug.proposals.length !== 1) {
       ctx.addIssue({
         code: 'custom',
-        message: 'grammar: una sola proposta (gerarchia)',
+        message: 'grammar: a single proposal (hierarchy)',
         path: ['proposals'],
       });
     }
     if (sug.acceptedProposal !== undefined && sug.acceptedProposal >= sug.proposals.length) {
       ctx.addIssue({
         code: 'custom',
-        message: 'acceptedProposal fuori dalle proposte',
+        message: 'acceptedProposal outside the proposals',
         path: ['acceptedProposal'],
       });
     }
     if (sug.original.length !== sug.span.to - sug.span.from) {
       ctx.addIssue({
         code: 'custom',
-        message: 'original non lungo quanto lo span',
+        message: 'original not as long as the span',
         path: ['original'],
       });
     }
@@ -80,20 +80,20 @@ export const suggestionSchema = z
 
 export type Suggestion = z.infer<typeof suggestionSchema>;
 
-/** Richiesta di rifinitura: ciò che la callable refineChapter riceverà dal client. */
+/** Refinement request: what the refineChapter callable will receive from the client. */
 export interface RefineRequest {
   bookId: string;
   chapterId: string;
   text: string;
-  /** Hash di `text` (regola): torna indietro nei suggerimenti. */
+  /** Hash of `text`: comes back in the suggestions. */
   textHash: string;
-  /** Idempotenza lato Functions: un retry non genera doppi suggerimenti. */
+  /** Idempotency on the Functions side: a retry does not generate duplicate suggestions. */
   requestId: string;
 }
 
-/** Risposta della rifinitura, validata al confine con Zod. */
+/** Refinement response, validated at the boundary with Zod. */
 export const refineResultSchema = z.object({
-  /** Hash del testo su cui i suggerimenti sono stati calcolati. */
+  /** Hash of the text the suggestions were computed on. */
   textHash: z.string().min(1),
   suggestions: z.array(suggestionSchema),
 });
@@ -101,9 +101,9 @@ export const refineResultSchema = z.object({
 export type RefineResult = z.infer<typeof refineResultSchema>;
 
 /**
- * Strategia di provenienza dei suggerimenti (Strategy): oggi il finto
- * FakeSuggestionsProvider, con la callable `refineChapter`. La UI parla
- * solo con questa interfaccia.
+ * Strategy for where suggestions come from: today the fake
+ * FakeSuggestionsProvider, later the `refineChapter` callable. The UI talks
+ * only to this interface.
  */
 export interface SuggestionsProvider {
   refine(request: RefineRequest): Promise<RefineResult>;

@@ -1,4 +1,4 @@
-// Mock automatico di expo-network per Jest: rete presente. I test che vogliono
-// simulare l'offline sovrascrivono con un jest.mock() proprio.
+// Automatic expo-network mock for Jest: network present. Tests that want to
+// simulate offline override it with their own jest.mock().
 
 export const useNetworkState = jest.fn(() => ({ isConnected: true }));

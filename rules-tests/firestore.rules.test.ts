@@ -1,7 +1,7 @@
-// Test delle security rules Firestore.
-// Girano contro l'emulatore Firestore: `npm test` da rules-tests/ (avvia un
-// emulatore effimero via scripts/test-rules.ps1), oppure `npm run test:jest`
-// con gli emulatori già su.
+// Firestore security rules tests.
+// They run against the Firestore emulator: `npm test` from rules-tests/ (starts
+// an ephemeral emulator via scripts/test-rules.ps1), or `npm run test:jest`
+// with the emulators already running.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -24,15 +24,15 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 
-// I PERMISSION_DENIED sono l'esito atteso dei test negativi: senza questo
-// l'SDK riempie l'output di console.warn.
+// PERMISSION_DENIED is the expected outcome of the negative tests: without this
+// the SDK fills the output with console.warn.
 setLogLevel('error');
 
 const OWNER = 'jane-uid';
 const INTRUDER = 'intruso-uid';
 
-// Una voce per ogni collezione dello schema, con percorso del proprietario,
-// dati validi per la creazione e un aggiornamento innocuo.
+// One entry per schema collection, with the owner's path,
+// valid data for creation and a harmless update.
 type Fixture = {
   nome: string;
   path: (uid: string) => string;
@@ -73,9 +73,9 @@ const FIXTURES: Fixture[] = [
   },
   {
     nome: 'notes',
-    // l'update rispecchia il payload reale di updateNote: solo i campi cambiati
-    // + updatedAt, SENZA rimandare schemaVersion (la guardia passa perché il
-    // documento risultante lo conserva già dalla creazione).
+    // the update mirrors the real updateNote payload: only the changed fields
+    // + updatedAt, WITHOUT resending schemaVersion (the guard passes because the
+    // resulting document already keeps it from creation).
     path: (uid) => `users/${uid}/books/libro1/notes/nota1`,
     dati: { schemaVersion: 1, text: 'Un’idea a lato', tag: 'trama', createdAt: 1, updatedAt: 1 },
     update: { text: 'Idea rivista', updatedAt: 2 },
@@ -103,12 +103,12 @@ const FIXTURES: Fixture[] = [
 let testEnv: RulesTestEnvironment;
 
 beforeAll(async () => {
-  // Con `firebase emulators:exec` host e porta arrivano da FIRESTORE_EMULATOR_HOST;
-  // il fallback serve per lanciare Jest a mano con gli emulatori già attivi.
+  // With `firebase emulators:exec` host and port come from FIRESTORE_EMULATOR_HOST;
+  // the fallback is for launching Jest by hand with the emulators already running.
   const fromEnv = process.env.FIRESTORE_EMULATOR_HOST;
   const [host, port] = fromEnv ? fromEnv.split(':') : ['127.0.0.1', '8080'];
   testEnv = await initializeTestEnvironment({
-    projectId: 'demo-bookvoice', // solo etichetta locale, come in .firebaserc
+    projectId: 'demo-bookvoice', // local label only, as in .firebaserc
     firestore: {
       rules: readFileSync(resolve(__dirname, '..', 'firestore.rules'), 'utf8'),
       host,
@@ -123,8 +123,8 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await testEnv.clearFirestore();
-  // Semina tutti i documenti del proprietario bypassando le rules, così i test
-  // di lettura/aggiornamento/cancellazione partono da uno stato realistico.
+  // Seeds all of the owner's documents bypassing the rules, so the
+  // read/update/delete tests start from a realistic state.
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore() as unknown as Firestore;
     for (const f of FIXTURES) {
@@ -133,8 +133,8 @@ beforeEach(async () => {
   });
 });
 
-// RulesTestContext.firestore() è tipizzato con l'API compat, ma l'istanza è
-// compatibile con le funzioni modulari (pattern della doc ufficiale): cast unico qui.
+// RulesTestContext.firestore() is typed with the compat API, but the instance is
+// compatible with the modular functions (official docs pattern): single cast here.
 const ownerDb = (): Firestore =>
   testEnv.authenticatedContext(OWNER).firestore() as unknown as Firestore;
 const intruderDb = (): Firestore =>
@@ -144,7 +144,7 @@ const anonDb = (): Firestore => testEnv.unauthenticatedContext().firestore() as 
 describe.each(FIXTURES)('$nome', (f) => {
   const parentPath = (uid: string) => f.path(uid).split('/').slice(0, -1).join('/');
 
-  test('il proprietario legge, crea, aggiorna, cancella e lista', async () => {
+  test('the owner reads, creates, updates, deletes and lists', async () => {
     const db = ownerDb();
     await assertSucceeds(getDoc(doc(db, f.path(OWNER))));
     await assertSucceeds(setDoc(doc(db, `${parentPath(OWNER)}/nuovo`), f.dati));
@@ -153,7 +153,7 @@ describe.each(FIXTURES)('$nome', (f) => {
     await assertSucceeds(deleteDoc(doc(db, f.path(OWNER))));
   });
 
-  test('un utente autenticato DIVERSO è negato su tutto', async () => {
+  test('a DIFFERENT authenticated user is denied everything', async () => {
     const db = intruderDb();
     await assertFails(getDoc(doc(db, f.path(OWNER))));
     await assertFails(setDoc(doc(db, `${parentPath(OWNER)}/nuovo`), f.dati));
@@ -162,14 +162,14 @@ describe.each(FIXTURES)('$nome', (f) => {
     await assertFails(deleteDoc(doc(db, f.path(OWNER))));
   });
 
-  test('non autenticato è negato in lettura e scrittura', async () => {
+  test('unauthenticated is denied read and write', async () => {
     const db = anonDb();
     await assertFails(getDoc(doc(db, f.path(OWNER))));
     await assertFails(setDoc(doc(db, `${parentPath(OWNER)}/nuovo`), f.dati));
   });
 });
 
-describe('validazione schemaVersion (books, chapters e notes)', () => {
+describe('schemaVersion validation (books, chapters and notes)', () => {
   const CASI = [
     { nome: 'book', path: `users/${OWNER}/books/senza-versione`, dati: { title: 'x' } },
     {
@@ -184,16 +184,16 @@ describe('validazione schemaVersion (books, chapters e notes)', () => {
     },
   ];
 
-  test.each(CASI)('creazione $nome senza schemaVersion negata', async ({ path, dati }) => {
+  test.each(CASI)('creating $nome without schemaVersion is denied', async ({ path, dati }) => {
     await assertFails(setDoc(doc(ownerDb(), path), dati));
   });
 
-  test.each(CASI)('creazione $nome con schemaVersion non intera negata', async ({ path, dati }) => {
+  test.each(CASI)('creating $nome with a non-integer schemaVersion is denied', async ({ path, dati }) => {
     await assertFails(setDoc(doc(ownerDb(), path), { ...dati, schemaVersion: 'uno' }));
     await assertFails(setDoc(doc(ownerDb(), path), { ...dati, schemaVersion: 0 }));
   });
 
-  test('un update non può rimuovere schemaVersion', async () => {
+  test('an update cannot remove schemaVersion', async () => {
     await assertFails(
       updateDoc(doc(ownerDb(), `users/${OWNER}/books/libro1`), {
         schemaVersion: deleteField(),
@@ -202,20 +202,20 @@ describe('validazione schemaVersion (books, chapters e notes)', () => {
   });
 });
 
-describe('default deny fuori dallo schema', () => {
-  test('collezione top-level estranea negata anche ad autenticati', async () => {
+describe('default deny outside the schema', () => {
+  test('foreign top-level collection denied even to authenticated users', async () => {
     const db = ownerDb();
     await assertFails(getDoc(doc(db, 'altraCollezione/doc1')));
     await assertFails(setDoc(doc(db, 'altraCollezione/doc1'), { a: 1 }));
   });
 
-  test('collezione non prevista sotto users/{uid} negata anche al proprietario (fail-closed)', async () => {
+  test('unexpected collection under users/{uid} denied even to the owner (fail-closed)', async () => {
     const db = ownerDb();
     await assertFails(setDoc(doc(db, `users/${OWNER}/nonPrevista/doc1`), { a: 1 }));
     await assertFails(getDoc(doc(db, `users/${OWNER}/nonPrevista/doc1`)));
   });
 
-  test('il documento users/{uid} stesso non è né leggibile né scrivibile', async () => {
+  test('the users/{uid} document itself is neither readable nor writable', async () => {
     const db = ownerDb();
     await assertFails(getDoc(doc(db, `users/${OWNER}`)));
     await assertFails(setDoc(doc(db, `users/${OWNER}`), { a: 1 }));

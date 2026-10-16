@@ -1,6 +1,6 @@
-// API pubblica della feature review: tipi del dominio suggerimenti
-// condivisi con la function refineChapter, Command pattern con undo, provider finto e
-// schermate Editor/Review Editor/Review.
+// Public API of the review feature: suggestion domain types
+// shared with the refineChapter function, Command pattern with undo, fake
+// provider, and the Editor/Review Editor/Review screens.
 
 export {
   KIND_LABELS,

@@ -1,17 +1,17 @@
-// Contratti della generazione outline:
-// input della callable validato con Zod al confine, output di Gemini MAI
-// fidato (parse, don't validate) e interfaccia `OutlineModel` in stile
-// Strategy/AiProvider — la callable è un orchestratore sottile, il modello
-// vero (ProviderModel) si inietta e nei test si sostituisce con un fake.
+// Contracts for outline generation: the callable input is validated with Zod
+// at the boundary, the model output is NEVER trusted (parse, don't validate),
+// and the `OutlineModel` interface follows the Strategy/AiProvider style. The
+// callable is a thin orchestrator: the real model (ProviderModel) is injected
+// and replaced by a fake in tests.
 
 import { z } from 'zod';
 
 import type { OutlinePrompt } from './outlinePrompt';
 
 /**
- * Un capitolo proposto dalla scaletta: titolo, riassunto e beat principali.
- * I limiti servono da guardrail sull'output del modello:
- * un outline fuori misura è un output non conforme, non un dato da salvare.
+ * A chapter proposed by the outline: title, summary and main beats.
+ * The limits act as guardrails on the model output: an oversized outline is
+ * non-conforming output, not data to save.
  */
 export const outlineChapterSchema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -28,11 +28,11 @@ export const outlineSchema = z.object({
 export type Outline = z.infer<typeof outlineSchema>;
 
 /**
- * Input della callable `generateOutline`. Il requestId è la chiave di
- * idempotenza e diventa l'id del documento
- * `users/{uid}/outlines/{requestId}`: stesso formato ristretto di exportBook.
- * La sinossi viaggia come parametro (può differire da quella salvata sul
- * libro mentre l'utente la sta ancora ritoccando).
+ * Input of the `generateOutline` callable. The requestId is the idempotency
+ * key and becomes the id of the document `users/{uid}/outlines/{requestId}`:
+ * same restricted format as exportBook. The synopsis travels as a parameter
+ * (it may differ from the one saved on the book while the user is still
+ * editing it).
  */
 export const generateOutlineInputSchema = z.object({
   bookId: z.string().min(1),
@@ -43,8 +43,8 @@ export const generateOutlineInputSchema = z.object({
 export type GenerateOutlineInput = z.infer<typeof generateOutlineInputSchema>;
 
 /**
- * Campi del documento libro che servono al prompt (contesto per il modello).
- * Subset dello schema, come fa l'export.
+ * Fields of the book document needed by the prompt (context for the model).
+ * A subset of the schema, as the export does.
  */
 export const bookForOutlineSchema = z.object({
   title: z.string(),
@@ -55,9 +55,9 @@ export const bookForOutlineSchema = z.object({
 export type BookForOutline = z.infer<typeof bookForOutlineSchema>;
 
 /**
- * Campi del documento capitolo che servono alla generazione: i capitoli con
- * `rawText` non vuoto sono INTOCCABILI e entrano nel prompt solo
- * come contesto "già scritto, non riproporre".
+ * Fields of the chapter document needed for generation: chapters with
+ * non-empty `rawText` are UNTOUCHABLE and enter the prompt only as context
+ * ("already written, do not propose again").
  */
 export const chapterForOutlineSchema = z.object({
   order: z.number(),
@@ -66,10 +66,10 @@ export const chapterForOutlineSchema = z.object({
 });
 
 /**
- * Registro di idempotenza su `users/{uid}/outlines/{requestId}`: un retry di
- * rete con lo stesso requestId riusa l'outline già generato (stessa risposta,
- * nessuna seconda chiamata a Gemini). Collezione scritta solo dall'admin SDK:
- * le security rules la lasciano negata al client (fail-closed).
+ * Idempotency registry at `users/{uid}/outlines/{requestId}`: a network retry
+ * with the same requestId reuses the outline already generated (same
+ * response, no second model call). The collection is written only by the
+ * admin SDK: the security rules deny it to the client (fail-closed).
  */
 export const outlineRegistryDocSchema = z.object({
   schemaVersion: z.literal(1),
@@ -82,7 +82,7 @@ export const outlineRegistryDocSchema = z.object({
 
 export type OutlineRegistryDoc = z.infer<typeof outlineRegistryDocSchema>;
 
-/** Risposta della callable: la scaletta proposta, MAI salvata sui capitoli — la conferma (e il merge additivo) è dell'app. */
+/** Callable response: the proposed outline, NEVER saved to the chapters; confirmation (and the additive merge) belong to the app. */
 export interface GenerateOutlineResponse {
   requestId: string;
   bookId: string;
@@ -93,9 +93,9 @@ export interface GenerateOutlineResponse {
 }
 
 /**
- * Il modello che genera la scaletta (Strategy `AiProvider`):
- * riceve il prompt già costruito e restituisce il JSON del modello ANCORA da
- * validare — la validazione Zod resta alla callable, che è il confine.
+ * The model that generates the outline (`AiProvider` Strategy): it receives
+ * the already-built prompt and returns the model's JSON, NOT yet validated;
+ * Zod validation stays with the callable, which is the boundary.
  */
 export interface OutlineModel {
   readonly modelName: string;

@@ -1,14 +1,14 @@
 import { InMemoryNoteRepository } from '../InMemoryNoteRepository';
 import type { Note } from '../types';
 
-/** Orologio monotono: ogni chiamata avanza, così l'ordine è deterministico. */
+/** Monotonic clock: every call advances, so the order is deterministic. */
 function tickingClock(start = 1000): () => number {
   let t = start;
   return () => (t += 1);
 }
 
 describe('InMemoryNoteRepository', () => {
-  it('createNote aggiunge una nota e observeNotes la emette in cima', () => {
+  it('createNote adds a note and observeNotes emits it on top', () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     const emissions: Note[][] = [];
     repo.observeNotes('libro-1', (notes) => emissions.push(notes));
@@ -22,7 +22,7 @@ describe('InMemoryNoteRepository', () => {
     });
   });
 
-  it('observeNotes ordina per createdAt discendente (più recenti in cima)', async () => {
+  it('observeNotes orders by createdAt descending (most recent first)', async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     await repo.createNote('libro-1', { text: 'prima' });
     await repo.createNote('libro-1', { text: 'seconda' });
@@ -34,13 +34,13 @@ describe('InMemoryNoteRepository', () => {
     unsubscribe();
   });
 
-  it('tag opzionale: assente → null', async () => {
+  it('optional tag: absent → null', async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     const created = await repo.createNote('libro-1', { text: 'senza tag' });
     expect(created.tag).toBeNull();
   });
 
-  it('updateNote cambia testo/tag e alza updatedAt; getNote lo rilegge', async () => {
+  it('updateNote changes text/tag and bumps updatedAt; getNote reads it back', async () => {
     const clock = tickingClock();
     const repo = new InMemoryNoteRepository(clock);
     const created = await repo.createNote('libro-1', { text: 'bozza', tag: null });
@@ -54,14 +54,14 @@ describe('InMemoryNoteRepository', () => {
     expect(fetched!.updatedAt).toBeGreaterThan(created.updatedAt);
   });
 
-  it('updateNote su nota inesistente lancia', async () => {
+  it('updateNote on a nonexistent note throws', async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     await expect(
       repo.updateNote({ bookId: 'libro-1', noteId: 'mai-vista' }, { text: 'x' }),
-    ).rejects.toThrow(/inesistente/);
+    ).rejects.toThrow(/does not exist/);
   });
 
-  it('deleteNote toglie la nota e la lista si aggiorna', async () => {
+  it('deleteNote removes the note and the list updates', async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     const created = await repo.createNote('libro-1', { text: 'da cancellare' });
     let list: Note[] = [];
@@ -73,7 +73,7 @@ describe('InMemoryNoteRepository', () => {
     expect(await repo.getNote({ bookId: 'libro-1', noteId: created.id })).toBeNull();
   });
 
-  it('le note di un libro non compaiono nell’observe di un altro', async () => {
+  it("the notes of one book do not show up in another book's observe", async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     await repo.createNote('libro-1', { text: 'del primo' });
     let altro: Note[] = [];
@@ -81,7 +81,7 @@ describe('InMemoryNoteRepository', () => {
     expect(altro).toEqual([]);
   });
 
-  it('l’unsubscribe smette di ricevere aggiornamenti', async () => {
+  it('unsubscribe stops receiving updates', async () => {
     const repo = new InMemoryNoteRepository(tickingClock());
     const emissions: Note[][] = [];
     const unsubscribe = repo.observeNotes('libro-1', (notes) => emissions.push(notes));

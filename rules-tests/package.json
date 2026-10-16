@@ -2,7 +2,7 @@
   "name": "rules-tests",
   "license": "MIT",
   "private": true,
-  "description": "Test delle security rules Firestore con @firebase/rules-unit-testing sull'Emulator Suite",
+  "description": "Firestore security rules tests with @firebase/rules-unit-testing on the Emulator Suite",
   "engines": {
     "node": ">=20"
   },

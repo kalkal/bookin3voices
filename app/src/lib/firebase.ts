@@ -11,10 +11,10 @@ import { connectFirestoreEmulator, Firestore, getFirestore } from 'firebase/fire
 import { connectFunctionsEmulator, Functions, getFunctions } from 'firebase/functions';
 import { connectStorageEmulator, FirebaseStorage, getStorage } from 'firebase/storage';
 
-// In sviluppo si lavora SOLO contro l'Emulator Suite: il projectId coincide con
-// il progetto demo demo-bookvoice (come in .firebaserc, mai un progetto reale) ma l'apiKey di default è
-// fittizia, quindi nessuna chiamata può raggiungere il cloud. La config reale
-// (apiKey/appId della web app) arriva via EXPO_PUBLIC_*.
+// In development we work ONLY against the Emulator Suite: the projectId is the
+// demo project demo-bookvoice (as in .firebaserc, never a real project) and the
+// default apiKey is fake, so no call can reach the cloud. The real config
+// (web app apiKey/appId) comes via EXPO_PUBLIC_*.
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? 'emulator-fake-api-key',
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'demo-bookvoice.firebaseapp.com',
@@ -23,16 +23,16 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? 'emulator-fake-app-id',
 };
 
-// Dal device/emulatore Android "localhost" non è il PC: 10.0.2.2 sull'emulatore
-// Android, l'IP della macchina su device fisico (override via EXPO_PUBLIC_EMULATOR_HOST).
+// From a device/Android emulator "localhost" is not the PC: use 10.0.2.2 on the
+// Android emulator, the machine's IP on a physical device (override via EXPO_PUBLIC_EMULATOR_HOST).
 const emulatorHost = process.env.EXPO_PUBLIC_EMULATOR_HOST ?? '127.0.0.1';
 
 const app: FirebaseApp = getApps()[0] ?? initializeApp(firebaseConfig);
 
-// Su React Native l'Auth va inizializzata con la persistenza su AsyncStorage,
-// altrimenti la uid (anonima) cambia a ogni riavvio e i dati sotto
-// users/{uid} diventano orfani. getReactNativePersistence esiste solo nella
-// build react-native dell'SDK: nei test (build node) si ripiega su getAuth.
+// On React Native, Auth must be initialized with AsyncStorage persistence,
+// otherwise the (anonymous) uid changes on every restart and the data under
+// users/{uid} becomes orphaned. getReactNativePersistence only exists in the
+// SDK's react-native build: in tests (node build) we fall back to getAuth.
 function createAuth(firebaseApp: FirebaseApp): Auth {
   try {
     if (typeof getReactNativePersistence === 'function') {
@@ -41,7 +41,7 @@ function createAuth(firebaseApp: FirebaseApp): Auth {
       });
     }
   } catch {
-    // già inizializzata (fast refresh): si riusa l'istanza esistente
+    // already initialized (fast refresh): reuse the existing instance
   }
   return getAuth(firebaseApp);
 }
@@ -51,7 +51,7 @@ export const firestore: Firestore = getFirestore(app);
 export const functions: Functions = getFunctions(app);
 export const storage: FirebaseStorage = getStorage(app);
 
-// Evita doppie connessioni col fast refresh: connect*Emulator non è idempotente.
+// Avoids duplicate connections on fast refresh: connect*Emulator is not idempotent.
 declare global {
   var __bookvoiceEmulatorsConnected: boolean | undefined;
 }

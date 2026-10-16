@@ -1,58 +1,58 @@
 /**
- * Token di design "biblioteca inglese elegante".
- * I valori della palette chiara sono quelli della tabella dei token, da usare
- * tali e quali; i toni di supporto vengono dal mockup.
+ * Design tokens for the "elegant English library" look.
+ * The light palette values are those of the token table, to be used
+ * as they are; the supporting tones come from the mockup.
  */
 import { Platform } from 'react-native';
 
 export interface Palette {
-  /** Carta: sfondo di tutte le schermate. */
+  /** Paper: background of all screens. */
   background: string;
-  /** Carta card: card e superfici rialzate. */
+  /** Card paper: cards and raised surfaces. */
   surface: string;
-  /** Inchiostro: testo principale. */
+  /** Ink: main text. */
   text: string;
-  /** Attenuato: testi secondari, meta. */
+  /** Muted: secondary text, meta. */
   textMuted: string;
-  /** Attenuato scuro: didascalie e testo secondario più leggibile. */
+  /** Dark muted: captions and more readable secondary text. */
   textMutedStrong: string;
-  /** Verde biblioteca: azioni primarie, mic, stati "finale". */
+  /** Library green: primary actions, mic, "final" states. */
   primary: string;
-  /** Oro antico: accenti, numerali, FAB, stati "rifinito". */
+  /** Antique gold: accents, numerals, FAB, "refined" states. */
   accent: string;
-  /** Oro chiaro: filetti delle copertine, anello del mic. */
+  /** Light gold: cover rules, mic ring. */
   accentLight: string;
-  /** Oro leggibile come testo su carta. */
+  /** Gold readable as text on paper. */
   accentText: string;
-  /** Filetto: bordi e divisori. */
+  /** Hairline: borders and dividers. */
   hairline: string;
-  /** Filetto chiaro: divisori di riga negli elenchi. */
+  /** Light hairline: row dividers in lists. */
   hairlineLight: string;
-  /** Filetto oro attenuato: bordi di chip e ornamenti secondari. */
+  /** Muted gold hairline: chip borders and secondary ornaments. */
   hairlineGold: string;
-  /** Pannello dei controlli di dettatura (fascia sotto il testo, dal mockup). */
+  /** Dictation controls panel (band under the text, from the mockup). */
   panel: string;
-  /** Fondo delle barre di avanzamento. */
+  /** Background of progress bars. */
   track: string;
-  /** Tinta verde della variante selezionata. */
+  /** Green tint of the selected variant. */
   selectedTint: string;
-  /** Evidenziazione inline dei suggerimenti di stile. */
+  /** Inline highlight of style suggestions. */
   highlight: string;
-  /** Testo/icone sopra il verde biblioteca. */
+  /** Text/icons on top of library green. */
   onPrimary: string;
-  /** Testo/icone sopra l'oro antico. */
+  /** Text/icons on top of antique gold. */
   onAccent: string;
-  /** Stato capitolo "bozza" (pallino neutro). */
+  /** "Draft" chapter state (neutral dot). */
   statusDraft: string;
-  /** Copertina rilegata: verde. */
+  /** Bound cover: green. */
   coverGreen: string;
-  /** Copertina rilegata: cuoio. */
+  /** Bound cover: leather. */
   coverLeather: string;
-  /** Ombra calda (FAB, mic). */
+  /** Warm shadow (FAB, mic). */
   shadow: string;
 }
 
-/** Tema chiaro "carta" — il default. */
+/** Light "paper" theme — the default. */
 export const paperPalette: Palette = {
   background: '#F5EFE0',
   surface: '#FBF6EA',
@@ -79,9 +79,9 @@ export const paperPalette: Palette = {
 };
 
 /**
- * Tema scuro "a lume di candela" (fondo bruno quasi nero, testo
- * ambrato caldo, stessi accenti). Abbozzo da rifinire quando esisteranno le
- * schermate vere; il default dell'app resta il tema carta.
+ * Dark "candlelight" theme (near-black brown background, warm amber
+ * text, same accents). A sketch to refine once the real screens exist;
+ * the app default remains the paper theme.
  */
 export const candlelightPalette: Palette = {
   background: '#1A140B',
@@ -108,7 +108,7 @@ export const candlelightPalette: Palette = {
   shadow: 'rgba(0, 0, 0, 0.5)',
 };
 
-/** Scala di spaziatura (px). */
+/** Spacing scale (px). */
 export const spacing = {
   xs: 4,
   sm: 8,
@@ -119,38 +119,38 @@ export const spacing = {
   xxxl: 32,
 } as const;
 
-/** Raggi: angoli quasi vivi (3px), copertine appena smussate, pillole. */
+/** Radii: nearly sharp corners (3px), slightly rounded covers, pills. */
 export const radius = {
   sharp: 3,
   cover: 2,
   pill: 999,
 } as const;
 
-/** Scala tipografica (px), ricavata dal mockup. */
+/** Type scale (px), derived from the mockup. */
 export const typeScale = {
-  /** Titolo dell'app in Libreria. */
+  /** App title in the Library. */
   display: 34,
-  /** Titoli di schermata. */
+  /** Screen titles. */
   title: 24,
-  /** Titoli di card e numerali dei capitoli. */
+  /** Card titles and chapter numerals. */
   heading: 21,
-  /** Testo del capitolo in editor/dettatura. */
+  /** Chapter text in editor/dictation. */
   bodyLarge: 18,
-  /** Testo di card e suggerimenti. */
+  /** Card and suggestion text. */
   body: 16,
-  /** Corpo secondario. */
+  /** Secondary body. */
   bodySmall: 15,
-  /** Meta, didascalie, chip. */
+  /** Meta, captions, chips. */
   caption: 14,
-  /** Etichette maiuscole di sezione. */
+  /** Uppercase section labels. */
   label: 13,
-  /** Tag delle categorie nelle card. */
+  /** Category tags in cards. */
   micro: 12,
-  /** Capolettera. */
+  /** Drop cap. */
   dropCap: 58,
 } as const;
 
-/** Spaziatura lettere per gli stili "da frontespizio". */
+/** Letter spacing for "title page" styles. */
 export const letterSpacing = {
   display: 2,
   label: 1.5,
@@ -158,7 +158,7 @@ export const letterSpacing = {
   button: 0.4,
 } as const;
 
-/** Serif di sistema usato finché i Google Fonts non sono caricati. */
+/** System serif used until the Google Fonts are loaded. */
 export const serifFallback = Platform.select({
   ios: 'Georgia',
   default: 'serif',

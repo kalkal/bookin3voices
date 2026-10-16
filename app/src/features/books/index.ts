@@ -1,5 +1,5 @@
-// API pubblica della feature libri: contratto, implementazioni e
-// schermate Libreria/Libro.
+// Public API of the books feature: contract, implementations and
+// Library/Book screens.
 
 export type {
   Book,

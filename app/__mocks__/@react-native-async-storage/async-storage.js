@@ -1,4 +1,4 @@
-// Mock automatico di AsyncStorage per Jest: quello ufficiale del pacchetto
-// (in memoria). Il modulo nativo non esiste in ambiente di test.
+// Automatic AsyncStorage mock for Jest: the package's official one
+// (in memory). The native module does not exist in the test environment.
 
 module.exports = require('@react-native-async-storage/async-storage/jest/async-storage-mock');

@@ -1,12 +1,12 @@
 /**
- * Traccia del capitolo in Dettatura:
- * pannello richiudibile sopra il testo con etichetta
- * "Traccia · Capitolo <romano>" e i beat della scaletta, ciascuno con il
- * rombo dorato della firma visiva. Un tocco su un beat lo marca coperto/da
- * fare — puro segno visivo persistito in `outline.beatsDone` sul capitolo,
- * nessuna automazione. Lo stato apri/chiuso è ricordato tra le sessioni;
- * chiuso resta la sola riga di intestazione. Capitolo senza outline (o beat
- * vuoti): il pannello non esiste.
+ * Chapter track in Dictation:
+ * a collapsible panel above the text with the label
+ * "Traccia · Capitolo <roman numeral>" and the outline beats, each with the
+ * gold diamond of the visual signature. Tapping a beat marks it covered/to-do:
+ * a purely visual mark persisted in `outline.beatsDone` on the chapter, no
+ * automation. The open/closed state is remembered across sessions; when
+ * closed, only the header row remains. Chapter without an outline (or with
+ * empty beats): the panel does not exist.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,9 +26,9 @@ import type {
 } from '../chapters';
 
 /**
- * Il minimo che serve alla traccia: leggere il capitolo (per l'outline) e
- * scriverne la patch. ChapterRepository lo soddisfa strutturalmente — la
- * schermata non dipende dal CRUD completo (Repository).
+ * The minimum the track needs: read the chapter (for the outline) and
+ * write its patch. ChapterRepository satisfies it structurally, so the
+ * screen does not depend on the full CRUD (Repository).
  */
 export interface OutlineTrackRepository {
   observeChapter(
@@ -42,13 +42,13 @@ export interface OutlineTrackRepository {
 export interface OutlineTrackProps {
   chapter: ChapterRef;
   repository: OutlineTrackRepository;
-  /** Parte destra dell'etichetta, es. "Capitolo VII" → "Traccia · Capitolo VII". */
+  /** Right part of the label, e.g. "Capitolo VII" → "Traccia · Capitolo VII". */
   chapterLabel?: string;
-  /** Storage per lo stato apri/chiuso ricordato; default AsyncStorage. */
+  /** Storage for the remembered open/closed state; defaults to AsyncStorage. */
   storage?: KeyValueStorage;
 }
 
-/** Preferenza unica (non per capitolo): l'ultima scelta apri/chiuso vale ovunque. */
+/** Single preference (not per chapter): the last open/closed choice applies everywhere. */
 export const OUTLINE_TRACK_COLLAPSED_KEY = 'bookvoice/dettatura/traccia-chiusa';
 
 export function OutlineTrack({
@@ -63,7 +63,7 @@ export function OutlineTrack({
 
   useEffect(() => {
     return repository.observeChapter(chapter, (doc) => setOutline(doc?.outline ?? null));
-    // le coordinate del capitolo sono fisse per la vita della schermata (key in App)
+    // the chapter coordinates are fixed for the screen's lifetime (key in App)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repository]);
 
@@ -74,11 +74,11 @@ export function OutlineTrack({
       .then((value) => {
         if (!cancelled && value === '1') setCollapsed(true);
       })
-      .catch(() => {}); // storage illeggibile: si parte aperti, nessun dramma
+      .catch(() => {}); // unreadable storage: start open, no big deal
     return () => {
       cancelled = true;
     };
-    // lo storage è fisso per la vita del pannello
+    // the storage is fixed for the panel's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -96,7 +96,7 @@ export function OutlineTrack({
       ? outline.beatsDone.filter((beat) => beat !== index)
       : [...outline.beatsDone, index];
     const nextOutline: ChapterOutline = { ...outline, beatsDone };
-    // ottimistico: lo schermo si aggiorna subito, l'observe conferma
+    // optimistic: the screen updates right away, the observe confirms
     setOutline(nextOutline);
     repository.updateChapter(chapter, { outline: nextOutline }).catch(() => {});
   };

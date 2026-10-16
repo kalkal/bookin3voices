@@ -1,7 +1,7 @@
-// BackupService sulla callable `exportBackup` (functions): l'unico punto
-// della feature Impostazioni che parla con le Cloud Functions. La risposta
-// passa da Zod al confine: mai fidarsi dei dati che arrivano da
-// fuori. Stesso schema di CallableBookExportService.
+// BackupService on the `exportBackup` callable (functions): the only point
+// of the Settings feature that talks to the Cloud Functions. The response
+// goes through Zod at the boundary: never trust data coming from
+// outside. Same schema as CallableBookExportService.
 
 import { httpsCallable, type Functions } from 'firebase/functions';
 
@@ -16,7 +16,7 @@ type CallBackup = (data: BackupRequest) => Promise<{ data: unknown }>;
 
 export type CallableBackupServiceDeps =
   | { functions: Functions }
-  /** Iniettabile nei test al posto di httpsCallable. */
+  /** Injectable in tests in place of httpsCallable. */
   | { call: CallBackup };
 
 export class CallableBackupService implements BackupService {

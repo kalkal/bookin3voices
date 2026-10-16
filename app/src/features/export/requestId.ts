@@ -1,4 +1,4 @@
-// Chiave di idempotenza per exportBook: vedi lib/requestId.
+// Idempotency key for exportBook: see lib/requestId.
 
 import { makeRequestId as make } from '../../lib/requestId';
 

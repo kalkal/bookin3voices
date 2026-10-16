@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`buildOutlinePrompt snapshot con capitoli già scritti (contesto) 1`] = `
+exports[`buildOutlinePrompt snapshot with already-written chapters (context) 1`] = `
 {
   "responseSchema": {
     "properties": {
@@ -69,7 +69,7 @@ Nora Ferrandi, cartografa in fuga da un divorzio, eredita dallo zio un faro dism
 }
 `;
 
-exports[`buildOutlinePrompt snapshot senza capitoli già scritti 1`] = `
+exports[`buildOutlinePrompt snapshot without already-written chapters 1`] = `
 {
   "responseSchema": {
     "properties": {

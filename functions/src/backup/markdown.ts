@@ -1,15 +1,14 @@
-// Composizione del backup Markdown: funzioni pure, qui si
-// decide COSA finisce in ogni file. Un file per capitolo (frontmatter YAML +
-// rawText FEDELE, mai rielaborato) e un indice per libro. Lo zip lo assembla
-// exportBackup.ts.
+// Markdown backup composition: pure functions that decide WHAT goes into each
+// file. One file per chapter (YAML frontmatter + FAITHFUL rawText, never
+// reworked) and one index per book. The zip is assembled by exportBackup.ts.
 
 import { slugify } from '../export/compose';
 import type { BookForBackup, ChapterForBackup } from './types';
 
 /**
- * Scalare YAML tra doppi apici: il titolo è testo libero (può contenere
- * apici, due punti, «virgolette»), quindi si scappano solo backslash e
- * doppio apice; eventuali newline diventano spazi (un titolo resta una riga).
+ * Double-quoted YAML scalar: the title is free text (it may contain quotes,
+ * colons, «guillemets»), so only backslash and double quote are escaped; any
+ * newlines become spaces (a title stays on one line).
  */
 export function yamlText(value: string): string {
   const escaped = value
@@ -19,15 +18,15 @@ export function yamlText(value: string): string {
   return `"${escaped}"`;
 }
 
-/** "01", "02", … "117": ordinamento alfabetico = ordine di lettura. */
+/** "01", "02", ... "117": alphabetical order = reading order. */
 function pad(position: number, width: number): string {
   return String(position).padStart(width, '0');
 }
 
 /**
- * Nome file del capitolo: `NN-slug.md`. `position` è 1-based (l'ordine di
- * lettura, come i numerali romani in app); il prefisso numerico rende i nomi
- * unici anche con titoli uguali o vuoti. `total` decide lo zero-padding.
+ * Chapter file name: `NN-slug.md`. `position` is 1-based (the reading order,
+ * like the Roman numerals in the app); the numeric prefix keeps names unique
+ * even with identical or empty titles. `total` decides the zero-padding.
  */
 export function chapterFileName(position: number, total: number, title: string): string {
   const width = Math.max(2, String(total).length);
@@ -36,9 +35,9 @@ export function chapterFileName(position: number, total: number, title: string):
 }
 
 /**
- * File Markdown di un capitolo: frontmatter con titolo/ordine/stato/parole e
- * corpo = rawText VERBATIM (fedeltà al testo grezzo: niente trim, niente
- * riformattazioni — è la via d'uscita dei dati).
+ * Markdown file of one chapter: frontmatter with title/order/status/word count
+ * and body = rawText VERBATIM (faithful to the raw text: no trim, no
+ * reformatting - it is the data exit route).
  */
 export function chapterMarkdown(position: number, chapter: ChapterForBackup): string {
   const frontmatter = [
@@ -52,14 +51,14 @@ export function chapterMarkdown(position: number, chapter: ChapterForBackup): st
   return `${frontmatter}\n\n${chapter.rawText}\n`;
 }
 
-/** Data leggibile nell'indice (UTC: deterministica, niente fuso del server). */
+/** Readable date for the index (UTC: deterministic, independent of server timezone). */
 function isoDate(generatedAt: Date): string {
   return generatedAt.toISOString().slice(0, 10);
 }
 
 /**
- * Indice del libro (indice.md): metadati e sommario dei capitoli con link ai
- * file. `fileNames` è allineato a `book.chapters` (stesso ordine).
+ * Book index (indice.md): metadata and chapter summary with links to the
+ * files. `fileNames` is aligned with `book.chapters` (same order).
  */
 export function bookIndexMarkdown(
   book: BookForBackup,
@@ -93,9 +92,9 @@ export function bookIndexMarkdown(
 }
 
 /**
- * Cartella del libro nello zip: slug del titolo, con suffisso progressivo se
- * due libri producono lo stesso slug (titoli uguali o entrambi non-ASCII).
- * `used` è mutato: passare lo stesso Set per tutti i libri di un backup.
+ * Book folder in the zip: title slug, with a progressive suffix if two books
+ * produce the same slug (identical titles or both non-ASCII).
+ * `used` is mutated: pass the same Set for all books of a backup.
  */
 export function bookFolderName(title: string, used: Set<string>): string {
   const base = slugify(title) === '' ? 'libro' : slugify(title);
@@ -110,9 +109,9 @@ export function bookFolderName(title: string, used: Set<string>): string {
 }
 
 /**
- * Nome dello zip: con un solo libro richiesto porta lo slug del titolo,
- * altrimenti è il backup dell'intera biblioteca. La data rende riconoscibile
- * il file tra più backup successivi.
+ * Zip name: with a single requested book it carries the title slug, otherwise
+ * it is the backup of the whole library. The date makes the file recognizable
+ * among successive backups.
  */
 export function backupZipFileName(singleBookTitle: string | null, generatedAt: Date): string {
   const scope =

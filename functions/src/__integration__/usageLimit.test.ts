@@ -1,10 +1,10 @@
-// Test d'integrazione del tetto d'uso contro l'emulatore Firestore
-// (MAI progetti reali). Si verifica che:
-//  - il contatore per-uid blocca al raggiungimento del tetto (resource-exhausted);
-//  - il contatore globale blocca a prescindere dall'uid (argine ai molti anonimi);
-//  - i contatori sono separati per azione (refine non intacca outline);
-//  - i contatori sono separati per giorno (chiave UTC);
-//  - la transazione tiene sotto concorrenza (N chiamate parallele → mai oltre il tetto).
+// Integration test of the usage cap against the Firestore emulator
+// (NEVER real projects). It verifies that:
+//  - the per-uid counter blocks once the cap is reached (resource-exhausted);
+//  - the global counter blocks regardless of uid (guard against many anonymous users);
+//  - counters are separate per action (refine does not affect outline);
+//  - counters are separate per day (UTC key);
+//  - the transaction holds under concurrency (N parallel calls → never above the cap).
 
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
@@ -18,13 +18,11 @@ import {
 } from '../usage/rateLimit';
 
 if (process.env.FIRESTORE_EMULATOR_HOST === undefined) {
-  throw new Error(
-    'Questi test girano SOLO contro l’emulatore Firestore (firebase emulators:exec).',
-  );
+  throw new Error('These tests run ONLY against the Firestore emulator (firebase emulators:exec).');
 }
 
 const PROJECT_ID = process.env.GCLOUD_PROJECT ?? 'demo-bookvoice-functions';
-const NOW = 1757900000000; // 2025-09-15T... (fisso: chiave-giorno stabile)
+const NOW = 1757900000000; // 2025-09-15T... (fixed: stable day key)
 
 let db: Firestore;
 let uidCounter = 0;
@@ -52,13 +50,13 @@ beforeAll(() => {
   db = getFirestore();
 });
 
-describe('enforceUsageLimit (emulatore Firestore)', () => {
-  it('chiave-giorno in UTC, stabile per lo stesso istante', () => {
+describe('enforceUsageLimit (Firestore emulator)', () => {
+  it('day key in UTC, stable for the same instant', () => {
     expect(usageDayKey(NOW)).toBe(new Date(NOW).toISOString().slice(0, 10));
     expect(usageDayKey(NOW)).toHaveLength(10);
   });
 
-  it('per-uid: consente fino al tetto, poi resource-exhausted', async () => {
+  it('per-uid: allows up to the cap, then resource-exhausted', async () => {
     const uid = freshUid();
     const opts = limits({ refineChapter: { perUserPerDay: 3, globalPerDay: 1000 } });
 
@@ -71,23 +69,23 @@ describe('enforceUsageLimit (emulatore Firestore)', () => {
 
     const day = usageDayKey(NOW);
     const userSnap = await db.doc(`usageDaily/${day}__refineChapter/users/${uid}`).get();
-    expect(userSnap.get('count')).toBe(3); // la chiamata bloccata non incrementa
+    expect(userSnap.get('count')).toBe(3); // the blocked call does not increment
   });
 
-  it('globale: un secondo uid viene bloccato dal tetto complessivo', async () => {
+  it('global: another uid is blocked by the overall cap', async () => {
     const a = freshUid();
     const b = freshUid();
     const opts = limits({ generateOutline: { perUserPerDay: 100, globalPerDay: 2 } });
 
     await enforce(a, 'generateOutline', opts);
     await enforce(b, 'generateOutline', opts);
-    // tetto globale = 2 raggiunto: un terzo uid, pur sotto il proprio tetto, è fuori
+    // global cap = 2 reached: a third uid, even under its own cap, is out
     await expect(enforce(freshUid(), 'generateOutline', opts)).rejects.toMatchObject({
       code: 'resource-exhausted',
     });
   });
 
-  it('contatori separati per azione', async () => {
+  it('counters are separate per action', async () => {
     const uid = freshUid();
     const opts = limits({
       refineChapter: { perUserPerDay: 1, globalPerDay: 1000 },
@@ -95,7 +93,7 @@ describe('enforceUsageLimit (emulatore Firestore)', () => {
     });
 
     await enforce(uid, 'refineChapter', opts);
-    // outline ha il suo contatore: non è intaccato dal refine appena speso
+    // outline has its own counter: not affected by the refine just spent
     await enforce(uid, 'generateOutline', opts);
 
     await expect(enforce(uid, 'refineChapter', opts)).rejects.toMatchObject({
@@ -103,7 +101,7 @@ describe('enforceUsageLimit (emulatore Firestore)', () => {
     });
   });
 
-  it('contatori separati per giorno (UTC)', async () => {
+  it('counters are separate per day (UTC)', async () => {
     const uid = freshUid();
     const opts = limits({ refineChapter: { perUserPerDay: 1, globalPerDay: 1000 } });
     const domani = NOW + 24 * 60 * 60 * 1000;
@@ -112,11 +110,11 @@ describe('enforceUsageLimit (emulatore Firestore)', () => {
     await expect(enforce(uid, 'refineChapter', opts, NOW)).rejects.toMatchObject({
       code: 'resource-exhausted',
     });
-    // il giorno dopo il contatore riparte
+    // the next day the counter restarts
     await expect(enforce(uid, 'refineChapter', opts, domani)).resolves.toBeUndefined();
   });
 
-  it('concorrenza: 10 chiamate parallele non superano il tetto', async () => {
+  it('concurrency: 10 parallel calls do not exceed the cap', async () => {
     const uid = freshUid();
     const opts = limits({ refineChapter: { perUserPerDay: 4, globalPerDay: 1000 } });
 

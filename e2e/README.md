@@ -45,7 +45,7 @@ npm run e2e:android
 ```
 
 `run-android.mjs` checks the emulator and the dev client, runs `adb reverse tcp:8081`,
-starts Metro with `EXPO_PUBLIC_E2E=1`, runs `maestro test` on **the whole `flows/` folder**
+starts Metro with `EXPO_PUBLIC_E2E=1` and the Italian interface (the flows match Italian text), runs `maestro test` on **the whole `flows/` folder**
 (in alphabetical order) and shuts everything down. One flow only:
 `npm run e2e:android -- ..\e2e\flows\<name>.yaml`.
 

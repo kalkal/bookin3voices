@@ -1,71 +1,73 @@
-// Tetto d'uso giornaliero per le callable che consumano Gemini (hardening). Con la config web pubblica (apiKey/appId nel profilo
-// preview di eas.json) chiunque può fare signInAnonymously e martellare
-// refineChapter/generateOutline: su chiave FREE brucia quota, su chiave a
-// pagamento brucia soldi.
+// Daily usage cap for the callables that consume Gemini (hardening). With the
+// public web config (apiKey/appId in the preview profile of eas.json) anyone
+// can signInAnonymously and hammer refineChapter/generateOutline: on a FREE key
+// that burns quota, on a paid key it burns money.
 //
-// App Check "vero" (Play Integrity) qui non è praticabile: l'app usa il
-// Firebase JS SDK (non @react-native-firebase), che supporta solo reCAPTCHA
-// (web) o un CustomProvider, e comunque l'APK è distribuito fuori dal Play
-// Store (Play Integrity produrrebbe token solo via debug token). Scelta:
-// mettere un limite lato server, per-uid e globale, contato PRIMA della
-// chiamata al modello. Il tetto globale è la difesa dai molti uid anonimi; il
-// budget alert GCP (da configurare nel proprio progetto) è la rete di sicurezza finale.
+// Real App Check (Play Integrity) is not practical here: the app uses the
+// Firebase JS SDK (not @react-native-firebase), which only supports reCAPTCHA
+// (web) or a CustomProvider, and the APK is distributed outside the Play Store
+// anyway (Play Integrity would only yield tokens via a debug token). Choice:
+// a server-side limit, per uid and global, counted BEFORE the model call. The
+// global cap is the defense against many anonymous uids; the GCP budget alert
+// (to be configured in your own project) is the final safety net.
 //
-// Dati server-only: la collezione `usageDaily` è scritta solo dall'admin SDK
-// (le Functions bypassano le rules) e, non essendo nello schema, resta
-// negata ai client dalle security rules fail-closed (default deny).
+// Server-only data: the `usageDaily` collection is written only by the admin
+// SDK (Functions bypass the rules) and, not being in the schema, stays denied
+// to clients by the fail-closed security rules (default deny).
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
-/** Azioni con tetto. Contatori separati per azione: un limite su refine (flash,
- *  frequente) non deve intaccare il budget di outline (Pro, caro ma raro). */
+/** Actions with a cap. Separate counters per action: a limit on refine (flash,
+ *  frequent) must not eat into the outline budget (Pro, expensive but rare). */
 export const USAGE_ACTIONS = ['refineChapter', 'generateOutline'] as const;
 export type UsageAction = (typeof USAGE_ACTIONS)[number];
 
 export interface UsageLimit {
-  /** Tetto giornaliero per singolo uid. */
+  /** Daily cap per single uid. */
   perUserPerDay: number;
-  /** Tetto giornaliero complessivo (argine ai molti uid anonimi). */
+  /** Overall daily cap (guards against many anonymous uids). */
   globalPerDay: number;
 }
 
-// Default calibrati su un'app mono-utente: abbondanti per un singolo utente, stretti per
-// un attaccante. Il tetto globale è di fatto l'hard-cap di spesa: bloccando il
-// NUMERO di chiamate/giorno (e la dimensione per chiamata è già limitata dai
-// max-length Zod su testo/sinossi) limita in modo deterministico il costo/giorno.
-// generateOutline usa il tier Pro (caro) → tetti più bassi del refine (flash).
-// In produzione si ritoccano qui (un solo punto; il cambio richiede un redeploy).
+// Defaults calibrated for a single-user app: generous for one user, tight for
+// an attacker. The global cap is in effect the spending hard-cap: by limiting
+// the NUMBER of calls/day (and the size per call is already bounded by the Zod
+// max-lengths on text/synopsis) it deterministically bounds the cost/day.
+// generateOutline uses the Pro tier (expensive) -> lower caps than refine
+// (flash). In production adjust them here (single place; a change requires a
+// redeploy).
 export const DEFAULT_USAGE_LIMITS: Record<UsageAction, UsageLimit> = {
   refineChapter: { perUserPerDay: 200, globalPerDay: 300 },
   generateOutline: { perUserPerDay: 15, globalPerDay: 25 },
 };
 
-// Il contatore è dato interno, ma lo si rilegge con Zod al confine.
-// Fail-closed: un documento ESISTENTE ma corrotto non deve "sbloccare" il tetto
-// azzerandosi — si tratta come esaurito e si blocca (mai spendere di più per una
-// forma inattesa). Un documento assente è invece il caso normale "ancora a zero".
+// The counter is internal data, but it is re-read with Zod at the boundary.
+// Fail-closed: an EXISTING but corrupted document must not "unlock" the cap by
+// resetting itself - it is treated as exhausted and blocks (never spend more
+// because of an unexpected shape). A missing document is instead the normal
+// "still at zero" case.
 const counterSchema = z.object({ count: z.number().int().nonnegative() });
 
-/** Contatore corrente: 0 se il doc non esiste; se esiste ma è illeggibile, si
- *  blocca (fail-closed) invece di ripartire da zero. */
+/** Current counter: 0 if the doc does not exist; if it exists but is
+ *  unreadable, it blocks (fail-closed) instead of restarting from zero. */
 function readCounter(snap: { exists: boolean; data: () => unknown }): number {
   if (!snap.exists) return 0;
   const parsed = counterSchema.safeParse(snap.data());
   if (!parsed.success) {
     throw new HttpsError(
       'resource-exhausted',
-      'Contatore d’uso non leggibile: operazione sospesa per prudenza. Riprova più tardi.',
+      'Usage counter unreadable: operation suspended as a precaution. Try again later.',
     );
   }
   return parsed.data.count;
 }
 
 /**
- * Chiave-giorno in UTC (YYYY-MM-DD): deterministica e indipendente dal fuso del
- * server. Il reset del tetto è quindi a mezzanotte UTC — accettabile per un
- * limite anti-abuso, non è una quota contrattuale.
+ * Day key in UTC (YYYY-MM-DD): deterministic and independent of the server
+ * timezone. The cap therefore resets at midnight UTC - acceptable for an
+ * anti-abuse limit, it is not a contractual quota.
  */
 export function usageDayKey(nowMs: number): string {
   return new Date(nowMs).toISOString().slice(0, 10);
@@ -75,34 +77,35 @@ export interface EnforceUsageOptions {
   db: Firestore;
   uid: string;
   action: UsageAction;
-  /** Orologio iniettabile nei test; default Date.now. */
+  /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
-  /** Tetti iniettabili nei test; default DEFAULT_USAGE_LIMITS. */
+  /** Limits, injectable in tests; default DEFAULT_USAGE_LIMITS. */
   limits?: Record<UsageAction, UsageLimit>;
 }
 
 /**
- * Conta un uso dell'azione e lo blocca se supera il tetto per-uid o globale.
- * Tutto in UNA transazione (legge i due contatori del giorno, verifica,
- * incrementa) così due chiamate concorrenti non superano il limite per corsa.
+ * Counts one use of the action and blocks it if it exceeds the per-uid or
+ * global cap. Everything runs in ONE transaction (reads the two daily
+ * counters, checks, increments) so two concurrent calls cannot exceed the
+ * limit through a race.
  *
- * Va invocata PRIMA della chiamata al modello e DOPO lo short-circuit di
- * idempotenza (requestId): un retry di rete riusa la risposta salvata e NON
- * deve consumare budget. Solleva `resource-exhausted` (429 lato client) al
- * raggiungimento del tetto, senza aver toccato Gemini.
+ * Must be invoked BEFORE the model call and AFTER the idempotency
+ * short-circuit (requestId): a network retry reuses the saved response and
+ * must NOT consume budget. Throws `resource-exhausted` (429 on the client side)
+ * when the cap is reached, without having touched Gemini.
  */
 export async function enforceUsageLimit(options: EnforceUsageOptions): Promise<void> {
   const { db, uid, action, now = Date.now, limits = DEFAULT_USAGE_LIMITS } = options;
   const limit = limits[action];
   const day = usageDayKey(now());
 
-  // usageDaily/{giorno__azione}                → contatore globale
-  // usageDaily/{giorno__azione}/users/{uid}    → contatore per-uid
+  // usageDaily/{day__action}                -> global counter
+  // usageDaily/{day__action}/users/{uid}    -> per-uid counter
   const globalRef = db.doc(`usageDaily/${day}__${action}`);
   const userRef = globalRef.collection('users').doc(uid);
 
   await db.runTransaction(async (tx) => {
-    // tutte le letture prima di qualunque scrittura (vincolo delle transazioni)
+    // all reads before any write (transaction constraint)
     const [globalSnap, userSnap] = await Promise.all([tx.get(globalRef), tx.get(userRef)]);
     const globalCount = readCounter(globalSnap);
     const userCount = readCounter(userSnap);
@@ -110,13 +113,13 @@ export async function enforceUsageLimit(options: EnforceUsageOptions): Promise<v
     if (userCount >= limit.perUserPerDay) {
       throw new HttpsError(
         'resource-exhausted',
-        `Limite giornaliero raggiunto per questa operazione (${limit.perUserPerDay}/giorno). Riprova domani.`,
+        `Daily limit reached for this operation (${limit.perUserPerDay}/day). Try again tomorrow.`,
       );
     }
     if (globalCount >= limit.globalPerDay) {
       throw new HttpsError(
         'resource-exhausted',
-        'Servizio momentaneamente non disponibile per raggiunto limite d’uso complessivo. Riprova più tardi.',
+        'Service temporarily unavailable: the overall usage limit has been reached. Try again later.',
       );
     }
 

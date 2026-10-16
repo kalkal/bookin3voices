@@ -1,10 +1,10 @@
-// Outbox LOCALE durabile delle note (feature Taccuino). Il JS SDK di
-// Firestore su React Native ha SOLO cache in memoria: una nota creata offline
-// vive in RAM e muore con l'app prima del sync. Come per i capitoli (LocalChapterRepository),
-// la rete di sicurezza su disco la mette questo modulo:
-// ogni nota creata finisce PRIMA in un outbox su AsyncStorage (durabile, Zod al
-// confine), poi in Firestore; se il remoto non risponde la nota resta qui e
-// viene ri-sincronizzata alla prossima occasione (OfflineFirstNoteRepository).
+// DURABLE LOCAL outbox of notes (Notebook feature). The Firestore JS SDK on
+// React Native has ONLY an in-memory cache: a note created offline lives in
+// RAM and dies with the app before syncing. As for chapters (LocalChapterRepository),
+// this module provides the on-disk safety net:
+// every created note goes FIRST into an AsyncStorage outbox (durable, Zod at the
+// boundary), then into Firestore; if the remote does not answer, the note stays here
+// and is re-synced at the next opportunity (OfflineFirstNoteRepository).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { NOTE_TAGS } from './types';
 import type { Note, NoteRef } from './types';
 
-// dati esterni (qui: disco) validati al confine con Zod (standard tecnici)
+// external data (here: disk) validated at the boundary with Zod
 const storedNoteSchema = z.object({
   schemaVersion: z.literal(1),
   id: z.string(),
@@ -27,16 +27,16 @@ const outboxSchema = z.array(storedNoteSchema);
 
 const keyFor = (bookId: string) => `bookvoice/notes-outbox/${bookId}`;
 
-/** Sottoinsieme di AsyncStorage usato dal repository, iniettabile nei test. */
+/** Subset of AsyncStorage used by the repository, injectable in tests. */
 export interface KeyValueStorage {
   getItem(key: string): Promise<string | null>;
   setItem(key: string, value: string): Promise<void>;
 }
 
 /**
- * Outbox delle note non ancora confermate dal server, una voce per libro.
- * Non è un mirror completo del Taccuino: le note già sincronizzate arrivano da
- * Firestore via observe. Qui vivono solo le creazioni in attesa di ack.
+ * Outbox of notes not yet confirmed by the server, one entry per book.
+ * It is not a full mirror of the Notebook: already-synced notes come from
+ * Firestore via observe. Only creations awaiting an ack live here.
  */
 export class LocalNoteRepository {
   private readonly storage: KeyValueStorage;
@@ -45,21 +45,21 @@ export class LocalNoteRepository {
     this.storage = storage;
   }
 
-  /** Note in attesa per il libro (array vuoto se nulla o payload illeggibile). */
+  /** Pending notes for the book (empty array if none or unreadable payload). */
   async listPending(bookId: string): Promise<Note[]> {
     const raw = await this.storage.getItem(keyFor(bookId));
     if (raw === null) return [];
     const parsed = parseOutbox(raw);
     if (parsed === null) {
-      // payload corrotto o di uno schema futuro: non si butta MAI del testo —
-      // lo si mette da parte con un timestamp e si riparte da outbox vuoto
+      // corrupt payload or from a future schema: text is NEVER thrown away —
+      // it is set aside with a timestamp and we restart from an empty outbox
       await this.storage.setItem(`${keyFor(bookId)}:quarantena-${Date.now()}`, raw);
       return [];
     }
     return parsed;
   }
 
-  /** Inserisce o aggiorna (per id) una nota in attesa. */
+  /** Inserts or updates (by id) a pending note. */
   async savePending(note: Note): Promise<void> {
     const current = await this.listPending(note.bookId);
     const next = current.filter((n) => n.id !== note.id);
@@ -67,7 +67,7 @@ export class LocalNoteRepository {
     await this.write(note.bookId, next);
   }
 
-  /** Toglie una nota dall'outbox (confermata dal server, o cancellata). */
+  /** Removes a note from the outbox (confirmed by the server, or deleted). */
   async removePending(ref: NoteRef): Promise<void> {
     const current = await this.listPending(ref.bookId);
     const next = current.filter((n) => n.id !== ref.noteId);

@@ -1,5 +1,5 @@
-// API pubblica della feature dettatura. La UI consuma DictationSession (mai il
-// motore direttamente); i motori si scelgono qui: Expo per l'app, Fake nei test.
+// Public API of the dictation feature. The UI consumes DictationSession (never
+// the engine directly); engines are chosen here: Expo for the app, Fake in tests.
 
 export type {
   DictationEngine,

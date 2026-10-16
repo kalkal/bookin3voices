@@ -15,20 +15,20 @@ const ref = { bookId: 'libro-1', chapterId: 'cap-1' };
 const KEY = 'bookvoice/chapters/libro-1/cap-1';
 
 describe('LocalChapterRepository', () => {
-  it('un capitolo mai salvato è null (non stringa vuota)', async () => {
+  it('a chapter never saved is null (not an empty string)', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalChapterRepository(storage);
     await expect(repo.loadRawText(ref)).resolves.toBeNull();
   });
 
-  it('salva e rilegge il testo grezzo (round-trip)', async () => {
+  it('saves and re-reads the raw text (round-trip)', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalChapterRepository(storage);
     await repo.saveRawText(ref, 'Il caffè era ancora caldo.');
     await expect(repo.loadRawText(ref)).resolves.toBe('Il caffè era ancora caldo.');
   });
 
-  it('capitoli e libri diversi non si pestano', async () => {
+  it('different chapters and books do not clobber each other', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalChapterRepository(storage);
     await repo.saveRawText(ref, 'testo del primo');
@@ -37,7 +37,7 @@ describe('LocalChapterRepository', () => {
     await expect(repo.loadRawText({ bookId: 'libro-2', chapterId: 'cap-1' })).resolves.toBeNull();
   });
 
-  it('il payload salvato è versionato (schemaVersion per upgrade-on-read)', async () => {
+  it('the saved payload is versioned (schemaVersion for upgrade-on-read)', async () => {
     const { storage, data } = memoryStorage();
     const repo = new LocalChapterRepository(storage);
     await repo.saveRawText(ref, 'testo');
@@ -46,7 +46,7 @@ describe('LocalChapterRepository', () => {
     expect(typeof stored.updatedAt).toBe('number');
   });
 
-  it('payload corrotto: niente crash, si riparte da vuoto MA il blob va in quarantena', async () => {
+  it('corrupt payload: no crash, restarts from empty BUT the blob is quarantined', async () => {
     const { storage, data } = memoryStorage({ [KEY]: '{non-json' });
     const repo = new LocalChapterRepository(storage);
     await expect(repo.loadRawText(ref)).resolves.toBeNull();
@@ -55,7 +55,7 @@ describe('LocalChapterRepository', () => {
     expect(data.get(quarantined ?? '')).toBe('{non-json');
   });
 
-  it('schema sconosciuto (versione futura): stessa quarantena, mai perdita silenziosa', async () => {
+  it('unknown schema (future version): same quarantine, never silent loss', async () => {
     const future = JSON.stringify({ schemaVersion: 2, rawText: 'testo nuovo', updatedAt: 1 });
     const { storage, data } = memoryStorage({ [KEY]: future });
     const repo = new LocalChapterRepository(storage);

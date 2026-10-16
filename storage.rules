@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Solo il proprietario autenticato sotto users/{uid}/**; il resto negato.
+// Only the authenticated owner under users/{uid}/**; the rest is denied.
 service firebase.storage {
   match /b/{bucket}/o {
     match /users/{uid}/{allPaths=**} {

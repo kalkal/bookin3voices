@@ -1,7 +1,7 @@
-// Contratto dell'export: input della callable validato con
-// Zod al confine, documenti Firestore validati alla lettura (parse, don't
-// validate) e interfaccia Strategy `Exporter` con una implementazione per
-// formato, registrate nella factory (exporterFactory.ts).
+// Export contract: callable input validated with Zod at the boundary,
+// Firestore documents validated on read (parse, don't validate) and the
+// `Exporter` strategy interface with one implementation per format,
+// registered in the factory (exporterFactory.ts).
 
 import { z } from 'zod';
 
@@ -11,9 +11,9 @@ export const EXPORT_FORMATS = ['epub', 'docx'] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 /**
- * Input della callable `exportBook`. Il requestId è la chiave di idempotenza
- * e diventa l'id del documento `users/{uid}/exports/{requestId}`:
- * per questo il formato è ristretto ai caratteri sicuri per un id Firestore.
+ * Input of the `exportBook` callable. The requestId is the idempotency key and
+ * becomes the id of the document `users/{uid}/exports/{requestId}`: that is why
+ * its format is restricted to characters safe for a Firestore id.
  */
 export const exportBookInputSchema = z.object({
   bookId: z.string().min(1),
@@ -26,22 +26,21 @@ export const exportBookInputSchema = z.object({
 export type ExportBookInput = z.infer<typeof exportBookInputSchema>;
 
 /**
- * Campi del documento libro che servono all'export (metadati KDP).
- * Subset dello schema: il resto del documento non riguarda l'export.
+ * Book document fields needed by export (KDP metadata). Subset of the schema:
+ * the rest of the document is irrelevant to export.
  */
 export const bookExportDocSchema = z.object({
   title: z.string(),
   author: z.string(),
   description: z.string(),
-  /** Lingua del libro ('it'): se vuota si esporta comunque, con default 'it'. */
+  /** Book language ('it'): if empty, export still proceeds with default 'it'. */
   language: z.string(),
   genre: z.string(),
 });
 
 /**
- * Campi del documento capitolo che servono all'export. I suggerimenti pending
- * vivono in una sottocollezione e NON vengono letti: l'export usa solo il
- * `rawText` finale.
+ * Chapter document fields needed by export. Pending suggestions live in a
+ * subcollection and are NOT read: export uses only the final `rawText`.
  */
 export const chapterExportDocSchema = z.object({
   order: z.number(),
@@ -49,7 +48,7 @@ export const chapterExportDocSchema = z.object({
   rawText: z.string(),
 });
 
-/** Libro composto e pronto per il rendering: capitoli già in ordine. */
+/** Composed book ready for rendering: chapters already in order. */
 export interface BookForExport {
   title: string;
   author: string;
@@ -60,9 +59,9 @@ export interface BookForExport {
 }
 
 /**
- * Strategy `Exporter`: `render(book) → Buffer`. `generatedAt` è la
- * data di creazione dell'export (fissata dal registro di idempotenza, così un
- * retry produce gli stessi metadati).
+ * `Exporter` strategy: `render(book) -> Buffer`. `generatedAt` is the export
+ * creation date (pinned by the idempotency registry, so a retry produces the
+ * same metadata).
  */
 export interface Exporter {
   readonly format: ExportFormat;
@@ -72,10 +71,10 @@ export interface Exporter {
 }
 
 /**
- * Registro dell'export su `users/{uid}/exports/{requestId}`.
- * `storagePath` resta null nell'MVP: Storage non è attivo (piano Spark), il
- * file torna al client nella risposta; la variante Storage+URL firmato è
- * annotata come lavoro futuro.
+ * Export registry entry at `users/{uid}/exports/{requestId}`. `storagePath`
+ * stays null in the MVP: Storage is not enabled (Spark plan), the file is
+ * returned to the client in the response; the Storage + signed URL variant is
+ * noted as future work.
  */
 export const exportRegistryDocSchema = z.object({
   schemaVersion: z.literal(1),
@@ -89,7 +88,7 @@ export const exportRegistryDocSchema = z.object({
 
 export type ExportRegistryDoc = z.infer<typeof exportRegistryDocSchema>;
 
-/** Risposta della callable: il file torna al client come base64 (MVP). */
+/** Callable response: the file is returned to the client as base64 (MVP). */
 export interface ExportBookResponse {
   exportId: string;
   format: ExportFormat;

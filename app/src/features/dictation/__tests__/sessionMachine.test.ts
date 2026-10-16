@@ -1,6 +1,6 @@
 import { transition, type SessionEventType, type SessionState } from '../sessionMachine';
 
-describe('sessionMachine — transizioni esplicite', () => {
+describe('sessionMachine — explicit transitions', () => {
   it.each<[SessionState, SessionEventType, SessionState, string[]]>([
     ['idle', 'USER_START', 'listening', ['resetTranscript', 'startEngine']],
     ['listening', 'USER_PAUSE', 'paused', ['flush', 'stopEngine']],
@@ -19,11 +19,11 @@ describe('sessionMachine — transizioni esplicite', () => {
     expect(t.effects).toEqual(effects);
   });
 
-  it('la ripresa da paused NON azzera il buffer (nessun resetTranscript)', () => {
+  it('resuming from paused does NOT clear the buffer (no resetTranscript)', () => {
     expect(transition('paused', 'USER_START').effects).not.toContain('resetTranscript');
   });
 
-  it('FATAL_ERROR da ogni stato attivo porta a error con flush (mai perdere testo)', () => {
+  it('FATAL_ERROR from every active state leads to error with flush (never lose text)', () => {
     for (const from of ['idle', 'listening', 'paused', 'committing'] as const) {
       const t = transition(from, 'FATAL_ERROR');
       expect(t.to).toBe('error');
@@ -31,7 +31,7 @@ describe('sessionMachine — transizioni esplicite', () => {
     }
   });
 
-  it('FATAL_ERROR in error è ignorato', () => {
+  it('FATAL_ERROR in error is ignored', () => {
     expect(transition('error', 'FATAL_ERROR')).toEqual({ to: 'error', effects: [], ignored: true });
   });
 
@@ -43,7 +43,7 @@ describe('sessionMachine — transizioni esplicite', () => {
     ['listening', 'USER_START'],
     ['listening', 'COMMIT_DONE'],
     ['paused', 'USER_PAUSE'],
-    ['paused', 'ENGINE_ENDED'], // il motore muore in pausa: nessun riavvio automatico
+    ['paused', 'ENGINE_ENDED'], // the engine dies while paused: no automatic restart
     ['paused', 'AUDIO_INTERRUPTED'],
     ['committing', 'USER_START'],
     ['committing', 'USER_STOP'],

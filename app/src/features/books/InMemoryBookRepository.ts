@@ -1,4 +1,4 @@
-// Repository libri in memoria per test e sviluppo (come InMemoryChapterRepository).
+// In-memory book repository for tests and development (like InMemoryChapterRepository).
 
 import { newBookDoc, toBook } from './bookCodec';
 import type { Unsubscribe } from '../chapters';
@@ -9,7 +9,7 @@ export class InMemoryBookRepository implements BookRepository {
   private readonly listListeners = new Set<(books: Book[]) => void>();
   private readonly docListeners = new Map<string, Set<(book: Book | null) => void>>();
   private nextId = 1;
-  /** Contatore delle riconciliazioni richieste (per le asserzioni nei test). */
+  /** Count of requested reconciliations (for assertions in tests). */
   reconcileCalls: string[] = [];
 
   observeBooks(onChange: (books: Book[]) => void): Unsubscribe {
@@ -39,7 +39,7 @@ export class InMemoryBookRepository implements BookRepository {
 
   async updateBook(bookId: string, patch: BookPatch): Promise<void> {
     const existing = this.books.get(bookId);
-    if (!existing) throw new Error(`Libro inesistente: ${bookId}`);
+    if (!existing) throw new Error(`Book does not exist: ${bookId}`);
     this.books.set(bookId, { ...existing, ...patch, updatedAt: Date.now() });
     this.emit(bookId);
   }
@@ -53,7 +53,7 @@ export class InMemoryBookRepository implements BookRepository {
     this.reconcileCalls.push(bookId);
   }
 
-  /** Comodo per preparare lo stato iniziale nei test. */
+  /** Convenient for setting up the initial state in tests. */
   seed(book: Partial<Book> & { id: string; title: string }): Book {
     const full: Book = {
       ...toBook(book.id, newBookDoc({ title: book.title }, Date.now())),
@@ -64,7 +64,7 @@ export class InMemoryBookRepository implements BookRepository {
     return full;
   }
 
-  /** Aggiorna i contatori denormalizzati, come farebbe il repository capitoli. */
+  /** Updates the denormalized counters, as the chapter repository would. */
   setCounters(bookId: string, counters: { wordCount?: number; chapterCount?: number }): void {
     const existing = this.books.get(bookId);
     if (!existing) return;

@@ -1,22 +1,23 @@
-// Callable `refineChapter(bookId, chapterId, text, textHash, requestId)`
-// testo dettato → modello AI (Style Bible +
-// few-shot + contesto, structured output) → suggerimenti puntuali VALIDATI e
-// ancorati al testo, scritti in un BATCH ATOMICO nella sottocollezione
-// `suggestions` del capitolo (mai parziali) e restituiti al client.
+// Callable `refineChapter(bookId, chapterId, text, textHash, requestId)`:
+// dictated text → AI model (Style Bible + few-shot + context, structured
+// output) → VALIDATED, text-anchored suggestions, written in an ATOMIC BATCH to
+// the chapter's `suggestions` subcollection (never partially) and returned to
+// the client.
 //
-// Regole incorporate:
-// - il testo che fa fede è quello del CLIENT (durante la sessione l'editor
-//   locale è il master); il suo hash torna nei suggerimenti
-// così l'app li marca stale se il testo è cambiato;
-// - idempotenza: requestId = id del registro users/{uid}/refines/{requestId};
-//   un retry riusa la risposta salvata, zero doppioni;
-// - dedup: una nuova rifinitura SOSTITUISCE i pending non decisi;
-//   accettati/rifiutati restano storia in `revisions` lato app;
-// - un suggerimento il cui `original` non combacia col testo viene scartato
-//   dal server (normalizeSuggestions), mai applicato alla cieca;
-// - Strategy AiProvider: il provider attivo si legge da
-//   users/{uid}/settings/app.aiProvider (predefinito: bedrock, Amazon Nova); il
-//   modello primario e la riserva arrivano da config (models.ts).
+// Built-in rules:
+// - the CLIENT's text is authoritative (during a session the local editor is
+//   the master); its hash travels back in the suggestions so the app marks
+//   them stale if the text has changed;
+// - idempotency: requestId = id of the registry document
+//   users/{uid}/refines/{requestId}; a retry reuses the saved response, no
+//   duplicates;
+// - dedup: a new refinement REPLACES the undecided pending suggestions;
+//   accepted/rejected ones stay as history in `revisions` on the app side;
+// - a suggestion whose `original` does not match the text is discarded by the
+//   server (normalizeSuggestions), never applied blindly;
+// - AiProvider Strategy: the active provider is read from
+//   users/{uid}/settings/app.aiProvider (default: bedrock, Amazon Nova); the
+//   primary and fallback models come from config (models.ts).
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
@@ -44,7 +45,7 @@ import { loadStyleProfileContent, type StyleProfileContent } from './styleProfil
 import { textHash } from './textHash';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
-/** Id dei provider AI supportati (catalogo condiviso con l'app). */
+/** Ids of the supported AI providers (catalog shared with the app). */
 export const AI_PROVIDER_IDS = ['bedrock', 'gemini'] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 
@@ -52,22 +53,22 @@ const settingsProviderSchema = z.object({ aiProvider: z.enum(AI_PROVIDER_IDS).ca
 
 export interface RefineChapterDeps {
   db: Firestore;
-  /** Modelli per provider: primario + eventuale riserva (Strategy). */
+  /** Models per provider: primary + optional fallback (Strategy). */
   providers: Record<AiProviderId, { primary: RefineModel; fallback?: RefineModel }>;
   /** Provider used when the user has no explicit choice (deployment-level AI_PROVIDER). */
   defaultProvider?: AiProviderId;
-  /** Caricamento profilo di stile iniettabile nei test. */
+  /** Style profile loader, injectable in tests. */
   loadStyleProfile?: (profileId: string) => StyleProfileContent;
-  /** Orologio iniettabile nei test; default Date.now. */
+  /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
-  /** Tetti d'uso giornalieri; default DEFAULT_USAGE_LIMITS. */
+  /** Daily usage caps; defaults to DEFAULT_USAGE_LIMITS. */
   usageLimits?: Record<UsageAction, UsageLimit>;
 }
 
 /**
- * Provider attivo da users/{uid}/settings/app: documento assente o
- * campo malformato → default bedrock; un provider sconosciuto esplicito →
- * failed-precondition (meglio un errore chiaro che ignorare la scelta).
+ * Active provider from users/{uid}/settings/app: missing document or
+ * malformed field → default bedrock; an explicit unknown provider →
+ * failed-precondition (a clear error beats silently ignoring the choice).
  */
 export async function readAiProviderId(
   db: Firestore,
@@ -82,7 +83,7 @@ export async function readAiProviderId(
   if (typeof raw !== 'string' || !AI_PROVIDER_IDS.includes(raw as AiProviderId)) {
     throw new HttpsError(
       'failed-precondition',
-      `Motore AI non supportato: ${String(raw).slice(0, 40)}.`,
+      `Unsupported AI provider: ${String(raw).slice(0, 40)}.`,
     );
   }
   return settingsProviderSchema.parse({ aiProvider: raw }).aiProvider;
@@ -121,24 +122,24 @@ export function buildPromptForBook(args: {
   });
 }
 
-/** Legge libro e capitolo per il contesto del prompt (sinossi + outline). */
+/** Reads the book and chapter for the prompt context (synopsis + outline). */
 async function readContext(db: Firestore, uid: string, input: RefineChapterInput) {
   const bookRef = db.doc(`users/${uid}/books/${input.bookId}`);
   const chapterRef = bookRef.collection('chapters').doc(input.chapterId);
   const [bookSnap, chapterSnap] = await Promise.all([bookRef.get(), chapterRef.get()]);
-  if (!bookSnap.exists) throw new HttpsError('not-found', 'Libro inesistente.');
-  if (!chapterSnap.exists) throw new HttpsError('not-found', 'Capitolo inesistente.');
-  // schemi con .catch(): il contesto è un aiuto, un campo malformato non
-  // blocca la rifinitura (a differenza dell'outline, dove è materia prima)
+  if (!bookSnap.exists) throw new HttpsError('not-found', 'Book not found.');
+  if (!chapterSnap.exists) throw new HttpsError('not-found', 'Chapter not found.');
+  // schemas use .catch(): the context is an aid, so a malformed field does not
+  // block the refinement (unlike the outline, where it is the raw material)
   const book = bookForRefineSchema.parse(bookSnap.data() ?? {});
   const chapter = chapterForRefineSchema.parse(chapterSnap.data() ?? {});
   return { book, chapter, chapterRef };
 }
 
 /**
- * Chiama il modello: due tentativi sul primario (retry su output non conforme
- * o errore ritentabile), poi uno sulla riserva se configurata — i flash
- * correnti possono rispondere 503 nei picchi.
+ * Calls the model: two attempts on the primary (retry on non-conforming output
+ * or a retryable error), then one on the fallback if configured; current flash
+ * models can answer 503 at peak times.
  */
 async function generateValidatedSuggestions(
   primary: RefineModel,
@@ -167,8 +168,8 @@ async function generateValidatedSuggestions(
       });
       if (error instanceof SyntaxError || isRetryableAiError(error)) continue;
       if (error instanceof HttpsError) throw error;
-      // altri errori (es. 400): il retry sullo stesso input non aiuta, ma la
-      // riserva può farcela (modello primario ritirato o schema rifiutato)
+      // other errors (e.g. 400): retrying the same input won't help, but the
+      // fallback may succeed (primary model retired or schema rejected)
       continue;
     }
     const lenient = parseModelOutput(candidate);
@@ -183,8 +184,8 @@ async function generateValidatedSuggestions(
     }
     const parsed = modelOutputSchema.safeParse(candidate);
     lastIssue = parsed.success
-      ? 'schema non rispettato'
-      : (parsed.error.issues[0]?.message ?? 'schema non rispettato');
+      ? 'schema not respected'
+      : (parsed.error.issues[0]?.message ?? 'schema not respected');
     logger.warn('refineChapter: model output failed validation', {
       model: model.modelName,
       issue: lastIssue.slice(0, 300),
@@ -192,7 +193,7 @@ async function generateValidatedSuggestions(
   }
   throw new HttpsError(
     'unavailable',
-    `Il modello non ha prodotto suggerimenti validi: ${lastIssue.slice(0, 200)}. Riprova.`,
+    `The model did not produce valid suggestions: ${lastIssue.slice(0, 200)}. Try again.`,
   );
 }
 
@@ -207,7 +208,7 @@ function toResponse(requestId: string, doc: RefineRegistryDoc): RefineChapterRes
   };
 }
 
-/** Cuore della callable, testabile direttamente contro l'emulatore Firestore. */
+/** Core of the callable, testable directly against the Firestore emulator. */
 export async function runRefineChapter(
   deps: RefineChapterDeps,
   uid: string,
@@ -221,15 +222,15 @@ export async function runRefineChapter(
     usageLimits,
   } = deps;
 
-  // integrità: l'hash dichiarato deve essere davvero l'hash del testo inviato
+  // integrity: the declared hash must really be the hash of the text sent
   if (textHash(input.text) !== input.textHash) {
-    throw new HttpsError('invalid-argument', 'textHash non combacia col testo inviato.');
+    throw new HttpsError('invalid-argument', 'textHash does not match the text sent.');
   }
 
   const registryRef = db.doc(`users/${uid}/refines/${input.requestId}`);
 
-  // Retry di rete: registro già scritto → stessa risposta, nessuna seconda
-  // chiamata al modello. Stesso requestId su un altro capitolo = errore client.
+  // Network retry: registry already written → same response, no second model
+  // call. The same requestId on another chapter is a client error.
   const existingSnap = await registryRef.get();
   if (existingSnap.exists) {
     const existing = refineRegistryDocSchema.safeParse(existingSnap.data());
@@ -238,13 +239,13 @@ export async function runRefineChapter(
       existing.data.bookId !== input.bookId ||
       existing.data.chapterId !== input.chapterId
     ) {
-      throw new HttpsError('already-exists', 'requestId già usato per un’altra rifinitura.');
+      throw new HttpsError('already-exists', 'requestId already used for another refinement.');
     }
     return toResponse(input.requestId, existing.data);
   }
 
-  // Tetto anti-abuso: contato solo qui, dopo lo short-circuit di
-  // idempotenza (un retry di rete non consuma budget) e prima di toccare Gemini.
+  // Anti-abuse cap: counted only here, after the idempotency short-circuit (a
+  // network retry consumes no budget) and before touching the model.
   await enforceUsageLimit({ db, uid, action: 'refineChapter', now, limits: usageLimits });
 
   const providerId = await readAiProviderId(db, uid, deps.defaultProvider);
@@ -267,9 +268,9 @@ export async function runRefineChapter(
   const { suggestions } = normalized;
   const discarded = normalized.discarded + dropped;
 
-  // Batch atomico: registro + dedup dei pending + nuovi suggerimenti
-  // in UNA transazione — mai 20 su 40 per un timeout a metà. Se un'altra
-  // chiamata con lo stesso requestId ha vinto la corsa, si riusa la sua.
+  // Atomic batch: registry + pending dedup + new suggestions in ONE
+  // transaction, never 20 out of 40 because of a mid-way timeout. If another
+  // call with the same requestId won the race, its result is reused.
   const suggestionsRef = chapterRef.collection('suggestions');
   const doc = await db.runTransaction<RefineRegistryDoc>(async (tx) => {
     const snap = await tx.get(registryRef);
@@ -280,12 +281,12 @@ export async function runRefineChapter(
         existing.data.bookId !== input.bookId ||
         existing.data.chapterId !== input.chapterId
       ) {
-        throw new HttpsError('already-exists', 'requestId già usato per un’altra rifinitura.');
+        throw new HttpsError('already-exists', 'requestId already used for another refinement.');
       }
       return existing.data;
     }
 
-    // dedup: la nuova rifinitura sostituisce i pending non decisi
+    // dedup: the new refinement replaces the undecided pending suggestions
     const pendingSnap = await tx.get(suggestionsRef.where('state', '==', 'pending'));
 
     const fresh: RefineRegistryDoc = {
@@ -318,20 +319,20 @@ export async function runRefineChapter(
   return toResponse(input.requestId, doc);
 }
 
-/** Handler della callable: auth + validazione input, poi runRefineChapter. */
+/** Callable handler: auth + input validation, then runRefineChapter. */
 export function createRefineChapterHandler(
   deps: RefineChapterDeps,
 ): (request: CallableRequest<unknown>) => Promise<RefineChapterResponse> {
   return async (request) => {
     const uid = request.auth?.uid;
     if (uid === undefined) {
-      throw new HttpsError('unauthenticated', 'Accesso richiesto.');
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
     }
     const parsed = refineChapterInputSchema.safeParse(request.data);
     if (!parsed.success) {
       throw new HttpsError(
         'invalid-argument',
-        'Attesi { bookId, chapterId, text, textHash, requestId }.',
+        'Expected { bookId, chapterId, text, textHash, requestId }.',
       );
     }
     return runRefineChapter(deps, uid, parsed.data);

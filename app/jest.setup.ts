@@ -1,6 +1,6 @@
-// Test più stabili su macchine cariche (CI, typecheck in parallelo): i findBy*/waitFor
-// aspettano fino a 5 s invece del default di 1 s, e ogni test ha 15 s di margine.
-// Le suite girano con l'interfaccia in italiano (vedi src/i18n).
+// More stable tests on loaded machines (CI, parallel typecheck): findBy*/waitFor
+// wait up to 5 s instead of the default 1 s, and each test has 15 s of margin.
+// The suites run with the UI in Italian (see src/i18n).
 import { configure } from '@testing-library/react-native';
 
 import { setLanguage } from './src/i18n';

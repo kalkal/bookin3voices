@@ -1,6 +1,6 @@
-// Test di componente della traccia in Dettatura: pannello solo se
-// il capitolo ha un outline, beat spuntabili persistiti su `outline.beatsDone`,
-// apri/chiudi col chevron ricordato tra i montaggi (storage iniettato).
+// Component test of the Dictation track: panel only if the chapter has an
+// outline, tickable beats persisted on `outline.beatsDone`, and open/close via
+// the chevron remembered across mounts (injected storage).
 
 import { act, fireEvent, render } from '@testing-library/react-native';
 
@@ -47,30 +47,30 @@ async function renderTrack(options?: {
       />
     </ThemeProvider>,
   );
-  // lascia concludere la lettura dello stato apri/chiuso ricordato
+  // let the read of the remembered open/closed state finish
   await act(async () => {});
   return { repository, ...utils };
 }
 
-describe('OutlineTrack — quando compare', () => {
-  it('capitolo senza outline: il pannello non esiste', async () => {
+describe('OutlineTrack — when it appears', () => {
+  it('chapter without outline: the panel does not exist', async () => {
     const { queryByTestId } = await renderTrack({ outline: null });
     expect(queryByTestId('outline-track')).toBeNull();
   });
 
-  it('capitolo inesistente (mai salvato): il pannello non esiste', async () => {
+  it('nonexistent chapter (never saved): the panel does not exist', async () => {
     const { queryByTestId } = await renderTrack();
     expect(queryByTestId('outline-track')).toBeNull();
   });
 
-  it('outline con beat vuoti: il pannello non esiste', async () => {
+  it('outline with empty beats: the panel does not exist', async () => {
     const { queryByTestId } = await renderTrack({
       outline: { summary: 'Vuota.', beats: [], beatsDone: [] },
     });
     expect(queryByTestId('outline-track')).toBeNull();
   });
 
-  it('capitolo con outline: etichetta del mockup e tutti i beat da coprire', async () => {
+  it('chapter with outline: mockup label and all beats to cover', async () => {
     const { getByTestId } = await renderTrack({ outline: OUTLINE });
     expect(getByTestId('outline-track')).toHaveTextContent(/Traccia · Capitolo VII/);
     expect(getByTestId('outline-beat-0')).toHaveTextContent(
@@ -84,8 +84,8 @@ describe('OutlineTrack — quando compare', () => {
   });
 });
 
-describe('OutlineTrack — beat spuntati (solo visuale, persistiti sul capitolo)', () => {
-  it('tocco su un beat: spuntato e salvato in outline.beatsDone; secondo tocco: da fare', async () => {
+describe('OutlineTrack — ticked beats (visual only, persisted on the chapter)', () => {
+  it('tap on a beat: ticked and saved in outline.beatsDone; second tap: to do', async () => {
     const { repository, getByTestId } = await renderTrack({ outline: OUTLINE });
 
     await fireEvent.press(getByTestId('outline-beat-1'));
@@ -103,15 +103,15 @@ describe('OutlineTrack — beat spuntati (solo visuale, persistiti sul capitolo)
     expect((await repository.getChapter(CHAPTER))?.outline).toEqual(OUTLINE);
   });
 
-  it('i beat già spuntati sul capitolo partono spuntati', async () => {
+  it('beats already ticked on the chapter start ticked', async () => {
     const { getByTestId } = await renderTrack({ outline: { ...OUTLINE, beatsDone: [0] } });
     expect(getByTestId('outline-beat-0')).toBeChecked();
     expect(getByTestId('outline-beat-1')).not.toBeChecked();
   });
 });
 
-describe('OutlineTrack — apri/chiudi ricordato', () => {
-  it('chiuso col chevron: restano etichetta e toggle, i beat spariscono, la scelta si salva', async () => {
+describe('OutlineTrack — remembered open/close', () => {
+  it('closed via chevron: label and toggle remain, beats disappear, the choice is saved', async () => {
     const { storage, data } = memoryStorage();
     const { getByTestId, queryByTestId } = await renderTrack({ outline: OUTLINE, storage });
 
@@ -127,31 +127,31 @@ describe('OutlineTrack — apri/chiudi ricordato', () => {
     expect(data.get(OUTLINE_TRACK_COLLAPSED_KEY)).toBe('0');
   });
 
-  it('al montaggio successivo riparte com’era rimasto (chiuso)', async () => {
+  it('on the next mount it restarts as it was left (closed)', async () => {
     const { storage } = memoryStorage({ [OUTLINE_TRACK_COLLAPSED_KEY]: '1' });
     const { getByTestId, queryByTestId } = await renderTrack({ outline: OUTLINE, storage });
     expect(getByTestId('outline-track')).toBeTruthy();
     expect(queryByTestId('outline-beat-0')).toBeNull();
   });
 
-  it('storage illeggibile: si parte aperti senza errori', async () => {
+  it('unreadable storage: starts open without errors', async () => {
     const storage: KeyValueStorage = {
       getItem: async () => {
-        throw new Error('storage rotto');
+        throw new Error('storage broken');
       },
       setItem: async () => {
-        throw new Error('storage rotto');
+        throw new Error('storage broken');
       },
     };
     const { getByTestId } = await renderTrack({ outline: OUTLINE, storage });
     expect(getByTestId('outline-beat-0')).toBeTruthy();
-    // anche il salvataggio della scelta fallisce in silenzio
+    // saving the choice also fails silently
     await fireEvent.press(getByTestId('outline-track-toggle'));
     await act(async () => {});
     expect(getByTestId('outline-track')).toBeTruthy();
   });
 
-  it('senza etichetta capitolo il pannello dice solo "Traccia"', async () => {
+  it('without a chapter label the panel says just "Traccia"', async () => {
     const { getByTestId } = await renderTrack({ outline: OUTLINE, chapterLabel: '' });
     expect(getByTestId('outline-track')).toHaveTextContent(/Traccia/);
     expect(getByTestId('outline-track')).not.toHaveTextContent(/Traccia ·/);

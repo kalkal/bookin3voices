@@ -1,8 +1,8 @@
-// Avviso "chiave di sviluppo": serve solo se le functions usano una chiave
-// Gemini del tier GRATUITO, che usa i prompt per l'addestramento — in quel caso
-// nessun testo reale del libro va mandato all'AI. Con il provider predefinito
-// (Amazon Nova su Bedrock) i prompt non vengono usati per l'addestramento, quindi
-// l'avviso è spento. Mettere true se si usa una chiave Gemini gratuita.
-// La costante è condivisa da tutte le superfici che invocano l'AI (tab Sinossi,
-// editor/rifinitura).
+// "Development key" warning: only needed if the functions use a FREE-tier
+// Gemini key, which uses prompts for training — in that case no real book
+// text must be sent to the AI. With the default provider (Amazon Nova on
+// Bedrock) prompts are not used for training, so the warning is off.
+// Set to true when using a free Gemini key.
+// The constant is shared by every surface that calls the AI (Synopsis tab,
+// editor/refinement).
 export const SHOW_FREE_TIER_WARNING = false;

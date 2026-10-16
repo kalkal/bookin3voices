@@ -1,30 +1,29 @@
-// Provider FINTO di suggerimenti (Strategy): genera in locale suggerimenti
-// plausibili e meccanicamente corretti (span che combaciano, 1–3 proposte,
-// hash del testo) per costruire e collaudare l'esperienza di review PRIMA che
-// esista la function `refineChapter`, che lo sostituirà dietro la stessa
-// interfaccia SuggestionsProvider.
+// FAKE suggestions provider (Strategy): generates plausible, mechanically
+// correct suggestions locally (matching spans, 1-3 proposals, text hash) to
+// build and exercise the review experience BEFORE the `refineChapter` function
+// exists, which will replace it behind the same SuggestionsProvider interface.
 //
-// Le regole si ispirano alle categorie del golden set
-// (content/style-profiles/suspense/golden-set/): avverbi in -mente e verbi
-// filtro (style), refusi di dettatura come elisioni e minuscole (grammar),
-// frasi lunghe da spezzare (pacing). NON è un modello di stile: è un generatore
-// deterministico per UI e test — la qualità vera dei suggerimenti è materia
-// della callable refineChapter e del giudizio editoriale umano.
+// The rules follow the categories of the golden set
+// (content/style-profiles/suspense/golden-set/): -mente adverbs and filter
+// verbs (style), dictation slips such as elisions and lowercase (grammar),
+// long sentences to split (pacing). It is NOT a style model: it is a
+// deterministic generator for UI and tests; real suggestion quality is the
+// job of the refineChapter callable and of human editorial judgment.
 
 import { textHash } from './textHash';
 import type { RefineRequest, RefineResult, Suggestion, SuggestionsProvider } from './types';
 
-/** Densità del golden set: 5–8 suggerimenti per brano, mai una pioggia. */
+/** Golden-set density: 5-8 suggestions per passage, never a downpour. */
 const MAX_SUGGESTIONS = 8;
 
-/** Femminili comuni che dopo «un» vogliono l'elisione (refuso da dettatura). */
+/** Common feminine nouns that take elision after «un» (dictation slip). */
 const FEMININE_AFTER_UN = ['altra', 'amica', 'idea', 'intera', 'ombra', 'ora', 'ultima', 'unica'];
 
-/** Verbi filtro segnalati dal golden set: la percezione diretta è più forte. */
+/** Filter verbs flagged by the golden set: direct perception is stronger. */
 const FILTER_VERBS = ['sentì che', 'vide che', 'capì che', 'pensò che', 'si rese conto che'];
 
 export interface FakeSuggestionsProviderOptions {
-  /** Ritardo simulato della "chiamata" (0 nei test, ~700ms nell'app). */
+  /** Simulated delay of the "call" (0 in tests, ~700ms in the app). */
   delayMs?: number;
 }
 
@@ -48,7 +47,7 @@ export class FakeSuggestionsProvider implements SuggestionsProvider {
       ...findLongSentences(text),
     ].sort((a, b) => a.span.from - b.span.from);
 
-    // niente span sovrapposti nello stesso lotto: si tiene il primo
+    // no overlapping spans in the same batch: keep the first
     const kept: Draft[] = [];
     for (const draft of found) {
       const last = kept[kept.length - 1];
@@ -79,7 +78,7 @@ interface Draft {
   rationale: string;
 }
 
-/** «posò lentamente» → 3 varianti di stile senza l'avverbio in -mente. */
+/** «posò lentamente» → 3 style variants without the -mente adverb. */
 function findAdverbs(text: string): Draft[] {
   const drafts: Draft[] = [];
   const regex = /(\p{L}+) (\p{L}{3,}mente)\b/gu;
@@ -96,9 +95,9 @@ function findAdverbs(text: string): Draft[] {
 }
 
 /**
- * «sentì che qualcosa non andava» → «qualcosa non andava»: lo span copre il
- * verbo filtro E la parola successiva, la proposta tiene solo quest'ultima —
- * così la patch non è mai una cancellazione a proposta vuota (schema).
+ * «sentì che qualcosa non andava» → «qualcosa non andava»: the span covers the
+ * filter verb AND the next word, and the proposal keeps only the latter, so
+ * the patch is never a deletion with an empty proposal (schema).
  */
 function findFilterVerbs(text: string): Draft[] {
   const drafts: Draft[] = [];
@@ -121,7 +120,7 @@ function findFilterVerbs(text: string): Draft[] {
   return drafts;
 }
 
-/** «un altra» → «un'altra»: una sola proposta (grammatica). */
+/** «un altra» → «un'altra»: a single proposal (grammar). */
 function findMissingElisions(text: string): Draft[] {
   const drafts: Draft[] = [];
   const regex = new RegExp(`\\bun (${FEMININE_AFTER_UN.join('|')})\\b`, 'gu');
@@ -136,7 +135,7 @@ function findMissingElisions(text: string): Draft[] {
   return drafts;
 }
 
-/** «. aprì il rubinetto» → maiuscola dopo il punto (refuso di dettatura). */
+/** «. aprì il rubinetto» → capital after the period (dictation slip). */
 function findLowercaseSentenceStarts(text: string): Draft[] {
   const drafts: Draft[] = [];
   const regex = /[.!?]\s+(\p{Ll})/gu;
@@ -152,10 +151,10 @@ function findLowercaseSentenceStarts(text: string): Draft[] {
   return drafts;
 }
 
-/** Parole oltre cui una frase dettata chiede una spezzatura di ritmo. */
+/** Word count beyond which a dictated sentence calls for a pacing split. */
 const LONG_SENTENCE_WORDS = 45;
 
-/** Frase molto lunga → spezzarla su una «e» centrale: proposta unica, prudente. */
+/** Very long sentence → split it at a central «e»: a single, cautious proposal. */
 function findLongSentences(text: string): Draft[] {
   const drafts: Draft[] = [];
   const sentenceRegex = /[^.!?]+[.!?]?/g;
@@ -163,7 +162,7 @@ function findLongSentences(text: string): Draft[] {
     const sentence = match[0];
     const words = sentence.trim().split(/\s+/);
     if (words.length <= LONG_SENTENCE_WORDS) continue;
-    // la « e parola» più vicina al centro della frase
+    // the « e word» closest to the middle of the sentence
     const eRegex = / e (\p{Ll}\p{L}*)/gu;
     const middle = match.index + sentence.length / 2;
     let best: { from: number; whole: string; word: string } | null = null;

@@ -1,5 +1,5 @@
-// OutlineService in memoria per test e modalità E2E: risponde a
-// copione senza rete, registrando le richieste per le asserzioni.
+// In-memory OutlineService for tests and E2E mode: answers from a
+// script without network, recording the requests for assertions.
 
 import type { GenerateOutlineRequest, OutlineCard, OutlineProposal, OutlineService } from './types';
 
@@ -18,7 +18,7 @@ const SCALETTA_DEFAULT: OutlineCard[] = [
 
 export class InMemoryOutlineService implements OutlineService {
   readonly requests: GenerateOutlineRequest[] = [];
-  /** Se impostato, la prossima generateOutline fallisce con questo errore. */
+  /** If set, the next generateOutline fails with this error. */
   nextError?: Error;
   private readonly chapters: OutlineCard[];
 

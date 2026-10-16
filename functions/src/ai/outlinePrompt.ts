@@ -1,14 +1,14 @@
-// Prompt della generazione outline. I prompt sono CODICE:
-// versionati (OUTLINE_PROMPT_VERSION) e coperti da snapshot test — un
-// refactor non deve cambiarli silenziosamente, una modifica voluta aggiorna
-// versione e snapshot insieme.
+// Outline generation prompt. Prompts are CODE: versioned
+// (OUTLINE_PROMPT_VERSION) and covered by snapshot tests; a refactor must not
+// change them silently, and an intentional change updates the version and the
+// snapshot together.
 //
-// Regole incorporate nel prompt: i capitoli già scritti sono
-// contesto intoccabile — il modello NON li ripropone, la scaletta prosegue
-// da dove il libro è arrivato. Il merge additivo vero resta comunque all'app:
-// il prompt è la prima linea, non la garanzia.
+// Rules built into the prompt: chapters already written are untouchable
+// context; the model does NOT propose them again, and the outline continues
+// from where the book has got to. The real additive merge still belongs to the
+// app: the prompt is the first line of defense, not the guarantee.
 
-/** Versione del prompt: da incrementare a OGNI modifica del testo o dello schema. */
+/** Prompt version: bump on EVERY change to the text or the schema. */
 export const OUTLINE_PROMPT_VERSION = 1;
 
 export interface OutlinePromptInput {
@@ -18,25 +18,25 @@ export interface OutlinePromptInput {
     genre: string;
     language: string;
   };
-  /** Titoli dei capitoli con testo (rawText non vuoto), in ordine: solo contesto. */
+  /** Titles of chapters with text (non-empty rawText), in order: context only. */
   writtenChapterTitles: string[];
 }
 
-/** Prompt pronto per il modello: istruzioni, testo utente e schema di risposta. */
+/** Prompt ready for the model: instructions, user text and response schema. */
 export interface OutlinePrompt {
   systemInstruction: string;
   userText: string;
-  /** JSON Schema (dialetto OpenAPI di Gemini) per lo structured output. */
+  /** JSON Schema (Gemini's OpenAPI dialect) for structured output. */
   responseSchema: Record<string, unknown>;
 }
 
 /**
- * Schema di risposta per lo structured output di Gemini: rispecchia
- * outlineSchema (types.ts) nel dialetto OpenAPI dell'API. `propertyOrdering`
- * stabilizza l'ordine dei campi nel JSON generato (raccomandazione Google).
- * NIENTE minItems/maxItems: l'endpoint li rifiuta con 400 (verificato
- * su gemini-3.6-flash) — i limiti numerici li fa rispettare lo
- * Zod di outlineSchema, qui restano solo nelle description.
+ * Response schema for Gemini's structured output: mirrors outlineSchema
+ * (types.ts) in the API's OpenAPI dialect. `propertyOrdering` stabilizes the
+ * field order in the generated JSON (Google's recommendation).
+ * NO minItems/maxItems: the endpoint rejects them with 400 (verified on
+ * gemini-3.6-flash); the numeric limits are enforced by the Zod outlineSchema
+ * and appear here only in the descriptions.
  */
 export const OUTLINE_RESPONSE_SCHEMA: Record<string, unknown> = {
   type: 'OBJECT',
@@ -87,7 +87,7 @@ function writtenChaptersBlock(titles: string[]): string {
   ].join('\n');
 }
 
-/** Costruisce il prompt (funzione pura: lo snapshot test la blocca). */
+/** Builds the prompt (pure function: the snapshot test locks it). */
 export function buildOutlinePrompt(input: OutlinePromptInput): OutlinePrompt {
   const userText = [
     `Libro: «${input.book.title}»`,

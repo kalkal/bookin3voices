@@ -1,7 +1,7 @@
-// Conteggio dei suggerimenti pending su Firestore (sottocollezione
-// `suggestions` dei capitoli; avviso pre-export). Si contano capitolo
-// per capitolo — niente collection group: le rules per-utente non lo
-// prevedono e i capitoli di un libro sono poche decine.
+// Count of pending suggestions on Firestore (the chapters'
+// `suggestions` subcollection; pre-export warning). They are counted chapter
+// by chapter — no collection group: the per-user rules do not provide for it
+// and a book's chapters are a few dozen.
 
 import { collection, getDocs, query, where, type Firestore } from 'firebase/firestore';
 

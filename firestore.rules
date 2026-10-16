@@ -1,14 +1,14 @@
 rules_version = '2';
 
-// Security rules per-utente: solo il proprietario
-// autenticato accede al proprio albero users/{uid}/**; tutto il resto negato.
+// Per-user security rules: only the authenticated owner
+// accesses their own users/{uid}/** tree; everything else is denied.
 //
-// Scelta deliberata: match ESPLICITI sulle collezioni dello schema invece
-// del wildcard ricorsivo users/{uid}/{document=**}. In Firestore basta un
-// match che consente per aprire l'accesso, quindi il wildcard permetterebbe
-// di aggirare le validazioni di forma. Rovescio della medaglia:
-// una collezione nuova nasce negata (fail-closed) finché non viene aggiunta
-// qui — aggiornare queste rules fa parte di ogni evoluzione dello schema.
+// Deliberate choice: EXPLICIT matches on the schema collections instead of
+// the recursive wildcard users/{uid}/{document=**}. In Firestore a single
+// allowing match is enough to open access, so the wildcard would allow
+// bypassing the shape validations. Flip side: a new collection is born
+// denied (fail-closed) until it is added here — updating these rules is
+// part of every schema evolution.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -16,17 +16,17 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
-    // schemaVersion presente e intero positivo (upgrade-on-read).
-    // Su update request.resource.data è il documento risultante, quindi la
-    // guardia impedisce anche di rimuovere il campo.
+    // schemaVersion present and a positive integer (upgrade-on-read).
+    // On update request.resource.data is the resulting document, so the
+    // guard also prevents removing the field.
     function hasSchemaVersion() {
       return request.resource.data.schemaVersion is int
         && request.resource.data.schemaVersion > 0;
     }
 
     match /users/{uid} {
-      // Lo schema non prevede un documento utente vero e proprio:
-      // nessuna regola sul doc users/{uid} stesso (resta negato).
+      // The schema has no real user document:
+      // no rule on the users/{uid} doc itself (it stays denied).
 
       match /books/{bookId} {
         allow read, delete: if isOwner(uid);
@@ -47,9 +47,9 @@ service cloud.firestore {
           }
         }
 
-        // Taccuino (idee/pensieri per libro): sottocollezione del
-        // libro. Create/update passano dalla guardia schemaVersion come books
-        // e chapters (upgrade-on-read); read/delete solo al proprietario.
+        // Notebook (ideas/thoughts per book): subcollection of the
+        // book. Create/update go through the schemaVersion guard like books
+        // and chapters (upgrade-on-read); read/delete only for the owner.
         match /notes/{noteId} {
           allow read, delete: if isOwner(uid);
           allow create, update: if isOwner(uid) && hasSchemaVersion();
@@ -69,8 +69,8 @@ service cloud.firestore {
       }
     }
 
-    // Default deny esplicito (ridondante — Firestore nega ciò che nessun
-    // match consente — ma documenta l'intenzione).
+    // Explicit default deny (redundant — Firestore denies whatever no
+    // match allows — but it documents the intent).
     match /{document=**} {
       allow read, write: if false;
     }

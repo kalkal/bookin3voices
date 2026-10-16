@@ -1,10 +1,10 @@
 /**
- * Review suggerimenti: card
- * originale→proposta con categoria e motivazione in una riga; per lo stile
- * fino a 3 varianti selezionabili (tap = scegli), per grammatica/ritmo una
- * proposta sola; swipe destra = accetta, sinistra = rifiuta (stessi comandi
- * dei bottoni tondi); filtri per categoria con «accetta tutti»; «Annulla»
- * sull'ultimo comando (Command pattern con undo).
+ * Suggestion review: original→proposal cards
+ * with category and one-line rationale; for style up to 3 selectable
+ * variants (tap = choose), for grammar/pacing a single proposal; swipe
+ * right = accept, left = reject (same commands as the round buttons);
+ * category filters with «accept all»; «Annulla» on the last command
+ * (Command pattern with undo).
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
@@ -28,7 +28,7 @@ import type { ChapterReviewController } from './useChapterReview';
 
 export interface ReviewScreenProps {
   controller: ChapterReviewController;
-  /** Es. "Capitolo VII". */
+  /** E.g. "Capitolo VII". */
   chapterLabel?: string;
   onBack: () => void;
 }
@@ -207,8 +207,8 @@ function SuggestionCard({
   const [selected, setSelected] = useState(0);
   const translateX = useMemo(() => new Animated.Value(0), []);
 
-  // si ricrea quando cambiano gestori o variante scelta: mai a metà gesto
-  // (la variante si sceglie col tap, non durante lo swipe)
+  // recreated when handlers or the chosen variant change: never mid-gesture
+  // (the variant is chosen with a tap, not during the swipe)
   const panResponder = useMemo(
     () =>
       PanResponder.create({

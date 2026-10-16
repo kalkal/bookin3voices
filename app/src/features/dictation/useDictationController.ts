@@ -1,12 +1,12 @@
-// Controller React della schermata Dettatura: lega DictationSession (motore +
-// state machine) al ChapterRepository con queste regole:
-//  - ogni finale aggiorna subito lo stato locale; il repository riceve con
-//    debounce 3 s, MA pausa/interruzione/background/chiusura salvano subito
-//    (regola di convivenza 3 — il testo non si perde MAI);
-//  - pre-flight a inizio schermata;
-//  - keep-awake mentre si ascolta, pausa automatica su passaggio in background
-//    o blocco schermo — l'interruzione audio la gestisce già la sessione;
-//  - aptica su start/pausa/ripresa e sulle pause automatiche.
+// React controller for the Dictation screen: binds DictationSession (engine +
+// state machine) to the ChapterRepository with these rules:
+//  - every final result updates local state immediately; the repository is
+//    written with a 3 s debounce, BUT pause/interruption/background/close save
+//    immediately (text is NEVER lost);
+//  - pre-flight at screen start;
+//  - keep-awake while listening, automatic pause when moving to background
+//    or on screen lock (audio interruption is already handled by the session);
+//  - haptics on start/pause/resume and on automatic pauses.
 
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -32,29 +32,29 @@ export interface DictationControllerOptions {
   engine: DictationEngine;
   repository: ChapterTextRepository;
   chapter: ChapterRef;
-  /** Debounce verso il repository (default 3000 ms: 3–5 s). */
+  /** Debounce toward the repository (default 3000 ms; typical range 3-5 s). */
   debounceMs?: number;
   lang?: string;
-  /** Controlli di pre-flight; default: quelli nativi. Iniettabili nei test. */
+  /** Pre-flight checks; defaults to the native ones. Injectable in tests. */
   preflightChecks?: PreflightChecks;
 }
 
 export interface DictationController {
-  /** Caricamento del testo esistente dal repository. */
+  /** Loading of the existing text from the repository. */
   loadState: 'loading' | 'ready' | 'load-error';
   sessionState: SessionState;
-  /** Testo consolidato: capitolo + sessione corrente (in inchiostro). */
+  /** Finalized text: chapter + current session (rendered in ink). */
   fullText: string;
-  /** Parziale effimero del motore (in grigio attenuato). */
+  /** Ephemeral interim result from the engine (rendered dimmed grey). */
   partial: string;
-  /** Parole aggiunte da quando la schermata è stata aperta. */
+  /** Words added since the screen was opened. */
   sessionWords: number;
   saveStatus: SaveStatus;
   dictationError?: DictationError;
-  /** true se la pausa corrente è automatica (telefonata, rete, background). */
+  /** true if the current pause is automatic (phone call, network, background). */
   pausedByInterruption: boolean;
   preflight: PreflightReport | undefined;
-  /** true finché il pre-flight non è concluso. */
+  /** true until the pre-flight has finished. */
   preflightRunning: boolean;
   micDisabled: boolean;
   toggleMic: () => void;
@@ -63,7 +63,7 @@ export interface DictationController {
 
 const haptic = (fn: () => Promise<unknown>) => {
   fn().catch(() => {
-    // l'aptica è decorativa: mai far fallire la dettatura per un motorino
+    // haptics are decorative: never let a vibration failure break dictation
   });
 };
 
@@ -81,12 +81,12 @@ export function useDictationController(options: DictationControllerOptions): Dic
   const [preflight, setPreflight] = useState<PreflightReport | undefined>();
   const [preflightRunning, setPreflightRunning] = useState(true);
 
-  // ref speculari per i callback della sessione (evitano chiusure stantie)
+  // mirror refs for the session callbacks (avoid stale closures)
   const baseTextRef = useRef('');
   const initialWordsRef = useRef(0);
   const holder = useRef<{ session?: DictationSession; saver?: DebouncedSaver }>({}).current;
-  // dopo lo smontaggio il flush di chiusura DEVE ancora girare (salvataggio),
-  // ma niente più setState: la schermata non c'è più
+  // after unmount the closing flush MUST still run (saving),
+  // but no more setState: the screen is gone
   const unmountedRef = useRef(false);
 
   const saver = useMemo(
@@ -98,7 +98,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
           if (!unmountedRef.current) setSaveStatus(status);
         },
       }),
-    // il repository e il capitolo sono fissi per la vita della schermata
+    // the repository and chapter are fixed for the screen's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -132,14 +132,14 @@ export function useDictationController(options: DictationControllerOptions): Dic
           }
         },
       }),
-    // motore e opzioni sono fissi per la vita della schermata
+    // the engine and options are fixed for the screen's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   holder.session = session;
   holder.saver = saver;
 
-  // caricamento del testo esistente (il capitolo può essere già iniziato)
+  // load the existing text (the chapter may already be started)
   useEffect(() => {
     let cancelled = false;
     repository
@@ -158,12 +158,12 @@ export function useDictationController(options: DictationControllerOptions): Dic
     return () => {
       cancelled = true;
     };
-    // il capitolo è fisso per la vita della schermata
+    // the chapter is fixed for the screen's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // pre-flight: permesso mic, servizio, lingua offline; il nonce
-  // permette di rieseguirlo su richiesta (bottone "Ricontrolla")
+  // pre-flight: mic permission, service, offline language; the nonce
+  // allows rerunning it on request (the "Recheck" button)
   const [preflightNonce, setPreflightNonce] = useState(0);
   useEffect(() => {
     let cancelled = false;
@@ -173,8 +173,8 @@ export function useDictationController(options: DictationControllerOptions): Dic
         if (!cancelled) setPreflight(report);
       })
       .catch(() => {
-        // un pre-flight che esplode non deve murare la schermata: si procede
-        // senza esito e sarà il motore a segnalare l'eventuale problema vero
+        // a pre-flight that blows up must not wall off the screen: proceed
+        // without a result and let the engine report any real problem
         if (!cancelled) setPreflight({ ok: true, issues: [] });
       })
       .finally(() => {
@@ -183,7 +183,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
     return () => {
       cancelled = true;
     };
-    // controlli e lingua fissi per la vita della schermata
+    // checks and language are fixed for the screen's lifetime
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preflightNonce]);
   const rerunPreflight = useCallback(() => {
@@ -192,8 +192,8 @@ export function useDictationController(options: DictationControllerOptions): Dic
     setPreflightNonce((nonce) => nonce + 1);
   }, []);
 
-  // pausa automatica quando l'app va in background o lo schermo si blocca
-  // (se non si sta ascoltando, comunque flush: mai testo solo in RAM)
+  // automatic pause when the app goes to background or the screen locks
+  // (if not listening, still flush: never keep text only in RAM)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') return;
@@ -205,7 +205,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
     return () => subscription.remove();
   }, [holder]);
 
-  // schermo acceso finché si ascolta (keep-awake)
+  // keep the screen on while listening (keep-awake)
   useEffect(() => {
     if (sessionState !== 'listening') return;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
@@ -214,7 +214,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
     };
   }, [sessionState]);
 
-  // chiusura schermata: stop (flush + motore giù) e rilascio risorse
+  // screen close: stop (flush + engine down) and release resources
   useEffect(() => {
     return () => {
       unmountedRef.current = true;
@@ -238,7 +238,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
         break;
       case 'error':
         current.reset();
-      // falls through: da idle si riparte consolidando la sessione precedente
+      // falls through: from idle we restart, folding in the previous session
       case 'idle': {
         const folded = appendText(baseTextRef.current, current.text);
         baseTextRef.current = folded;
@@ -250,7 +250,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
         break;
       }
       default:
-        break; // committing: si attende la chiusura
+        break; // committing: wait for the close
     }
   }, [holder]);
 

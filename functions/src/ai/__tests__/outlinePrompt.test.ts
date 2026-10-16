@@ -1,6 +1,6 @@
-// Snapshot test del prompt outline (i prompt sono codice — un
-// refactor non deve cambiarli silenziosamente). Una modifica VOLUTA al prompt
-// aggiorna insieme OUTLINE_PROMPT_VERSION e questi snapshot.
+// Snapshot test of the outline prompt (prompts are code; a refactor must not
+// change them silently). An INTENTIONAL prompt change updates
+// OUTLINE_PROMPT_VERSION and these snapshots together.
 
 import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION } from '../outlinePrompt';
 
@@ -17,15 +17,15 @@ describe('buildOutlinePrompt', () => {
     writtenChapterTitles: [],
   };
 
-  it('la versione del prompt è quella attesa (bump esplicito a ogni modifica)', () => {
+  it('the prompt version is the expected one (explicit bump on every change)', () => {
     expect(OUTLINE_PROMPT_VERSION).toBe(1);
   });
 
-  it('snapshot senza capitoli già scritti', () => {
+  it('snapshot without already-written chapters', () => {
     expect(buildOutlinePrompt(base)).toMatchSnapshot();
   });
 
-  it('snapshot con capitoli già scritti (contesto)', () => {
+  it('snapshot with already-written chapters (context)', () => {
     expect(
       buildOutlinePrompt({
         ...base,
@@ -34,7 +34,7 @@ describe('buildOutlinePrompt', () => {
     ).toMatchSnapshot();
   });
 
-  it('i capitoli già scritti entrano nel testo utente come elenco numerato', () => {
+  it('already-written chapters enter the user text as a numbered list', () => {
     const prompt = buildOutlinePrompt({
       ...base,
       writtenChapterTitles: ['Il ritorno', 'Il registro'],
@@ -44,11 +44,11 @@ describe('buildOutlinePrompt', () => {
     expect(prompt.userText).toContain('non riproporli');
   });
 
-  it('senza capitoli scritti il blocco non compare', () => {
+  it('without written chapters the block does not appear', () => {
     expect(buildOutlinePrompt(base).userText).not.toContain('GIÀ SCRITTI');
   });
 
-  it('genere e lingua vuoti hanno un ripiego leggibile', () => {
+  it('empty genre and language have a readable fallback', () => {
     const prompt = buildOutlinePrompt({
       ...base,
       book: { title: 'Senza meta', genre: '', language: '' },
@@ -57,7 +57,7 @@ describe('buildOutlinePrompt', () => {
     expect(prompt.userText).toContain('Lingua del libro: it');
   });
 
-  it('lo schema di risposta NON contiene minItems/maxItems (l’endpoint li rifiuta)', () => {
+  it('the response schema does NOT contain minItems/maxItems (the endpoint rejects them)', () => {
     const flat = JSON.stringify(buildOutlinePrompt(base).responseSchema);
     expect(flat).not.toContain('minItems');
     expect(flat).not.toContain('maxItems');

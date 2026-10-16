@@ -1,7 +1,7 @@
 /**
- * Provider del tema a due modalità: "paper" (default) e "candlelight"
- * (scuro, abbozzato). I componenti leggono tutto da `useTheme`,
- * mai dai token grezzi, così il cambio tema resta un dettaglio del provider.
+ * Two-mode theme provider: "paper" (default) and "candlelight"
+ * (dark, sketched). Components read everything from `useTheme`,
+ * never from the raw tokens, so switching theme stays a provider detail.
  */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
@@ -39,7 +39,7 @@ const ThemeContext = createContext<Theme | null>(null);
 
 interface ThemeProviderProps {
   children: ReactNode;
-  /** Modalità iniziale; il default dell'app è il tema carta. */
+  /** Initial mode; the app default is the paper theme. */
   initialMode?: ThemeMode;
 }
 
@@ -64,11 +64,11 @@ export function ThemeProvider({ children, initialMode = 'paper' }: ThemeProvider
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
 }
 
-/** Tema corrente; da usare solo sotto `ThemeProvider`. */
+/** Current theme; to be used only under `ThemeProvider`. */
 export function useTheme(): Theme {
   const theme = useContext(ThemeContext);
   if (theme === null) {
-    throw new Error('useTheme va usato dentro <ThemeProvider>');
+    throw new Error('useTheme must be used inside <ThemeProvider>');
   }
   return theme;
 }

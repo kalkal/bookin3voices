@@ -1,9 +1,10 @@
 /**
- * Cattura di una nota a voce (feature Taccuino). Pannello modale che riusa il
- * motore di dettatura e i comandi vocali dei capitoli, ma SENZA la macchina di
- * sessione né l'autosave: una nota si detta e si salva in un colpo ( * brief Taccuino). Il testo dettato passa dal TranscriptComposer (punteggiatura
- * a voce), resta editabile a mano e si salva con "Salva idea" → createNote.
- * Il motore è iniettabile (Fake nei test); la UI non tocca mai l'SDK Firebase.
+ * Voice note capture (Notebook feature). Modal panel that reuses the
+ * dictation engine and the chapters' voice commands, but WITHOUT the session
+ * state machine or autosave: a note is dictated and saved in one go. The
+ * dictated text goes through the TranscriptComposer (spoken punctuation), stays
+ * hand-editable and is saved with "Salva idea" → createNote.
+ * The engine is injectable (Fake in tests); the UI never touches the Firebase SDK.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -18,19 +19,19 @@ import type { NoteTag } from './types';
 
 export interface NoteCaptureModalProps {
   visible: boolean;
-  /** Motore STT già creato dalla schermata (riusabile tra un'apertura e l'altra). */
+  /** STT engine already created by the screen (reusable between openings). */
   engine: DictationEngine;
   lang?: string;
   onCancel: () => void;
-  /** Salva la nota: testo (già trimmato) e tag scelto (o null). */
+  /** Saves the note: text (already trimmed) and chosen tag (or null). */
   onSave: (text: string, tag: NoteTag | null) => void;
-  /** Testo di partenza in modifica (precompila l'editor). Default: vuoto. */
+  /** Starting text when editing (pre-fills the editor). Default: empty. */
   initialText?: string;
-  /** Tag di partenza in modifica. Default: null. */
+  /** Starting tag when editing. Default: null. */
   initialTag?: NoteTag | null;
-  /** Titolo del pannello (es. "Modifica idea" in modifica). Default: "Nuova idea". */
+  /** Panel title (e.g. "Modifica idea" when editing). Default: "Nuova idea". */
   title?: string;
-  /** Etichetta del pulsante di salvataggio. Default: "Salva idea". */
+  /** Label of the save button. Default: "Salva idea". */
   saveLabel?: string;
 }
 
@@ -52,9 +53,9 @@ export function NoteCaptureModal({
 }: NoteCaptureModalProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
 
-  // Il composer accumula i finali applicando i comandi vocali; si ricostruisce
-  // dal testo quando l'utente modifica a mano, così la dettatura successiva
-  // riprende dal testo corrente. In modifica parte dal testo esistente.
+  // The composer accumulates the final results applying voice commands; it is rebuilt
+  // from the text when the user edits by hand, so the next dictation
+  // resumes from the current text. When editing, it starts from the existing text.
   const composerRef = useRef(new TranscriptComposer(initialText));
   const [text, setText] = useState(initialText);
   const [partial, setPartial] = useState('');
@@ -62,12 +63,12 @@ export function NoteCaptureModal({
   const [tag, setTag] = useState<NoteTag | null>(initialTag);
   const [errorCode, setErrorCode] = useState<DictationErrorCode | undefined>();
 
-  // Nessuna reinizializzazione in un effetto: la schermata rimonta il pannello
-  // (via `key`) a ogni apertura, così lo stato parte già pulito (nuova idea) o
-  // precompilato dai valori iniziali (modifica).
+  // No reinitialization in an effect: the screen remounts the panel
+  // (via `key`) on every opening, so the state starts clean (new idea) or
+  // pre-filled from the initial values (edit).
 
-  // eventi del motore mentre il pannello è montato; alla chiusura si ferma
-  // l'ascolto e si sganciano i listener (mai lasciare il microfono acceso)
+  // engine events while the panel is mounted; on close, listening is stopped
+  // and listeners are detached (never leave the microphone on)
   useEffect(() => {
     engine.setEvents({
       onStart: () => setListening(true),
@@ -91,11 +92,11 @@ export function NoteCaptureModal({
     };
   }, [engine]);
 
-  // Il pannello resta montato tra un'apertura e l'altra (la schermata lo tiene
-  // vivo e lo chiude con visible=false). Alla chiusura — salva, annulla o back
-  // Android — si ferma il motore: senza questo il riconoscimento vocale
-  // continuerebbe in background a microfono acceso. Lo stop emette onEnd, che
-  // azzera ascolto e parziale dai gestori qui sopra (niente setState nell'effetto).
+  // The panel stays mounted between openings (the screen keeps it
+  // alive and closes it with visible=false). On close — save, cancel or Android
+  // back — the engine is stopped: without this, speech recognition
+  // would keep running in the background with the microphone on. The stop emits onEnd, which
+  // resets listening and the partial result in the handlers above (no setState in the effect).
   useEffect(() => {
     if (!visible) engine.stop().catch(() => {});
   }, [visible, engine]);

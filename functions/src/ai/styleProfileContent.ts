@@ -1,27 +1,26 @@
-// Caricamento della Style Bible e dei few-shot di un profilo di stile.
+// Loads the Style Bible and few-shot examples of a style profile.
 //
-// Fonte di verità UNICA: content/style-profiles/<id>/ nella radice del repo
-// (versionata). Al deploy Firebase carica solo la
-// cartella functions/, quindi `npm run build` copia i profili in
-// functions/content/ (scripts/copy-style-profiles.mjs, cartella ignorata da
-// git): a runtime si prova prima la copia locale, in dev/test si risale al
-// repo. Niente doppioni committati, niente drift.
+// SINGLE source of truth: content/style-profiles/<id>/ at the repo root
+// (versioned). Firebase deploys only the functions/ folder, so `npm run build`
+// copies the profiles into functions/content/ (scripts/copy-style-profiles.mjs,
+// a git-ignored folder): at runtime the local copy is tried first, in
+// dev/test the loader walks up to the repo. No committed duplicates, no drift.
 
 import { existsSync, readFileSync } from 'node:fs';
 import * as path from 'node:path';
 
 export interface StyleProfileContent {
-  /** Testo integrale di style-bible.md: va passato come system instruction. */
+  /** Full text of style-bible.md: to be passed as the system instruction. */
   styleBible: string;
-  /** Testo integrale di few-shots.md. */
+  /** Full text of few-shots.md. */
   fewShots: string;
 }
 
-/** Radici candidate, in ordine: copia di build, poi il repo (dev e ts-jest). */
+/** Candidate roots, in order: the build copy, then the repo (dev and ts-jest). */
 function candidateRoots(): string[] {
   return [
     // build:   functions/lib/ai → functions/content
-    // ts-jest: functions/src/ai → functions/content (presente se build già girata)
+    // ts-jest: functions/src/ai → functions/content (present if the build has already run)
     path.resolve(__dirname, '..', '..', 'content', 'style-profiles'),
     // repo: <root>/content/style-profiles
     path.resolve(__dirname, '..', '..', '..', 'content', 'style-profiles'),
@@ -31,8 +30,8 @@ function candidateRoots(): string[] {
 const cache = new Map<string, StyleProfileContent>();
 
 /**
- * Carica il profilo (default: suspense). Lancia se il profilo non esiste
- * in nessuna radice: meglio un errore chiaro di un prompt senza Style Bible.
+ * Loads the profile (default: suspense). Throws if the profile exists in no
+ * root: a clear error beats a prompt without a Style Bible.
  */
 export function loadStyleProfileContent(profileId = 'suspense'): StyleProfileContent {
   const cached = cache.get(profileId);
@@ -49,5 +48,5 @@ export function loadStyleProfileContent(profileId = 'suspense'): StyleProfileCon
     return content;
   }
 
-  throw new Error(`Profilo di stile "${profileId}" non trovato (style-bible.md mancante)`);
+  throw new Error(`Style profile "${profileId}" not found (style-bible.md missing)`);
 }

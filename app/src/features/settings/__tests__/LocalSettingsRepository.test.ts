@@ -17,7 +17,7 @@ function memoryStorage(initial: Record<string, string> = {}) {
 const KEY = 'bookvoice/settings/app';
 
 describe('LocalSettingsRepository', () => {
-  it('senza nulla di salvato tornano i default, con aiProvider = bedrock', async () => {
+  it('with nothing saved the defaults are returned, with aiProvider = bedrock', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalSettingsRepository(storage);
     const settings = await repo.load();
@@ -26,7 +26,7 @@ describe('LocalSettingsRepository', () => {
     expect(settings.theme).toBe('paper');
   });
 
-  it('salva e rilegge il documento completo (round-trip)', async () => {
+  it('saves and re-reads the full document (round-trip)', async () => {
     const { storage } = memoryStorage();
     const repo = new LocalSettingsRepository(storage);
     const modificate: AppSettings = {
@@ -41,7 +41,7 @@ describe('LocalSettingsRepository', () => {
     await expect(repo.load()).resolves.toEqual(modificate);
   });
 
-  it('payload salvato prima della feature Backup (senza lastBackupAt): si legge, niente default', async () => {
+  it('payload saved before the Backup feature (without lastBackupAt): it is read, no defaults', async () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
@@ -62,20 +62,20 @@ describe('LocalSettingsRepository', () => {
     });
   });
 
-  it('il payload salvato è versionato (schemaVersion per upgrade-on-read)', async () => {
+  it('the saved payload is versioned (schemaVersion for upgrade-on-read)', async () => {
     const { storage, data } = memoryStorage();
     const repo = new LocalSettingsRepository(storage);
     await repo.save(DEFAULT_SETTINGS);
     expect(JSON.parse(data.get(KEY) ?? '')).toMatchObject({ schemaVersion: 1 });
   });
 
-  it('payload corrotto: niente crash, si riparte dai default', async () => {
+  it('corrupt payload: no crash, start again from the defaults', async () => {
     const { storage } = memoryStorage({ [KEY]: '{non-json' });
     const repo = new LocalSettingsRepository(storage);
     await expect(repo.load()).resolves.toEqual(DEFAULT_SETTINGS);
   });
 
-  it('payload di uno schema sconosciuto o fuori range: default, mai valori invalidi', async () => {
+  it('payload of an unknown schema or out of range: defaults, never invalid values', async () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({ schemaVersion: 99, aiProvider: 'skynet', dailyGoalWords: -5 }),
     });
