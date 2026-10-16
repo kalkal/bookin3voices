@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, OrnamentDivider } from '../../components';
 import { formatNumber } from '../../lib/text';
+import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { SettingsRepository } from '../settings';
 import { BOOK_TARGET_WORDS } from './LibraryScreen';
@@ -38,7 +39,7 @@ export interface ProgressScreenProps {
 /** Iniziale del giorno della settimana (D L M M G V S) dalla chiave YYYY-MM-DD. */
 function weekdayInitial(dateKey: string): string {
   const [year, month, day] = dateKey.split('-').map(Number);
-  return ['D', 'L', 'M', 'M', 'G', 'V', 'S'][new Date(year, month - 1, day).getDay()];
+  return t('books.weekdayInitials')[new Date(year, month - 1, day).getDay()];
 }
 
 /**
@@ -216,7 +217,7 @@ export function ProgressScreen({
         <Pressable
           testID="progress-back"
           accessibilityRole="button"
-          accessibilityLabel="Torna alla Libreria"
+          accessibilityLabel={t('books.backToLibrary')}
           onPress={onBack}
           style={styles.iconButton}
         >
@@ -230,7 +231,7 @@ export function ProgressScreen({
             color: colors.text,
           }}
         >
-          I progressi
+          {t('books.progressTitle')}
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -263,7 +264,9 @@ export function ProgressScreen({
                   color: colors.textMuted,
                 }}
               >
-                {goal !== null ? `di ${formatNumber(goal)} parole` : 'parole oggi'}
+                {goal !== null
+                  ? t('books.ofGoalWords', { goal: formatNumber(goal) })
+                  : t('books.wordsToday')}
               </Text>
             </GoalRing>
           </View>
@@ -282,7 +285,7 @@ export function ProgressScreen({
                   color: colors.text,
                 }}
               >
-                {`${formatNumber(streak)} ${streak === 1 ? 'giorno' : 'giorni'} di fila`}
+                {tn('books.streakDays', streak, { formatted: formatNumber(streak) })}
               </Text>
               <Text
                 style={{
@@ -291,16 +294,14 @@ export function ProgressScreen({
                   color: colors.textMuted,
                 }}
               >
-                {streak === 0
-                  ? 'Raggiungi l’obiettivo di oggi per accendere la serie.'
-                  : 'Giorni consecutivi in cui hai raggiunto l’obiettivo.'}
+                {streak === 0 ? t('books.streakZero') : t('books.streakSome')}
               </Text>
             </View>
           </Card>
 
           {/* Striscia della settimana: spunta se raggiunto, oggi cerchiato oro */}
           <View style={{ gap: spacing.sm }}>
-            <Text style={sectionLabelStyle}>Questa settimana</Text>
+            <Text style={sectionLabelStyle}>{t('books.thisWeek')}</Text>
             <View style={styles.weekRow} testID="progress-week">
               {view.week.map((day, index) => {
                 const isToday = index === view.week.length - 1;
@@ -318,7 +319,7 @@ export function ProgressScreen({
                     </Text>
                     <View
                       testID={`progress-day-${day.date}`}
-                      accessibilityValue={{ text: ok ? 'raggiunto' : 'non raggiunto' }}
+                      accessibilityValue={{ text: ok ? t('books.reached') : t('books.notReached') }}
                       style={{
                         width: 30,
                         height: 30,
@@ -351,7 +352,7 @@ export function ProgressScreen({
 
           {/* Grafico a barre degli ultimi 7 giorni */}
           <View style={{ gap: spacing.sm }}>
-            <Text style={sectionLabelStyle}>Ultimi 7 giorni</Text>
+            <Text style={sectionLabelStyle}>{t('books.last7Days')}</Text>
             <View style={styles.barsRow}>
               {view.week.map((day) => {
                 const fraction = Math.max(0.02, day.words / view.barMax);
@@ -390,7 +391,7 @@ export function ProgressScreen({
           {/* Riga del libro più recente */}
           {book !== null && (
             <Card style={{ gap: spacing.sm }} testID="progress-book">
-              <Text style={sectionLabelStyle}>Il tuo libro</Text>
+              <Text style={sectionLabelStyle}>{t('books.yourBook')}</Text>
               <Text
                 numberOfLines={2}
                 style={{
@@ -408,7 +409,7 @@ export function ProgressScreen({
                   color: colors.text,
                 }}
               >
-                {`${formatNumber(book.chapterCount)} ${book.chapterCount === 1 ? 'capitolo' : 'capitoli'} · ${formatNumber(book.wordCount)} parole`}
+                {`${tn('books.chapters', book.chapterCount, { formatted: formatNumber(book.chapterCount) })} · ${tn('books.words', book.wordCount, { formatted: formatNumber(book.wordCount) })}`}
               </Text>
               <View
                 style={{

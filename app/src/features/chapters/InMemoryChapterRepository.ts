@@ -2,6 +2,7 @@
 // (CRUD + observe*), più qualche contatore per le asserzioni sui salvataggi
 // (debounce, flush) usato dai test della Dettatura.
 
+import { t } from '../../i18n';
 import { countWords } from '../../lib/text';
 import { toChapterSummary } from './chapterCodec';
 import type {
@@ -105,7 +106,7 @@ export class InMemoryChapterRepository implements ChapterRepository {
     const current = this.listOf(bookId);
     const existing = new Set(current.map((chapter) => chapter.id));
     if (existing.size !== orderedIds.length || orderedIds.some((id) => !existing.has(id))) {
-      throw new Error('Riordino non totale: gli id non coincidono con i capitoli del libro');
+      throw new Error(t('chapters.reorderMismatch'));
     }
     orderedIds.forEach((chapterId, index) => {
       const ref = { bookId, chapterId };

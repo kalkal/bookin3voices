@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
+import { t } from '../../i18n';
 import { useTheme } from '../../theme';
 
 export type MicVisualState = 'idle' | 'listening' | 'paused';
@@ -23,10 +24,10 @@ const BUTTON_SIZE = 88;
 // anello oro: il mockup lo mostra staccato di 6px dal cerchio
 const RING_SIZE = BUTTON_SIZE + 16;
 
-const ACCESSIBILITY_LABELS: Record<MicVisualState, string> = {
-  idle: 'Inizia a dettare',
-  listening: 'Metti in pausa la dettatura',
-  paused: 'Riprendi la dettatura',
+const ACCESSIBILITY_LABEL_KEYS: Record<MicVisualState, string> = {
+  idle: 'dictation.mic.idle',
+  listening: 'dictation.mic.listening',
+  paused: 'dictation.mic.paused',
 };
 
 export function MicButton({ state, onPress, disabled = false, testID }: MicButtonProps) {
@@ -83,7 +84,7 @@ export function MicButton({ state, onPress, disabled = false, testID }: MicButto
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={ACCESSIBILITY_LABELS[state]}
+        accessibilityLabel={t(ACCESSIBILITY_LABEL_KEYS[state])}
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={onPress}

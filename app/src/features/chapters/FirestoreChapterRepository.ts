@@ -27,6 +27,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 
+import { t } from '../../i18n';
 import { timestampsToMillis, toError } from '../../lib/firestoreCodec';
 import { countWords } from '../../lib/text';
 import { decodeChapterDoc, toChapter, toChapterSummary } from './chapterCodec';
@@ -239,7 +240,7 @@ export class FirestoreChapterRepository implements ChapterRepository {
     const snapshot = await getDocs(this.chaptersCol(bookId));
     const existing = new Set(snapshot.docs.map((docSnap) => docSnap.id));
     if (existing.size !== orderedIds.length || orderedIds.some((id) => !existing.has(id))) {
-      throw new Error('Riordino non totale: gli id non coincidono con i capitoli del libro');
+      throw new Error(t('chapters.reorderMismatch'));
     }
 
     const batch = writeBatch(this.db);

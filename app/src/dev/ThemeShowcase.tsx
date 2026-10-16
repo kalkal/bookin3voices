@@ -7,6 +7,7 @@ import { ScrollView, Text, View } from 'react-native';
 import type { ReactNode } from 'react';
 
 import { Card, Chip, DropCap, OrnamentDivider, PrimaryButton, RomanNumeral } from '../components';
+import { t } from '../i18n';
 import { useTheme } from '../theme';
 
 const EDITOR_SAMPLE =
@@ -61,14 +62,14 @@ export function ThemeShowcase() {
   const { mode, setMode, colors, spacing, radius, typeScale, letterSpacing, fonts } = useTheme();
 
   const swatches: [string, string][] = [
-    ['carta', colors.background],
-    ['card', colors.surface],
-    ['inchiostro', colors.text],
-    ['attenuato', colors.textMuted],
-    ['verde', colors.primary],
-    ['oro', colors.accent],
-    ['oro chiaro', colors.accentLight],
-    ['filetto', colors.hairline],
+    [t('settings.dev.sw.paper'), colors.background],
+    [t('settings.dev.sw.card'), colors.surface],
+    [t('settings.dev.sw.ink'), colors.text],
+    [t('settings.dev.sw.muted'), colors.textMuted],
+    [t('settings.dev.sw.green'), colors.primary],
+    [t('settings.dev.sw.gold'), colors.accent],
+    [t('settings.dev.sw.goldLight'), colors.accentLight],
+    [t('settings.dev.sw.hairline'), colors.hairline],
   ];
 
   return (
@@ -100,20 +101,20 @@ export function ThemeShowcase() {
             color: colors.textMuted,
           }}
         >
-          Vetrina del tema — solo sviluppo
+          {t('settings.dev.subtitle')}
         </Text>
       </View>
 
-      <Section title="Tema">
+      <Section title={t('settings.dev.theme')}>
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <Chip
-            label="Carta"
+            label={t('settings.dev.paper')}
             selected={mode === 'paper'}
             onPress={() => setMode('paper')}
             testID="mode-paper"
           />
           <Chip
-            label="A lume di candela"
+            label={t('settings.dev.candlelight')}
             selected={mode === 'candlelight'}
             onPress={() => setMode('candlelight')}
             testID="mode-candlelight"
@@ -121,7 +122,7 @@ export function ThemeShowcase() {
         </View>
       </Section>
 
-      <Section title="Palette">
+      <Section title={t('settings.dev.palette')}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           {swatches.map(([name, value]) => (
             <Swatch key={name} name={name} value={value} />
@@ -129,12 +130,12 @@ export function ThemeShowcase() {
         </View>
       </Section>
 
-      <Section title="Tipografia">
+      <Section title={t('settings.dev.typography')}>
         <Text style={{ fontFamily: fonts.display, fontSize: typeScale.title, color: colors.text }}>
-          Titolo — Cormorant Garamond
+          {t('settings.dev.typeTitle')}
         </Text>
         <Text style={{ fontFamily: fonts.body, fontSize: typeScale.bodyLarge, color: colors.text }}>
-          Corpo del capitolo — EB Garamond, la misura della lettura.
+          {t('settings.dev.typeBody')}
         </Text>
         <Text
           style={{
@@ -143,7 +144,7 @@ export function ThemeShowcase() {
             color: colors.textMutedStrong,
           }}
         >
-          Corsivo per didascalie e motivazioni dei suggerimenti.
+          {t('settings.dev.typeItalic')}
         </Text>
         <Text
           style={{
@@ -154,34 +155,34 @@ export function ThemeShowcase() {
             color: colors.textMuted,
           }}
         >
-          Etichetta maiuscola di sezione
+          {t('settings.dev.typeLabel')}
         </Text>
       </Section>
 
-      <Section title="Bottone primario">
-        <PrimaryButton label="Rifinisci con AI" testID="demo-primary-button" />
-        <PrimaryButton label="Disabilitato" disabled />
+      <Section title={t('settings.dev.button')}>
+        <PrimaryButton label={t('settings.dev.buttonLabel')} testID="demo-primary-button" />
+        <PrimaryButton label={t('settings.dev.disabled')} disabled />
       </Section>
 
-      <Section title="Chip">
+      <Section title={t('settings.dev.chip')}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <Chip label="Tutti" selected />
-          <Chip label="Stile" />
-          <Chip label="Grammatica" />
-          <Chip label="Ritmo" />
+          <Chip label={t('settings.dev.chipAll')} selected />
+          <Chip label={t('settings.dev.chipStyle')} />
+          <Chip label={t('settings.dev.chipGrammar')} />
+          <Chip label={t('settings.dev.chipRhythm')} />
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <Chip label="Stile" tone="gold" uppercase />
-          <Chip label="Grammatica" tone="green" uppercase />
+          <Chip label={t('settings.dev.chipStyle')} tone="gold" uppercase />
+          <Chip label={t('settings.dev.chipGrammar')} tone="green" uppercase />
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <Chip label="«punto»" italic />
-          <Chip label="«virgola»" italic />
-          <Chip label="«a capo»" italic />
+          <Chip label={t('settings.dev.chipPeriod')} italic />
+          <Chip label={t('settings.dev.chipComma')} italic />
+          <Chip label={t('settings.dev.chipNewLine')} italic />
         </View>
       </Section>
 
-      <Section title="Card su carta">
+      <Section title={t('settings.dev.card')}>
         <Card testID="demo-card" style={{ gap: spacing.sm + 2 }}>
           <View
             style={{
@@ -199,7 +200,7 @@ export function ThemeShowcase() {
                 color: colors.textMuted,
               }}
             >
-              Obiettivo di oggi
+              {t('settings.dev.goalToday')}
             </Text>
             <Text
               style={{
@@ -208,7 +209,7 @@ export function ThemeShowcase() {
                 color: colors.primary,
               }}
             >
-              Serie: 7 giorni
+              {t('settings.dev.streak')}
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -233,18 +234,18 @@ export function ThemeShowcase() {
             <Text
               style={{ fontFamily: fonts.body, fontSize: typeScale.bodySmall, color: colors.text }}
             >
-              512 / 800 parole
+              {t('settings.dev.progress')}
             </Text>
           </View>
         </Card>
       </Section>
 
-      <Section title="Divisore ornamentale">
+      <Section title={t('settings.dev.divider')}>
         <OrnamentDivider prominent testID="demo-divider-prominent" />
         <OrnamentDivider testID="demo-divider" />
       </Section>
 
-      <Section title="Numerali romani">
+      <Section title={t('settings.dev.roman')}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.lg }}>
           <RomanNumeral value={1} />
           <RomanNumeral value={4} />
@@ -254,7 +255,7 @@ export function ThemeShowcase() {
         </View>
       </Section>
 
-      <Section title="Capolettera">
+      <Section title={t('settings.dev.dropcap')}>
         <DropCap text={EDITOR_SAMPLE} testID="demo-dropcap" />
       </Section>
 

@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrnamentDivider, PrimaryButton } from '../../components';
 import { SHOW_FREE_TIER_WARNING } from '../../lib/freeTier';
 import { countWords } from '../../lib/text';
+import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import { HighlightedChapterText } from './HighlightedChapterText';
 import type { ChapterReviewController } from './useChapterReview';
@@ -58,7 +59,7 @@ export function ChapterEditorScreen({
   const words = countWords(controller.text);
   const subtitle =
     controller.loadState === 'ready'
-      ? `${words.toLocaleString('it-IT')} ${words === 1 ? 'parola' : 'parole'} · in stesura`
+      ? tn('review.editor.subtitle', words, { count: words.toLocaleString(uiLocale()) })
       : ' ';
 
   return (
@@ -75,7 +76,7 @@ export function ChapterEditorScreen({
         {onBack !== undefined && (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Torna al Libro"
+            accessibilityLabel={t('review.editor.backToBook')}
             testID="editor-back"
             onPress={onBack}
             style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
@@ -92,7 +93,7 @@ export function ChapterEditorScreen({
             }}
             numberOfLines={1}
           >
-            {chapterTitle ?? 'Capitolo'}
+            {chapterTitle ?? t('review.editor.chapterFallback')}
           </Text>
           <Text
             testID="editor-subtitle"
@@ -121,8 +122,7 @@ export function ChapterEditorScreen({
                 fontSize: typeScale.caption,
               }}
             >
-              {controller.pendingCount}{' '}
-              {controller.pendingCount === 1 ? 'suggerimento' : 'suggerimenti'}
+              {tn('review.editor.suggestions', controller.pendingCount)}
             </Text>
           </Pressable>
         ) : null}
@@ -141,7 +141,7 @@ export function ChapterEditorScreen({
             testID="editor-load-error"
             style={{ color: colors.textMutedStrong, fontFamily: fonts.bodyItalic }}
           >
-            Impossibile leggere il capitolo salvato. Chiudi e riapri l’app prima di modificare.
+            {t('review.editor.loadError')}
           </Text>
         ) : editing ? (
           <TextInput
@@ -170,7 +170,7 @@ export function ChapterEditorScreen({
               paddingTop: spacing.xxxl,
             }}
           >
-            Il capitolo è vuoto: detta o scrivi qualcosa,{'\n'}poi «Rifinisci con AI».
+            {t('review.editor.emptyHint')}
           </Text>
         ) : (
           <HighlightedChapterText
@@ -190,7 +190,7 @@ export function ChapterEditorScreen({
               marginTop: spacing.lg,
             }}
           >
-            La rifinitura non è riuscita: il testo è intatto, riprova tra poco.
+            {t('review.editor.refineFailed')}
           </Text>
         ) : null}
         {controller.refineBornStale ? (
@@ -203,7 +203,7 @@ export function ChapterEditorScreen({
               marginTop: spacing.lg,
             }}
           >
-            Il testo è cambiato durante la rifinitura: suggerimenti da rigenerare.
+            {t('review.editor.refineStale')}
           </Text>
         ) : null}
       </ScrollView>
@@ -228,13 +228,12 @@ export function ChapterEditorScreen({
               fontSize: typeScale.caption,
             }}
           >
-            Chiave AI di sviluppo attiva — rifinisci SOLO testi di prova
+            {t('review.editor.freeKeyTitle')}
           </Text>
           <Text
             style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: typeScale.caption }}
           >
-            Con la chiave gratuita i testi inviati possono essere usati per addestrare i modelli: il
-            testo vero del libro aspetta la chiave definitiva.
+            {t('review.editor.freeKeyBody')}
           </Text>
         </View>
       )}
@@ -262,7 +261,7 @@ export function ChapterEditorScreen({
         <View style={styles.refineButton}>
           <PrimaryButton
             testID="editor-refine"
-            label={controller.refining ? 'Rifinitura in corso…' : 'Rifinisci con AI'}
+            label={controller.refining ? t('review.editor.refining') : t('review.editor.refine')}
             disabled={
               controller.refining ||
               editing ||

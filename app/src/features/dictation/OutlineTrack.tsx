@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Card } from '../../components';
+import { t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type {
   Chapter,
@@ -113,7 +114,7 @@ export function OutlineTrack({
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={collapsed ? 'Apri la traccia' : 'Chiudi la traccia'}
+        accessibilityLabel={collapsed ? t('dictation.outline.open') : t('dictation.outline.close')}
         testID="outline-track-toggle"
         onPress={toggleCollapsed}
         style={[styles.headerRow, { gap: spacing.md }]}
@@ -130,8 +131,8 @@ export function OutlineTrack({
           }}
         >
           {chapterLabel === undefined || chapterLabel === ''
-            ? 'Traccia'
-            : `Traccia · ${chapterLabel}`}
+            ? t('dictation.outline.label')
+            : t('dictation.outline.labelWith', { chapter: chapterLabel })}
         </Text>
         <Ionicons
           name={collapsed ? 'chevron-down' : 'chevron-up'}

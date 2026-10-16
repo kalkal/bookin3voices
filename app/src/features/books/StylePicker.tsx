@@ -6,6 +6,7 @@
 import { Text, View } from 'react-native';
 
 import { Chip } from '../../components';
+import { getLanguage, t } from '../../i18n';
 import { useTheme } from '../../theme';
 import { resolveStyleId, STYLES } from './styles';
 import type { Book } from './types';
@@ -17,12 +18,13 @@ interface StylePickerProps {
 
 export function StylePicker({ book, onChange }: StylePickerProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
+  const lang = getLanguage();
   const current = resolveStyleId(book.styleProfileId);
   const info = STYLES.find((style) => style.id === current);
   return (
     <View testID="style-picker" style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
       <Text style={{ fontFamily: fonts.body, fontSize: typeScale.label, color: colors.textMuted }}>
-        Stile dei suggerimenti
+        {t('books.suggestionStyle')}
       </Text>
       <View
         style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs }}
@@ -31,7 +33,7 @@ export function StylePicker({ book, onChange }: StylePickerProps) {
           <Chip
             key={style.id}
             testID={`style-option-${style.id}`}
-            label={style.label.it}
+            label={style.label[lang]}
             selected={style.id === current}
             onPress={() => onChange(style.id)}
           />
@@ -47,7 +49,7 @@ export function StylePicker({ book, onChange }: StylePickerProps) {
             marginTop: spacing.xs,
           }}
         >
-          {info.summary.it}
+          {info.summary[lang]}
         </Text>
       )}
     </View>

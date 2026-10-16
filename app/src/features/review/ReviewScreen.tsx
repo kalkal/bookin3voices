@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Chip } from '../../components';
+import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import { KIND_LABELS, SUGGESTION_KINDS } from './types';
 import type { Suggestion, SuggestionKind } from './types';
@@ -62,14 +63,14 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
           <Text
             style={{ color: colors.text, fontFamily: fonts.display, fontSize: typeScale.title }}
           >
-            Suggerimenti
+            {t('review.screen.title')}
           </Text>
           <Text
             testID="review-subtitle"
             style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: typeScale.caption }}
           >
             {chapterLabel ? `${chapterLabel} · ` : ''}
-            {pending.length} in attesa
+            {t('review.screen.pending', { count: pending.length })}
           </Text>
         </View>
       </View>
@@ -81,7 +82,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
         ]}
       >
         <Chip
-          label="Tutti"
+          label={t('review.screen.all')}
           selected={filter === 'all'}
           onPress={() => setFilter('all')}
           testID="review-filter-all"
@@ -100,7 +101,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
       {filter !== 'all' && visible.length > 0 ? (
         <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.md }}>
           <Chip
-            label={`Accetta tutti (${visible.length})`}
+            label={t('review.screen.acceptAll', { count: visible.length })}
             tone="green"
             onPress={() => void controller.acceptAll(filter)}
             testID="review-accept-all"
@@ -136,7 +137,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
               paddingTop: spacing.xxxl,
             }}
           >
-            Nessun suggerimento in attesa.{'\n'}Torna all’editor e «Rifinisci con AI».
+            {t('review.screen.empty')}
           </Text>
         ) : null}
         {controller.staleCount > 0 ? (
@@ -149,11 +150,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
               textAlign: 'center',
             }}
           >
-            {controller.staleCount}{' '}
-            {controller.staleCount === 1
-              ? 'suggerimento non è più applicabile'
-              : 'suggerimenti non sono più applicabili'}{' '}
-            perché il testo è cambiato.
+            {tn('review.screen.stale', controller.staleCount)}
           </Text>
         ) : null}
       </ScrollView>
@@ -171,7 +168,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
       >
         {controller.canUndo ? (
           <Chip
-            label="Annulla ultima modifica"
+            label={t('review.screen.undo')}
             tone="gold"
             onPress={() => void controller.undo()}
             testID="review-undo"
@@ -185,7 +182,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
             textAlign: 'center',
           }}
         >
-          Scorri una scheda a destra per accettare, a sinistra per rifiutare
+          {t('review.screen.swipeHint')}
         </Text>
       </View>
     </SafeAreaView>
@@ -249,7 +246,7 @@ function SuggestionCard({
           <Text
             style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: typeScale.label }}
           >
-            riga {line}
+            {t('review.card.line', { line })}
           </Text>
         </View>
 
@@ -275,7 +272,7 @@ function SuggestionCard({
                 textTransform: 'uppercase',
               }}
             >
-              {suggestion.proposals.length} varianti — tocca per scegliere
+              {t('review.card.variants', { count: suggestion.proposals.length })}
             </Text>
             <View style={{ gap: spacing.sm }}>
               {suggestion.proposals.map((proposal, index) => {
@@ -375,7 +372,7 @@ function SuggestionCard({
         <View style={[styles.actions, { gap: spacing.md }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Rifiuta"
+            accessibilityLabel={t('review.card.reject')}
             onPress={onReject}
             testID={`review-reject-${suggestion.id}`}
             style={[styles.actionButton, { borderWidth: 1, borderColor: colors.hairlineGold }]}
@@ -384,7 +381,7 @@ function SuggestionCard({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Accetta"
+            accessibilityLabel={t('review.card.accept')}
             onPress={() => onAccept(selected)}
             testID={`review-accept-${suggestion.id}`}
             style={[styles.actionButton, { backgroundColor: colors.primary }]}

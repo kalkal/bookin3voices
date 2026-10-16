@@ -4,6 +4,7 @@
 
 import { useCallback, useState } from 'react';
 
+import { t, tn } from '../../i18n';
 import { makeRequestId } from '../export';
 import type { ExportFileSink } from '../export';
 import type { BackupService } from './backup';
@@ -16,7 +17,7 @@ export type BackupProgress =
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim() !== '') return error.message;
-  return 'Errore inatteso durante il backup.';
+  return t('settings.backup.error');
 }
 
 export interface BackupDownload {
@@ -35,17 +36,21 @@ export function useBackupDownload(
   const [progress, setProgress] = useState<BackupProgress>({ phase: 'idle' });
 
   const download = useCallback(() => {
-    setProgress({ phase: 'working', message: 'Backup in corso…' });
+    setProgress({ phase: 'working', message: t('settings.backup.working') });
     void (async () => {
       try {
         const file = await service.exportBackup({ requestId: makeRequestId() });
-        setProgress({ phase: 'working', message: 'Zip pronto, apro la condivisione…' });
+        setProgress({ phase: 'working', message: t('settings.backup.zipReady') });
         await fileSink.saveAndShare(file);
         onSuccess(file.createdAt);
-        const libri = file.bookCount === 1 ? '1 libro' : `${file.bookCount} libri`;
+        const books = tn('settings.backup.books', file.bookCount);
         setProgress({
           phase: 'done',
-          message: `«${file.fileName}» salvato (${libri}, ${Math.max(1, Math.round(file.size / 1024))} KB).`,
+          message: t('settings.backup.done', {
+            fileName: file.fileName,
+            books,
+            size: Math.max(1, Math.round(file.size / 1024)),
+          }),
         });
       } catch (error) {
         setProgress({ phase: 'error', message: errorMessage(error) });

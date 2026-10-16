@@ -11,6 +11,8 @@
 
 import { z } from 'zod';
 
+import { t, tn } from '../../i18n';
+
 import type { BackupFrequency } from './types';
 
 /** Risposta della callable, validata con Zod al confine. */
@@ -80,9 +82,17 @@ export function backupStatus(
   now: number,
 ): BackupStatus {
   if (lastBackupAt === null) {
-    return { label: 'Nessun backup ancora', overdue: true };
+    return { label: t('settings.backup.none'), overdue: true };
   }
   const days = Math.floor(Math.max(0, now - lastBackupAt) / DAY_MS);
-  const age = days === 0 ? 'oggi' : days === 1 ? 'ieri' : `${days} giorni fa`;
-  return { label: `Ultimo backup: ${age}`, overdue: days > BACKUP_FREQUENCY_DAYS[frequency] };
+  const age =
+    days === 0
+      ? t('settings.backup.today')
+      : days === 1
+        ? t('settings.backup.yesterday')
+        : tn('settings.backup.daysAgo', days);
+  return {
+    label: t('settings.backup.last', { age }),
+    overdue: days > BACKUP_FREQUENCY_DAYS[frequency],
+  };
 }

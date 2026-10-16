@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, OrnamentDivider, PrimaryButton } from '../../components';
 import { formatNumber } from '../../lib/text';
+import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { SettingsRepository } from '../settings';
 import type { DailyProgressRepository } from './dailyProgress';
@@ -37,12 +38,12 @@ export interface LibraryScreenProps {
 /** Mese di inizio in italiano per la riga meta ("Romanzo · iniziato a giugno"). */
 function startedLabel(createdAtMillis: number): string {
   try {
-    const month = new Intl.DateTimeFormat('it-IT', { month: 'long' }).format(
+    const month = new Intl.DateTimeFormat(uiLocale(), { month: 'long' }).format(
       new Date(createdAtMillis),
     );
-    return `iniziato a ${month}`;
+    return t('books.startedIn', { month });
   } catch {
-    return 'in corso';
+    return t('books.inProgressShort');
   }
 }
 
@@ -174,12 +175,12 @@ export function LibraryScreen({
                 color: colors.textMuted,
               }}
             >
-              {`${item.genre === '' ? 'Libro' : item.genre} · ${startedLabel(item.createdAt)}`}
+              {`${item.genre === '' ? t('books.defaultGenre') : item.genre} · ${startedLabel(item.createdAt)}`}
             </Text>
             <Text
               style={{ fontFamily: fonts.body, fontSize: typeScale.bodySmall, color: colors.text }}
             >
-              {`${formatNumber(item.chapterCount)} ${item.chapterCount === 1 ? 'capitolo' : 'capitoli'} · ${formatNumber(item.wordCount)} parole`}
+              {`${tn('books.chapters', item.chapterCount, { formatted: formatNumber(item.chapterCount) })} · ${tn('books.words', item.wordCount, { formatted: formatNumber(item.wordCount) })}`}
             </Text>
             <View
               style={{
@@ -228,7 +229,7 @@ export function LibraryScreen({
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Impostazioni"
+            accessibilityLabel={t('books.settings')}
             testID="library-settings"
             onPress={onOpenSettings}
             style={styles.iconButton}
@@ -242,12 +243,12 @@ export function LibraryScreen({
           <Pressable
             testID="library-goal-open"
             accessibilityRole="button"
-            accessibilityLabel="Apri il diario dei progressi"
+            accessibilityLabel={t('books.openProgress')}
             onPress={onOpenProgress}
           >
             <Card style={{ marginTop: spacing.xl, gap: spacing.sm + 2 }} testID="library-goal">
               <View style={styles.goalHeader}>
-                <Text style={sectionLabelStyle}>Obiettivo di oggi</Text>
+                <Text style={sectionLabelStyle}>{t('books.todayGoal')}</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
@@ -276,7 +277,10 @@ export function LibraryScreen({
                     color: colors.text,
                   }}
                 >
-                  {`${formatNumber(todayWords)} / ${formatNumber(dailyGoal)} parole`}
+                  {t('books.goalProgress', {
+                    today: formatNumber(todayWords),
+                    goal: formatNumber(dailyGoal),
+                  })}
                 </Text>
               </View>
             </Card>
@@ -284,7 +288,7 @@ export function LibraryScreen({
         )}
 
         <View style={[styles.sectionRow, { marginTop: spacing.xxl, marginBottom: spacing.sm }]}>
-          <Text style={sectionLabelStyle}>I tuoi libri</Text>
+          <Text style={sectionLabelStyle}>{t('books.yourBooks')}</Text>
           {books !== null && books.length > 0 && (
             <Text
               style={{
@@ -293,7 +297,7 @@ export function LibraryScreen({
                 color: colors.textMuted,
               }}
             >
-              {`${inProgress} in corso`}
+              {t('books.inProgressCount', { count: inProgress })}
             </Text>
           )}
         </View>
@@ -308,7 +312,7 @@ export function LibraryScreen({
             fontSize: typeScale.caption,
           }}
         >
-          La libreria non si aggiorna: si riproverà da solo appena torna la rete.
+          {t('books.listError')}
         </Text>
       )}
 
@@ -331,7 +335,7 @@ export function LibraryScreen({
                   color: colors.text,
                 }}
               >
-                Nessun libro, per ora
+                {t('books.emptyTitle')}
               </Text>
               <Text
                 style={{
@@ -341,7 +345,7 @@ export function LibraryScreen({
                   textAlign: 'center',
                 }}
               >
-                Tocca il + qui sotto per rilegare il primo volume.
+                {t('books.emptyBody')}
               </Text>
             </Card>
           )
@@ -350,7 +354,7 @@ export function LibraryScreen({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Nuovo libro"
+        accessibilityLabel={t('books.newBook')}
         testID="library-fab"
         onPress={() => setCreating(true)}
         style={{
@@ -389,14 +393,14 @@ export function LibraryScreen({
                 textAlign: 'center',
               }}
             >
-              Nuovo libro
+              {t('books.newBook')}
             </Text>
             <OrnamentDivider />
             <TextInput
               testID="library-new-book-title"
               value={newTitle}
               onChangeText={setNewTitle}
-              placeholder="Titolo del libro"
+              placeholder={t('books.bookTitlePlaceholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
               style={{
@@ -412,7 +416,7 @@ export function LibraryScreen({
               }}
             />
             <PrimaryButton
-              label="Crea libro"
+              label={t('books.createBook')}
               testID="library-new-book-create"
               disabled={newTitle.trim() === ''}
               onPress={createBook}
@@ -433,7 +437,7 @@ export function LibraryScreen({
                   color: colors.textMutedStrong,
                 }}
               >
-                Annulla
+                {t('books.cancel')}
               </Text>
             </Pressable>
           </Card>

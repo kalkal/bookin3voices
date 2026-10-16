@@ -20,6 +20,7 @@ import {
 
 import { Card, OrnamentDivider, PrimaryButton } from '../../components';
 import { makeRequestId } from '../../lib/requestId';
+import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
 import type { ChapterRepository, ChapterSummary } from '../chapters';
@@ -55,24 +56,17 @@ interface CardDraft {
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim() !== '') return error.message;
-  return 'Errore inatteso durante la generazione della scaletta.';
+  return t('outline.errorUnexpected');
 }
 
 function mergeMessage(result: { updated: number; created: number; skipped: number }): string {
   const parts: string[] = [];
-  if (result.updated > 0)
-    parts.push(
-      `${result.updated} ${result.updated === 1 ? 'capitolo vuoto riempito' : 'capitoli vuoti riempiti'}`,
-    );
-  if (result.created > 0)
-    parts.push(`${result.created} ${result.created === 1 ? 'capitolo nuovo' : 'capitoli nuovi'}`);
-  if (result.skipped > 0)
-    parts.push(
-      `${result.skipped} ${result.skipped === 1 ? 'saltato perché ha già testo' : 'saltati perché hanno già testo'}`,
-    );
+  if (result.updated > 0) parts.push(tn('outline.mergeUpdated', result.updated));
+  if (result.created > 0) parts.push(tn('outline.mergeCreated', result.created));
+  if (result.skipped > 0) parts.push(tn('outline.mergeSkipped', result.skipped));
   return parts.length === 0
-    ? 'Nessun capitolo da creare.'
-    : `Scaletta salvata: ${parts.join(', ')}.`;
+    ? t('outline.mergeNone')
+    : t('outline.mergeSaved', { parts: parts.join(', ') });
 }
 
 export function SynopsisTab({
@@ -106,12 +100,12 @@ export function SynopsisTab({
     setSynopsisSaved(true);
     bookRepository.updateBook(book.id, { synopsis }).catch(() => {
       setSynopsisSaved(false);
-      setProgress({ phase: 'error', message: 'Salvataggio della sinossi non riuscito.' });
+      setProgress({ phase: 'error', message: t('outline.saveFailed') });
     });
   };
 
   const generate = async () => {
-    setProgress({ phase: 'working', message: 'Generazione della scaletta in corso…' });
+    setProgress({ phase: 'working', message: t('outline.generating') });
     try {
       const proposal = await outlineService.generateOutline({
         bookId: book.id,
@@ -127,7 +121,7 @@ export function SynopsisTab({
 
   const confirm = async () => {
     if (cards === null || cards.length === 0) return;
-    setProgress({ phase: 'working', message: 'Creazione dei capitoli…' });
+    setProgress({ phase: 'working', message: t('outline.creating') });
     try {
       const plan = planOutlineMerge(chapters, cards);
       const result = await applyOutlineMerge(chapterRepository, book.id, plan);
@@ -215,7 +209,7 @@ export function SynopsisTab({
               color: colors.accentText,
             }}
           >
-            Chiave AI di sviluppo attiva
+            {t('outline.devKeyTitle')}
           </Text>
           <Text
             style={{
@@ -224,15 +218,13 @@ export function SynopsisTab({
               color: colors.textMuted,
             }}
           >
-            Non inserire la sinossi reale del libro: con la chiave gratuita i testi inviati possono
-            essere usati per addestrare i modelli. Usa solo trame di prova finché l’app non passa
-            alla chiave definitiva.
+            {t('outline.devKeyBody')}
           </Text>
         </Card>
       )}
 
       <Card style={{ gap: spacing.md }}>
-        {sectionTitle('Sinossi')}
+        {sectionTitle(t('outline.synopsisTitle'))}
         <OrnamentDivider style={{ alignSelf: 'stretch' }} />
         <TextInput
           testID="synopsis-input"
@@ -241,14 +233,14 @@ export function SynopsisTab({
             setSynopsis(next);
             setSynopsisSaved(false);
           }}
-          placeholder="La trama del libro, in poche righe: da qui nasce la scaletta."
+          placeholder={t('outline.synopsisPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={7}
           style={[fieldStyle, { minHeight: 150, textAlignVertical: 'top' }]}
         />
         <PrimaryButton
-          label="Salva sinossi"
+          label={t('outline.saveSynopsis')}
           testID="synopsis-save"
           disabled={!synopsisDirty}
           onPress={saveSynopsis}
@@ -263,23 +255,26 @@ export function SynopsisTab({
               color: colors.primary,
             }}
           >
-            Sinossi salvata ✓
+            {t('outline.synopsisSaved')}
           </Text>
         )}
       </Card>
 
       {cards === null && (
         <Card style={{ gap: spacing.md }}>
-          {sectionTitle('Scaletta capitoli')}
+          {sectionTitle(t('outline.outlineTitle'))}
           <OrnamentDivider style={{ alignSelf: 'stretch' }} />
           {mutedNote(
             writtenCount > 0
-              ? `I ${writtenCount === 1 ? 'capitolo già scritto resta intoccato' : `${writtenCount} capitoli già scritti restano intoccati`}: le nuove schede riempiono prima ${emptyCount === 1 ? 'il capitolo vuoto' : 'i capitoli vuoti'} e il resto va in coda.`
-              : 'La scaletta proposta si rivede scheda per scheda prima di creare i capitoli.',
+              ? t('outline.mergeNote', {
+                  written: tn('outline.writtenKept', writtenCount),
+                  empty: tn('outline.emptyFirst', emptyCount),
+                })
+              : t('outline.reviewNote'),
             'synopsis-merge-note',
           )}
           <PrimaryButton
-            label={working ? 'Generazione in corso…' : 'Genera scaletta capitoli'}
+            label={working ? t('outline.generatingShort') : t('outline.generate')}
             testID="synopsis-generate"
             disabled={working || synopsis.trim() === ''}
             onPress={() => {
@@ -291,11 +286,9 @@ export function SynopsisTab({
 
       {cards !== null && (
         <Card style={{ gap: spacing.md }}>
-          {sectionTitle('Anteprima scaletta')}
+          {sectionTitle(t('outline.previewTitle'))}
           <OrnamentDivider style={{ alignSelf: 'stretch' }} />
-          {mutedNote(
-            'Schede modificabili: niente viene creato finché non confermi. I capitoli con testo non vengono toccati.',
-          )}
+          {mutedNote(t('outline.previewNote'))}
           {cards.map((card, index) => (
             <View
               key={`${index}-${card.title}`}
@@ -332,7 +325,7 @@ export function SynopsisTab({
                 </Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Modifica ${card.title}`}
+                  accessibilityLabel={t('outline.edit', { title: card.title })}
                   testID={`outline-card-edit-${index}`}
                   onPress={() => openDraft(index, card)}
                   style={{ padding: spacing.xs }}
@@ -341,7 +334,7 @@ export function SynopsisTab({
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`Elimina ${card.title}`}
+                  accessibilityLabel={t('outline.delete', { title: card.title })}
                   testID={`outline-card-delete-${index}`}
                   onPress={() => removeCard(index)}
                   style={{ padding: spacing.xs }}
@@ -373,13 +366,7 @@ export function SynopsisTab({
             </View>
           ))}
           <PrimaryButton
-            label={
-              working
-                ? 'Creazione in corso…'
-                : cards.length === 1
-                  ? 'Crea 1 capitolo'
-                  : `Crea ${cards.length} capitoli`
-            }
+            label={working ? t('outline.creatingShort') : tn('outline.confirm', cards.length)}
             testID="outline-confirm"
             disabled={working || cards.length === 0}
             onPress={() => {
@@ -402,7 +389,7 @@ export function SynopsisTab({
                 color: colors.textMutedStrong,
               }}
             >
-              Scarta la proposta
+              {t('outline.discard')}
             </Text>
           </Pressable>
         </Card>
@@ -462,7 +449,7 @@ export function SynopsisTab({
                 textAlign: 'center',
               }}
             >
-              Modifica scheda
+              {t('outline.editCard')}
             </Text>
             <OrnamentDivider />
             <TextInput
@@ -471,7 +458,7 @@ export function SynopsisTab({
               onChangeText={(next) =>
                 setDraft((current) => (current === null ? null : { ...current, title: next }))
               }
-              placeholder="Titolo del capitolo"
+              placeholder={t('outline.chapterTitlePlaceholder')}
               placeholderTextColor={colors.textMuted}
               style={fieldStyle}
             />
@@ -481,7 +468,7 @@ export function SynopsisTab({
               onChangeText={(next) =>
                 setDraft((current) => (current === null ? null : { ...current, summary: next }))
               }
-              placeholder="Riassunto del capitolo"
+              placeholder={t('outline.summaryPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -493,14 +480,14 @@ export function SynopsisTab({
               onChangeText={(next) =>
                 setDraft((current) => (current === null ? null : { ...current, beatsText: next }))
               }
-              placeholder={'Un beat per riga'}
+              placeholder={t('outline.beatsPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={4}
               style={[fieldStyle, { minHeight: 96, textAlignVertical: 'top' }]}
             />
             <PrimaryButton
-              label="Salva scheda"
+              label={t('outline.saveCard')}
               testID="outline-edit-save"
               disabled={!draftValid}
               onPress={saveDraft}
@@ -518,7 +505,7 @@ export function SynopsisTab({
                   color: colors.textMutedStrong,
                 }}
               >
-                Annulla
+                {t('outline.cancel')}
               </Text>
             </Pressable>
           </Card>

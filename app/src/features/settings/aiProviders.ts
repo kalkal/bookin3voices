@@ -14,8 +14,8 @@ export const DEFAULT_AI_PROVIDER_ID: AiProviderId = 'bedrock';
 export interface AiProviderTier {
   id: string;
   label: string;
-  /** Una riga per la UI: a cosa serve questo tier. */
-  description: string;
+  /** Chiave i18n della riga per la UI (a cosa serve questo tier); si risolve con t() al render. */
+  descriptionKey: string;
 }
 
 export interface AiProviderInfo {
@@ -33,12 +33,12 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
       {
         id: 'pro',
         label: 'Pro',
-        description: 'Il modello predefinito: segue meglio lo stile scelto',
+        descriptionKey: 'settings.ai.bedrock.pro',
       },
       {
         id: 'lite',
         label: 'Lite',
-        description: 'Più economico, suggerimenti più semplici',
+        descriptionKey: 'settings.ai.bedrock.lite',
       },
     ],
   },
@@ -49,12 +49,12 @@ export const AI_PROVIDERS: readonly AiProviderInfo[] = [
       {
         id: 'flash',
         label: 'Flash',
-        description: 'Suggerimenti rapidi ed economici',
+        descriptionKey: 'settings.ai.gemini.flash',
       },
       {
         id: 'pro',
         label: 'Pro',
-        description: 'Rifiniture più accurate sui passaggi difficili',
+        descriptionKey: 'settings.ai.gemini.pro',
       },
     ],
   },

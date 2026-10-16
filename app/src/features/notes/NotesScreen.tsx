@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
 import { ExpoDictationEngine } from '../dictation';
 import type { DictationEngine } from '../dictation';
+import { t, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import { NoteCaptureModal } from './NoteCaptureModal';
 import { filterNotesByTag, type NoteFilter } from './noteFilter';
@@ -34,18 +35,12 @@ export interface NotesScreenProps {
   onBack: () => void;
 }
 
-const TAG_LABELS: Record<NoteTag, string> = {
-  trama: 'Trama',
-  dialogo: 'Dialogo',
-  atmosfera: 'Atmosfera',
-  dubbio: 'Dubbio',
-  idea: 'Idea',
-};
+const tagLabel = (tag: NoteTag): string => t(`notes.tag.${tag}`);
 
-/** Data breve all'italiana ("17 set 2026"); ripiego spoglio se Intl manca. */
+/** Data breve nella lingua dell'interfaccia ("17 set 2026"); ripiego spoglio se Intl manca. */
 function formatDate(millis: number): string {
   try {
-    return new Intl.DateTimeFormat('it-IT', {
+    return new Intl.DateTimeFormat(uiLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -131,7 +126,7 @@ export function NotesScreen({
     <Pressable
       testID={`note-${item.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`Idea del ${formatDate(item.createdAt)}: modifica o elimina`}
+      accessibilityLabel={t('notes.noteLabel', { date: formatDate(item.createdAt) })}
       onLongPress={() => {
         setConfirmDelete(false);
         setActionsFor(item);
@@ -145,7 +140,7 @@ export function NotesScreen({
           >
             {formatDate(item.createdAt)}
           </Text>
-          {item.tag !== null ? <Chip label={TAG_LABELS[item.tag]} uppercase tone="gold" /> : null}
+          {item.tag !== null ? <Chip label={tagLabel(item.tag)} uppercase tone="gold" /> : null}
         </View>
         <Text style={{ fontFamily: fonts.body, fontSize: typeScale.body, color: colors.text }}>
           {item.text}
@@ -174,7 +169,7 @@ export function NotesScreen({
       <View style={[styles.header, { gap: spacing.md, paddingHorizontal: spacing.lg }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Torna al Libro"
+          accessibilityLabel={t('notes.back')}
           testID="notes-back"
           onPress={onBack}
           style={styles.iconButton}
@@ -197,7 +192,7 @@ export function NotesScreen({
           <Text
             style={{ fontFamily: fonts.display, fontSize: typeScale.title + 1, color: colors.text }}
           >
-            Taccuino
+            {t('notes.title')}
           </Text>
         </View>
       </View>
@@ -212,8 +207,8 @@ export function NotesScreen({
             paddingVertical: spacing.md,
           }}
         >
-          {filterChip(null, 'Tutte')}
-          {NOTE_TAGS.map((t) => filterChip(t, TAG_LABELS[t]))}
+          {filterChip(null, t('notes.filterAll'))}
+          {NOTE_TAGS.map((tag) => filterChip(tag, tagLabel(tag)))}
         </ScrollView>
       </View>
 
@@ -228,7 +223,7 @@ export function NotesScreen({
             fontSize: typeScale.caption,
           }}
         >
-          Il taccuino non si aggiorna: si riproverà da solo appena torna la rete.
+          {t('notes.error')}
         </Text>
       )}
 
@@ -253,7 +248,7 @@ export function NotesScreen({
                     textAlign: 'center',
                   }}
                 >
-                  {filter === null ? 'Il taccuino è vuoto' : 'Nessuna idea con questo tag'}
+                  {filter === null ? t('notes.empty.title') : t('notes.empty.titleFiltered')}
                 </Text>
                 <OrnamentDivider style={{ alignSelf: 'stretch' }} />
                 <Text
@@ -264,9 +259,7 @@ export function NotesScreen({
                     textAlign: 'center',
                   }}
                 >
-                  {filter === null
-                    ? 'Detta il primo spunto: trama, dialoghi, atmosfere, dubbi. Niente va perso.'
-                    : 'Cambia filtro o detta una nuova idea con questo tag.'}
+                  {filter === null ? t('notes.empty.body') : t('notes.empty.bodyFiltered')}
                 </Text>
               </Card>
             </View>
@@ -276,7 +269,7 @@ export function NotesScreen({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Detta un’idea"
+        accessibilityLabel={t('notes.fab')}
         testID="notes-fab"
         onPress={() => openCapture(null)}
         style={({ pressed }) => [
@@ -302,7 +295,7 @@ export function NotesScreen({
             letterSpacing: letterSpacing.button,
           }}
         >
-          Detta un’idea
+          {t('notes.fab')}
         </Text>
       </Pressable>
 
@@ -318,8 +311,8 @@ export function NotesScreen({
         onSave={saveNote}
         initialText={editing?.text ?? ''}
         initialTag={editing?.tag ?? null}
-        title={editing !== null ? 'Modifica idea' : 'Nuova idea'}
-        saveLabel={editing !== null ? 'Salva modifiche' : 'Salva idea'}
+        title={editing !== null ? t('notes.capture.editTitle') : t('notes.capture.newTitle')}
+        saveLabel={editing !== null ? t('notes.capture.saveEdit') : t('notes.capture.save')}
       />
 
       <Modal
@@ -340,11 +333,11 @@ export function NotesScreen({
                     textAlign: 'center',
                   }}
                 >
-                  Questa idea
+                  {t('notes.actions.title')}
                 </Text>
                 <OrnamentDivider />
                 <PrimaryButton
-                  label="Modifica"
+                  label={t('notes.actions.edit')}
                   testID="note-actions-edit"
                   onPress={() => {
                     const note = actionsFor;
@@ -365,7 +358,7 @@ export function NotesScreen({
                       color: colors.coverLeather,
                     }}
                   >
-                    Elimina
+                    {t('notes.actions.delete')}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -381,7 +374,7 @@ export function NotesScreen({
                       color: colors.textMutedStrong,
                     }}
                   >
-                    Annulla
+                    {t('notes.actions.cancel')}
                   </Text>
                 </Pressable>
               </>
@@ -395,10 +388,10 @@ export function NotesScreen({
                     textAlign: 'center',
                   }}
                 >
-                  Eliminare questa idea? Non si può annullare.
+                  {t('notes.actions.confirm')}
                 </Text>
                 <PrimaryButton
-                  label="Elimina"
+                  label={t('notes.actions.delete')}
                   testID="note-actions-delete-confirm"
                   onPress={() => {
                     if (actionsFor !== null) deleteNote(actionsFor);
@@ -417,7 +410,7 @@ export function NotesScreen({
                       color: colors.textMutedStrong,
                     }}
                   >
-                    Annulla
+                    {t('notes.actions.cancel')}
                   </Text>
                 </Pressable>
               </>

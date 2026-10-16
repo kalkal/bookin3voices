@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { t } from './src/i18n';
 import { ThemeProvider, paperPalette, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
@@ -238,7 +239,7 @@ function AppNavigator({ services }: { services: AppServices }) {
             push({
               name: 'dictation',
               chapter: { bookId: chapter.bookId, chapterId: chapter.id },
-              title: `Capitolo ${toRoman(position)} · ${chapter.title}`,
+              title: t('common.chapterTitle', { roman: toRoman(position), title: chapter.title }),
             })
           }
           onOpenNotes={(bookTitle) => push({ name: 'notes', bookId: route.bookId, bookTitle })}

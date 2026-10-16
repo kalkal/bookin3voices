@@ -1,43 +1,42 @@
-# Golden set — brani di prova per il profilo «Suspense/Horror»
+# Golden set: test passages for the "Suspense / Horror" profile
 
-Sei brani **fittizi** (scritti apposta, nessun testo reale del libro né di opere
-esistenti), con **dettatura simulata**: frasi lunghe, punteggiatura scarsa, qualche
-attacco senza maiuscola. Generi e toni diversi, perché il profilo deve reggere su
-registri diversi senza appiattirli.
+Six **fictional** passages (written on purpose, no real text from the book or from
+existing works), in Italian, with **simulated dictation**: long sentences, sparse
+punctuation, a few openings without a capital letter. Different genres and tones, because
+the profile must hold up across registers without flattening them.
 
-| File | Tono | Cosa mette alla prova soprattutto |
+| File | Tone | What it mainly tests |
 |---|---|---|
-| `01-la-caldaia.md` | tensione domestica | avverbi, verbi filtro, emozione dichiarata, refrain da NON toccare |
-| `02-la-cucina-di-mamma.md` | dialogo | attribuzioni → «disse», parlato colloquiale da NON correggere |
-| `03-il-pozzo.md` | memoir, voce ricca | −10% mirato, anafora da NON toccare, densità bassa |
-| `04-il-parcheggio.md` | azione | filtri, passivo, punteggiatura da dettatura, frase lunga «di fiato» da NON smontare |
-| `05-la-cassa-tre.md` | quotidiano che si incrina | mostrare vs dichiarare, concretezza senza inventare fatti |
-| `06-le-magnolie.md` | perturbante quotidiano, brano lungo | densità sul tetto, refrain ×4, ripetizione ravvicinata voluta, paragrafo-fiume |
+| `01-la-caldaia.md` | domestic tension | adverbs, filter verbs, stated emotion, refrain NOT to touch |
+| `02-la-cucina-di-mamma.md` | dialogue | tags → "said", colloquial speech NOT to correct |
+| `03-il-pozzo.md` | memoir, rich voice | targeted −10%, anaphora NOT to touch, low density |
+| `04-il-parcheggio.md` | action | filters, passive, dictation punctuation, "breathless" long sentence NOT to break up |
+| `05-la-cassa-tre.md` | everyday life cracking | show vs tell, concreteness without inventing facts |
+| `06-le-magnolie.md` | everyday uncanny, long passage | density at the cap, refrain ×4, deliberate close repetition, run-on paragraph |
 
-## Come si usa
+## How to use
 
-- **Runner automatico (dalla callable refineChapter)**: `npm run golden` in `functions/` esegue TUTTI i
-  brani contro il prompt corrente (Style Bible + few-shot + regole di formato di
-  `refinePrompt.ts`) e verifica meccanicamente densità, zone «NON DEVE» (da
-  `checks.json`, che deve restare allineato ai brani — il runner esplode se
-  divergono), gerarchia grammar e formato; la copertura dei «DEVE» è riportata come
-  diagnostica. Chiave da env `GEMINI_API_KEY`, SOLO brani
-  fittizi sul tier free. Opzioni: `-- --model X --fallback Y --only 04 --out report.md --dry`.
-- Per una prova manuale (es. in Google AI Studio): incollare Style Bible e few-shot come
-  system instruction e, come messaggio, solo la sezione «Brano», mai l'«Esito atteso».
-- L'«Esito atteso» è una **griglia di verifica per il giudizio umano**, non un test
-  automatico: dice cosa il modello DEVE segnalare, cosa PUÒ segnalare e — soprattutto —
-  cosa NON DEVE toccare. Il runner blocca solo le regressioni meccaniche: il verdetto
-  finale è umano.
+- **Automatic runner (from the refineChapter callable)**: `npm run golden` in `functions/`
+  runs ALL the passages against the current prompt (Style Bible + few-shots + the format
+  rules in `refinePrompt.ts`) and mechanically checks density, the "MUST NOT" zones (from
+  `checks.json`, which must stay aligned with the passages: the runner fails loudly if
+  they diverge), grammar hierarchy and format; coverage of the "MUST" items is reported
+  as a diagnostic. Key from env `GEMINI_API_KEY`, ONLY fictional passages on the free
+  tier. Options: `-- --model X --fallback Y --only 04 --out report.md --dry`.
+- For a manual try (e.g. in Google AI Studio): paste the Style Bible and few-shots as the
+  system instruction and, as the message, only the "Brano" (passage) section, never the
+  "Esito atteso" (expected outcome).
+- The "Esito atteso" is a **checklist for human judgement**, not an automatic test: it
+  says what the model MUST flag, what it MAY flag and, above all, what it MUST NOT touch.
+  The runner only blocks mechanical regressions: the final verdict is human.
 
-## Regole di manutenzione (vincolanti)
+## Maintenance rules (binding)
 
-- **Rieseguire l'intero set a ogni modifica** di Style Bible, few-shot, prompt o
-  modello (`npm run golden` in `functions/`). Una regressione di stile è un bug a
-  tutti gli effetti.
-- Quando si aggiunge o modifica un brano, aggiornare la sua voce in `checks.json`
-  (citazioni verbatim: il runner verifica l'allineamento, anche con `--dry`).
-- I brani sono fittizi: in sviluppo si possono usare anche sul tier free di Gemini.
-  I brani **veri** del libro invece passano SOLO dal tier a pagamento.
-- Il set cresce: quando un brano vero fa emergere un difetto nuovo, si aggiunge qui un
-  brano fittizio che riproduce quel difetto, con il suo esito atteso.
+- **Rerun the whole set on every change** to Style Bible, few-shots, prompt or model
+  (`npm run golden` in `functions/`). A style regression is a bug in every respect.
+- When a passage is added or changed, update its entry in `checks.json` (verbatim
+  quotations: the runner checks alignment, even with `--dry`).
+- The passages are fictional: in development they may also be used on Gemini's free tier.
+  The **real** passages of the book go ONLY through the paid tier.
+- The set grows: when a real passage exposes a new defect, a fictional passage that
+  reproduces that defect is added here, with its expected outcome.

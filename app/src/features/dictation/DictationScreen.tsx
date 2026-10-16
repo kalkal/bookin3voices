@@ -13,6 +13,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Chip } from '../../components';
+import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
 import { ExpoDictationEngine } from './engines/ExpoDictationEngine';
@@ -47,12 +48,12 @@ export interface DictationScreenProps {
 /** Comandi vocali riconosciuti, mostrati tra virgolette basse. */
 const VOICE_COMMAND_HINTS = ['«punto»', '«virgola»', '«a capo»', '«nuovo paragrafo»'];
 
-const ERROR_MESSAGES: Record<DictationError['code'], string> = {
-  'permission-denied': 'Permesso microfono negato: concedilo dalle impostazioni.',
-  'audio-interruption': 'Il microfono è stato interrotto da un’altra app.',
-  'no-speech': 'Il motore non sente parlato da un po’.',
-  network: 'Rete assente: il riconoscimento non raggiunge il cloud.',
-  unknown: 'Il motore di dettatura si è fermato in modo inatteso.',
+const ERROR_MESSAGE_KEYS: Record<DictationError['code'], string> = {
+  'permission-denied': 'dictation.error.permissionDenied',
+  'audio-interruption': 'dictation.error.audioInterruption',
+  'no-speech': 'dictation.error.noSpeech',
+  network: 'dictation.error.network',
+  unknown: 'dictation.error.unknown',
 };
 
 export function DictationScreen({
@@ -114,7 +115,7 @@ export function DictationScreen({
           {onBack !== undefined ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Torna al Libro"
+              accessibilityLabel={t('dictation.backToBook')}
               testID="dictation-back"
               onPress={onBack}
               style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
@@ -176,8 +177,7 @@ export function DictationScreen({
             testID="dictation-load-error"
             style={{ color: colors.textMutedStrong, fontFamily: fonts.bodyItalic }}
           >
-            Impossibile leggere il capitolo salvato. Chiudi e riapri l’app; se il problema resta,
-            non dettare: il testo nuovo non si aggancerebbe a quello esistente.
+            {t('dictation.loadError')}
           </Text>
         ) : controller.fullText === '' && controller.partial === '' ? (
           <Text
@@ -190,7 +190,7 @@ export function DictationScreen({
               paddingTop: spacing.xxxl,
             }}
           >
-            Tocca il microfono e inizia a dettare:{'\n'}il testo apparirà qui.
+            {t('dictation.emptyHint')}
           </Text>
         ) : (
           <Text
@@ -239,8 +239,9 @@ export function DictationScreen({
               fontSize: typeScale.caption,
             }}
           >
-            {controller.sessionWords.toLocaleString('it-IT')}{' '}
-            {controller.sessionWords === 1 ? 'parola' : 'parole'} in questa sessione
+            {tn('dictation.sessionWords', controller.sessionWords, {
+              formatted: controller.sessionWords.toLocaleString(uiLocale()),
+            })}
           </Text>
           <SaveIndicator status={controller.saveStatus} />
           {offline ? (
@@ -296,34 +297,36 @@ function captionFor(
   controller: ReturnType<typeof useDictationController>,
   offline: boolean,
 ): string {
-  if (controller.loadState === 'loading') return 'Apertura del capitolo…';
-  if (controller.loadState === 'load-error') return 'Capitolo non leggibile';
-  if (controller.preflightRunning) return 'Controllo di microfono e lingua…';
+  if (controller.loadState === 'loading') return t('dictation.caption.loading');
+  if (controller.loadState === 'load-error') return t('dictation.caption.loadError');
+  if (controller.preflightRunning) return t('dictation.caption.preflight');
   if (controller.preflight && !controller.preflight.ok) {
-    return 'Risolvi i problemi qui sopra per dettare';
+    return t('dictation.caption.fixIssues');
   }
   switch (controller.sessionState) {
     case 'listening':
-      return 'In ascolto — tocca per mettere in pausa';
+      return t('dictation.caption.listening');
     case 'paused':
       return controller.pausedByInterruption
-        ? 'In pausa automatica (audio interrotto) — tocca per riprendere'
-        : 'In pausa — tocca per riprendere';
+        ? t('dictation.caption.pausedAuto')
+        : t('dictation.caption.paused');
     case 'committing':
-      return 'Chiusura della dettatura…';
+      return t('dictation.caption.committing');
     case 'error':
-      return ERROR_MESSAGES[controller.dictationError?.code ?? 'unknown'];
+      return t(ERROR_MESSAGE_KEYS[controller.dictationError?.code ?? 'unknown']);
     default:
-      return offline
-        ? 'Sei offline: senza pacchetto lingua la dettatura può fermarsi'
-        : 'Tocca il microfono per dettare';
+      return offline ? t('dictation.caption.offline') : t('dictation.caption.idle');
   }
 }
 
 function SaveIndicator({ status }: { status: 'saved' | 'pending' | 'saving' | 'error' }) {
   const { colors, fonts, typeScale, spacing } = useTheme();
   const label =
-    status === 'saved' ? 'Salvato' : status === 'error' ? 'Non salvato' : 'Salvataggio…';
+    status === 'saved'
+      ? t('dictation.save.saved')
+      : status === 'error'
+        ? t('dictation.save.error')
+        : t('dictation.save.saving');
   const color =
     status === 'saved' ? colors.primary : status === 'error' ? colors.accentText : colors.textMuted;
   return (
@@ -366,7 +369,7 @@ function PreflightIssueCard({
       <View style={[styles.chipsRow, { gap: spacing.sm }]}>
         {issue.action === 'open-settings' ? (
           <Chip
-            label="Apri impostazioni"
+            label={t('dictation.preflight.openSettings')}
             tone="green"
             onPress={() => {
               Linking.openSettings().catch(() => {});
@@ -376,7 +379,7 @@ function PreflightIssueCard({
         ) : null}
         {issue.action === 'download-offline-model' ? (
           <Chip
-            label="Scarica l’italiano offline"
+            label={t('dictation.preflight.downloadOffline')}
             tone="green"
             onPress={() => {
               downloadOfflineModel().catch(() => {});
@@ -384,9 +387,17 @@ function PreflightIssueCard({
             testID="preflight-action-download-offline-model"
           />
         ) : null}
-        <Chip label="Ricontrolla" onPress={onRetry} testID={`preflight-retry-${issue.id}`} />
+        <Chip
+          label={t('dictation.preflight.retry')}
+          onPress={onRetry}
+          testID={`preflight-retry-${issue.id}`}
+        />
         {onDismiss ? (
-          <Chip label="Ignora" onPress={onDismiss} testID={`preflight-dismiss-${issue.id}`} />
+          <Chip
+            label={t('dictation.preflight.dismiss')}
+            onPress={onDismiss}
+            testID={`preflight-dismiss-${issue.id}`}
+          />
         ) : null}
       </View>
     </Card>

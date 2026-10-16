@@ -1,20 +1,20 @@
-# Profilo di stile «Suspense/Horror»
+# "Suspense / Horror" style profile
 
-Materiale che definisce lo stile delle rifiniture AI. Tutto in italiano, tutto scritto
-con esempi e brani inventati. Viene caricato dalla Cloud Function `refineChapter`
+Material that defines the style of the AI refinements. All written with invented
+examples and passages. It is loaded by the `refineChapter` Cloud Function
 (`functions/src/ai/styleProfileContent.ts`).
 
-| File | Cos'è |
+| File | What it is |
 |---|---|
-| `style-bible.md` | Regole operative dello stile, passate come system instruction |
-| `few-shots.md` | Coppie «testo piatto → suggerimento» su scene inventate |
-| `golden-set/` | Brani fittizi di prova con esito atteso ciascuno (vedi il suo README) |
+| `style-bible.md` | Operating style rules, passed as the system instruction |
+| `few-shots.md` | "Flat text → suggestion" pairs on invented scenes |
+| `golden-set/` | Fictional test passages, each with its expected outcome (see its README) |
 
-## Vincoli
+## Constraints
 
-- Niente testi o citazioni estese da opere esistenti: qui vivono regole e brani
-  inventati, mai brani di romanzi.
-- Ogni modifica a Style Bible/few-shot/prompt/modello → si riesegue l'intero golden
-  set (`npm run golden` in `functions/`). Una regressione di stile è un bug.
-- Brani veri del libro solo su tier Gemini a pagamento; i brani fittizi di questa
-  cartella vanno bene anche sul free in sviluppo.
+- No texts or extended quotations from existing works: only rules and invented passages
+  live here, never passages from novels.
+- Every change to Style Bible / few-shots / prompt / model → rerun the whole golden set
+  (`npm run golden` in `functions/`). A style regression is a bug.
+- Real passages from the book only on the paid Gemini tier; the fictional passages in
+  this folder are fine on the free tier during development.

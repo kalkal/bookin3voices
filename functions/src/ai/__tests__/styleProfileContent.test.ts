@@ -7,9 +7,9 @@ import { loadStyleProfileContent } from '../styleProfileContent';
 describe('loadStyleProfileContent', () => {
   it('carica la Style Bible e i few-shot del profilo suspense', () => {
     const profile = loadStyleProfileContent('suspense');
-    expect(profile.styleBible).toContain('Regola zero');
-    expect(profile.styleBible).toContain('ripetizione');
-    expect(profile.fewShots).toContain('Esempio 11');
+    expect(profile.styleBible).toContain('Rule zero');
+    expect(profile.styleBible).toContain('repetition');
+    expect(profile.fewShots).toContain('Example 11');
   });
 
   it('profilo inesistente → errore parlante', () => {

@@ -13,6 +13,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Chip } from '../../components';
+import { getLanguage, t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ExportFileSink } from '../export';
 import { DEFAULT_STYLE_ID, STYLES } from '../books/styles';
@@ -33,17 +34,8 @@ export interface SettingsScreenProps {
   onBack?: () => void;
 }
 
-const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
-  { value: 'paper', label: 'Carta' },
-  { value: 'candlelight', label: 'A lume di candela' },
-  { value: 'auto', label: 'Automatico' },
-];
-
-const BACKUP_OPTIONS: readonly { value: BackupFrequency; label: string }[] = [
-  { value: 'daily', label: 'Giornaliera' },
-  { value: 'weekly', label: 'Settimanale' },
-  { value: 'monthly', label: 'Mensile' },
-];
+const THEME_VALUES: readonly ThemePreference[] = ['paper', 'candlelight', 'auto'];
+const BACKUP_VALUES: readonly BackupFrequency[] = ['daily', 'weekly', 'monthly'];
 
 export function SettingsScreen({
   repository,
@@ -96,7 +88,7 @@ export function SettingsScreen({
           {onBack !== undefined && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Torna alla Libreria"
+              accessibilityLabel={t('settings.back')}
               testID="settings-back"
               onPress={onBack}
               style={styles.backButton}
@@ -115,12 +107,12 @@ export function SettingsScreen({
               paddingVertical: spacing.md,
             }}
           >
-            IMPOSTAZIONI
+            {t('settings.title')}
           </Text>
           {onBack !== undefined && <View style={styles.backButton} />}
         </View>
 
-        <Text style={sectionLabelStyle}>Motore AI</Text>
+        <Text style={sectionLabelStyle}>{t('settings.ai.section')}</Text>
         <Card>
           {AI_PROVIDERS.map((provider) => {
             const active = settings.aiProvider === provider.id;
@@ -134,7 +126,7 @@ export function SettingsScreen({
                   style={[styles.row, { paddingVertical: spacing.xs }]}
                 >
                   <Text style={rowTitleStyle}>{provider.label}</Text>
-                  {active ? <Chip label="Attivo" selected /> : null}
+                  {active ? <Chip label={t('settings.ai.active')} selected /> : null}
                 </Pressable>
                 {provider.tiers.map((tier) => (
                   <View
@@ -142,21 +134,20 @@ export function SettingsScreen({
                     style={[styles.tierRow, { marginTop: spacing.sm, gap: spacing.sm }]}
                   >
                     <Chip label={tier.label} tone="gold" uppercase />
-                    <Text style={[captionStyle, styles.tierDescription]}>{tier.description}</Text>
+                    <Text style={[captionStyle, styles.tierDescription]}>
+                      {t(tier.descriptionKey)}
+                    </Text>
                   </View>
                 ))}
               </View>
             );
           })}
-          <Text style={[captionStyle, { marginTop: spacing.md }]}>
-            Il motore delle rifiniture lo decide il server (variabile AI_PROVIDER, predefinito
-            Amazon Nova); qui resta la tua preferenza.
-          </Text>
+          <Text style={[captionStyle, { marginTop: spacing.md }]}>{t('settings.ai.note')}</Text>
         </Card>
 
-        <Text style={sectionLabelStyle}>Scrittura</Text>
+        <Text style={sectionLabelStyle}>{t('settings.writing.section')}</Text>
         <Card>
-          <Text style={rowTitleStyle}>Obiettivo parole giornaliero</Text>
+          <Text style={rowTitleStyle}>{t('settings.writing.goal')}</Text>
           <View style={[styles.row, { marginTop: spacing.md }]}>
             <StepperButton
               label="−"
@@ -184,36 +175,36 @@ export function SettingsScreen({
             />
           </View>
           <Text style={[captionStyle, { textAlign: 'center', marginTop: spacing.xs }]}>
-            parole al giorno
+            {t('settings.writing.perDay')}
           </Text>
         </Card>
 
-        <Text style={sectionLabelStyle}>Aspetto</Text>
+        <Text style={sectionLabelStyle}>{t('settings.look.section')}</Text>
         <Card>
           <View style={[styles.chipRow, { gap: spacing.sm }]}>
-            {THEME_OPTIONS.map((option) => (
+            {THEME_VALUES.map((value) => (
               <Chip
-                key={option.value}
-                label={option.label}
-                testID={`theme-${option.value}`}
-                selected={settings.theme === option.value}
-                onPress={() => controller.setThemePreference(option.value)}
+                key={value}
+                label={t(`settings.theme.${value}`)}
+                testID={`theme-${value}`}
+                selected={settings.theme === value}
+                onPress={() => controller.setThemePreference(value)}
               />
             ))}
           </View>
         </Card>
 
-        <Text style={sectionLabelStyle}>Dati</Text>
+        <Text style={sectionLabelStyle}>{t('settings.data.section')}</Text>
         <Card>
-          <Text style={rowTitleStyle}>Frequenza backup</Text>
+          <Text style={rowTitleStyle}>{t('settings.data.frequency')}</Text>
           <View style={[styles.chipRow, { gap: spacing.sm, marginTop: spacing.md }]}>
-            {BACKUP_OPTIONS.map((option) => (
+            {BACKUP_VALUES.map((value) => (
               <Chip
-                key={option.value}
-                label={option.label}
-                testID={`backup-${option.value}`}
-                selected={settings.backupFrequency === option.value}
-                onPress={() => controller.setBackupFrequency(option.value)}
+                key={value}
+                label={t(`settings.backup.${value}`)}
+                testID={`backup-${value}`}
+                selected={settings.backupFrequency === value}
+                onPress={() => controller.setBackupFrequency(value)}
               />
             ))}
           </View>
@@ -229,8 +220,8 @@ export function SettingsScreen({
             onPress={backup.download}
             style={[styles.row, { marginTop: spacing.lg }]}
           >
-            <Text style={rowTitleStyle}>Scarica backup ora</Text>
-            <Text style={captionStyle}>zip di Markdown</Text>
+            <Text style={rowTitleStyle}>{t('settings.backup.now')}</Text>
+            <Text style={captionStyle}>{t('settings.backup.zip')}</Text>
           </Pressable>
           {backup.progress.phase !== 'idle' && (
             <View style={[styles.backupProgress, { gap: spacing.sm, marginTop: spacing.sm }]}>
@@ -257,17 +248,17 @@ export function SettingsScreen({
           )}
         </Card>
 
-        <Text style={sectionLabelStyle}>Profili di stile</Text>
+        <Text style={sectionLabelStyle}>{t('settings.styles.section')}</Text>
         <Card>
           {STYLES.map((style) => (
             <View key={style.id} style={styles.row} testID={`style-profile-${style.id}`}>
-              <Text style={rowTitleStyle}>{style.label.it}</Text>
-              {style.id === DEFAULT_STYLE_ID && <Chip label="Predefinito" selected />}
+              <Text style={rowTitleStyle}>{style.label[getLanguage()]}</Text>
+              {style.id === DEFAULT_STYLE_ID && (
+                <Chip label={t('settings.styles.default')} selected />
+              )}
             </View>
           ))}
-          <Text style={[captionStyle, { marginTop: spacing.md }]}>
-            Lo stile si sceglie per ogni libro, nella lista dei capitoli.
-          </Text>
+          <Text style={[captionStyle, { marginTop: spacing.md }]}>{t('settings.styles.note')}</Text>
         </Card>
       </ScrollView>
     </SafeAreaView>
@@ -300,7 +291,7 @@ function BackupStatusLine({ lastBackupAt, frequency }: BackupStatusLineProps) {
         color: status.overdue ? colors.accentText : colors.textMuted,
       }}
     >
-      {status.overdue ? `${status.label} — consigliato un nuovo backup` : status.label}
+      {status.overdue ? t('settings.backup.overdue', { label: status.label }) : status.label}
     </Text>
   );
 }

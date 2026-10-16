@@ -1,6 +1,8 @@
 // Decodifica dei documenti libro al confine (Zod + upgrade-on-read).
 // Funzioni pure: i test non hanno bisogno né dell'SDK né dell'emulatore.
 
+import { getLanguage } from '../../i18n';
+
 import { bookDocSchema } from './types';
 import type { Book, BookDoc, CreateBookInput } from './types';
 
@@ -37,8 +39,9 @@ export function newBookDoc(input: CreateBookInput, nowMillis: number): BookDoc {
     author: input.author ?? '',
     description: '',
     synopsis: '',
-    genre: input.genre ?? 'Romanzo',
-    language: input.language ?? 'it',
+    genre: input.genre ?? (getLanguage() === 'it' ? 'Romanzo' : 'Novel'),
+    // un libro nuovo nasce nella lingua dell'interfaccia (l'AI risponde in quella)
+    language: input.language ?? getLanguage(),
     status: 'draft',
     styleProfileId: null,
     wordCount: 0,

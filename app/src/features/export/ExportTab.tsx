@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
+import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
 import { preflightNote } from './kdpMessages';
@@ -38,7 +39,7 @@ type Progress =
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim() !== '') return error.message;
-  return 'Errore inatteso durante l’export.';
+  return t('export.error.unexpected');
 }
 
 export function ExportTab({
@@ -88,25 +89,32 @@ export function ExportTab({
     setMetadataSaved(true);
     bookRepository.updateBook(book.id, { title, author, language, description }).catch(() => {
       setMetadataSaved(false);
-      setProgress({ phase: 'error', message: 'Salvataggio dei metadati non riuscito.' });
+      setProgress({ phase: 'error', message: t('export.error.saveMetadata') });
     });
   };
 
   const working = progress.phase === 'working';
 
   const generate = async () => {
-    setProgress({ phase: 'working', message: `Generazione ${FORMAT_LABELS[format]} in corso…` });
+    setProgress({
+      phase: 'working',
+      message: t('export.progress.generating', { format: FORMAT_LABELS[format] }),
+    });
     try {
       const file = await exportService.exportBook({
         bookId: book.id,
         format,
         requestId: makeRequestId(),
       });
-      setProgress({ phase: 'working', message: 'File pronto, apro la condivisione…' });
+      setProgress({ phase: 'working', message: t('export.progress.opening') });
       await fileSink.saveAndShare(file);
       setProgress({
         phase: 'done',
-        message: `«${file.fileName}» generato (${Math.max(1, Math.round(file.size / 1024))} KB).${preflightNote(file)}`,
+        message: t('export.progress.done', {
+          fileName: file.fileName,
+          size: Math.max(1, Math.round(file.size / 1024)),
+          note: preflightNote(file),
+        }),
       });
     } catch (error) {
       setProgress({ phase: 'error', message: errorMessage(error) });
@@ -148,11 +156,11 @@ export function ExportTab({
         <Text
           style={{ fontFamily: fonts.display, fontSize: typeScale.heading, color: colors.text }}
         >
-          Metadati KDP
+          {t('export.metadata.title')}
         </Text>
         <OrnamentDivider style={{ alignSelf: 'stretch' }} />
         <View>
-          {fieldLabel('Titolo')}
+          {fieldLabel(t('export.field.title'))}
           <TextInput
             testID="export-title"
             value={title}
@@ -160,13 +168,13 @@ export function ExportTab({
               setTitle(next);
               setMetadataSaved(false);
             }}
-            placeholder="Titolo del libro"
+            placeholder={t('export.field.titlePlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={fieldStyle}
           />
         </View>
         <View>
-          {fieldLabel('Autore')}
+          {fieldLabel(t('export.field.author'))}
           <TextInput
             testID="export-author"
             value={author}
@@ -174,13 +182,13 @@ export function ExportTab({
               setAuthor(next);
               setMetadataSaved(false);
             }}
-            placeholder="Nome dell’autore"
+            placeholder={t('export.field.authorPlaceholder')}
             placeholderTextColor={colors.textMuted}
             style={fieldStyle}
           />
         </View>
         <View>
-          {fieldLabel('Lingua')}
+          {fieldLabel(t('export.field.language'))}
           <TextInput
             testID="export-language"
             value={language}
@@ -188,14 +196,14 @@ export function ExportTab({
               setLanguage(next);
               setMetadataSaved(false);
             }}
-            placeholder="it"
+            placeholder={t('export.field.languagePlaceholder')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             style={fieldStyle}
           />
         </View>
         <View>
-          {fieldLabel('Descrizione')}
+          {fieldLabel(t('export.field.description'))}
           <TextInput
             testID="export-description"
             value={description}
@@ -203,7 +211,7 @@ export function ExportTab({
               setDescription(next);
               setMetadataSaved(false);
             }}
-            placeholder="Descrizione per la scheda del libro"
+            placeholder={t('export.field.descriptionPlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={4}
@@ -211,7 +219,7 @@ export function ExportTab({
           />
         </View>
         <PrimaryButton
-          label="Salva metadati"
+          label={t('export.metadata.save')}
           testID="export-save-metadata"
           disabled={!metadataDirty || title.trim() === ''}
           onPress={saveMetadata}
@@ -226,7 +234,7 @@ export function ExportTab({
               color: colors.primary,
             }}
           >
-            Metadati salvati ✓
+            {t('export.metadata.saved')}
           </Text>
         )}
       </Card>
@@ -235,7 +243,7 @@ export function ExportTab({
         <Text
           style={{ fontFamily: fonts.display, fontSize: typeScale.heading, color: colors.text }}
         >
-          Formato
+          {t('export.format.title')}
         </Text>
         <OrnamentDivider style={{ alignSelf: 'stretch' }} />
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -256,9 +264,7 @@ export function ExportTab({
             color: colors.textMuted,
           }}
         >
-          {format === 'epub'
-            ? 'EPUB: il formato consigliato per l’ebook su Amazon KDP.'
-            : 'DOCX: si apre in Word, utile per la revisione umana.'}
+          {format === 'epub' ? t('export.format.epubHint') : t('export.format.docxHint')}
         </Text>
       </Card>
 
@@ -274,9 +280,7 @@ export function ExportTab({
               color: colors.accentText,
             }}
           >
-            {pendingCount === 1
-              ? 'C’è 1 suggerimento in sospeso'
-              : `Ci sono ${pendingCount} suggerimenti in sospeso`}
+            {tn('export.pending.title', pendingCount)}
           </Text>
           <Text
             style={{
@@ -285,14 +289,17 @@ export function ExportTab({
               color: colors.textMuted,
             }}
           >
-            L’export usa il testo attuale e li ignora: decidili prima, se vuoi che entrino nel
-            libro.
+            {t('export.pending.body')}
           </Text>
         </Card>
       )}
 
       <PrimaryButton
-        label={working ? 'Generazione in corso…' : `Genera ${FORMAT_LABELS[format]}`}
+        label={
+          working
+            ? t('export.generate.working')
+            : t('export.generate.idle', { format: FORMAT_LABELS[format] })
+        }
         testID="export-generate"
         disabled={working}
         onPress={() => {

@@ -5,6 +5,7 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
+import { t } from '../../i18n';
 import { base64ToUint8Array } from './base64';
 import type { ExportFileSink, ShareableFile } from './types';
 
@@ -17,7 +18,7 @@ export class ShareSheetExportFileSink implements ExportFileSink {
     target.write(base64ToUint8Array(file.base64));
 
     if (!(await Sharing.isAvailableAsync())) {
-      throw new Error('La condivisione non è disponibile su questo dispositivo.');
+      throw new Error(t('export.share.unavailable'));
     }
     await Sharing.shareAsync(target.uri, {
       mimeType: file.mimeType,

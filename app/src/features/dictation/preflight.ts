@@ -7,6 +7,8 @@
 import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 
+import { t } from '../../i18n';
+
 export interface PreflightChecks {
   isRecognitionAvailable(): boolean;
   getPermissions(): Promise<{ granted: boolean; canAskAgain: boolean }>;
@@ -47,10 +49,8 @@ export async function runPreflight(
     issues.push({
       id: 'recognition-unavailable',
       severity: 'blocker',
-      title: 'Riconoscimento vocale non disponibile',
-      detail:
-        'Questo dispositivo non ha un servizio di riconoscimento vocale attivo. ' +
-        'Su Android serve l’app Google (o i servizi vocali del produttore).',
+      title: t('dictation.preflight.unavailable.title'),
+      detail: t('dictation.preflight.unavailable.detail'),
     });
     // senza servizio, gli altri controlli non hanno senso
     return { ok: false, issues };
@@ -64,10 +64,10 @@ export async function runPreflight(
     issues.push({
       id: 'permission-denied',
       severity: 'blocker',
-      title: 'Permesso microfono negato',
+      title: t('dictation.preflight.permission.title'),
       detail: permission.canAskAgain
-        ? 'Senza il permesso del microfono non si può dettare. Riprova e concedilo.'
-        : 'Il permesso è stato negato in modo permanente: concedilo dalle impostazioni di sistema.',
+        ? t('dictation.preflight.permission.retry')
+        : t('dictation.preflight.permission.permanent'),
       action: permission.canAskAgain ? undefined : 'open-settings',
     });
     return { ok: false, issues };
@@ -85,10 +85,8 @@ export async function runPreflight(
         issues.push({
           id: 'offline-language-missing',
           severity: 'warning',
-          title: 'Italiano offline non installato',
-          detail:
-            'Senza rete la dettatura si interrompe: il riconoscimento userà il cloud. ' +
-            'Puoi scaricare il pacchetto lingua per dettare anche offline.',
+          title: t('dictation.preflight.offline.title'),
+          detail: t('dictation.preflight.offline.detail'),
           action: 'download-offline-model',
         });
       }

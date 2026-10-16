@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, OrnamentDivider, PrimaryButton, RomanNumeral } from '../../components';
 import { formatNumber } from '../../lib/text';
+import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ChapterRepository, ChapterStatus, ChapterSummary } from '../chapters';
 import { ExportTab } from '../export';
@@ -44,11 +45,7 @@ export interface BookScreenProps {
 
 type BookTab = 'chapters' | 'synopsis' | 'export';
 
-const STATUS_LABELS: Record<ChapterStatus, string> = {
-  draft: 'Bozza',
-  refined: 'Rifinito',
-  final: 'Finale',
-};
+const statusLabel = (status: ChapterStatus): string => t(`books.status_${status}`);
 
 export function BookScreen({
   bookId,
@@ -145,7 +142,7 @@ export function BookScreen({
           <Text
             style={{ fontFamily: fonts.body, fontSize: typeScale.label, color: colors.textMuted }}
           >
-            {`${STATUS_LABELS[item.status]} · ${formatNumber(item.wordCount)} parole`}
+            {`${statusLabel(item.status)} · ${tn('books.words', item.wordCount, { formatted: formatNumber(item.wordCount) })}`}
           </Text>
         </View>
       </View>
@@ -153,7 +150,7 @@ export function BookScreen({
         <View style={{ flexDirection: 'row', gap: spacing.xs }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Sposta su ${item.title}`}
+            accessibilityLabel={t('books.moveUp', { title: item.title })}
             testID={`book-chapter-up-${item.id}`}
             disabled={index === 0}
             onPress={() => moveChapter(index, -1)}
@@ -166,7 +163,7 @@ export function BookScreen({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Sposta giù ${item.title}`}
+            accessibilityLabel={t('books.moveDown', { title: item.title })}
             testID={`book-chapter-down-${item.id}`}
             disabled={chapters !== null && index === chapters.length - 1}
             onPress={() => moveChapter(index, 1)}
@@ -184,7 +181,7 @@ export function BookScreen({
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Detta ${item.title}`}
+          accessibilityLabel={t('books.dictate', { title: item.title })}
           testID={`book-chapter-mic-${item.id}`}
           onPress={() => onDictateChapter(item, index + 1)}
           style={[styles.roundButton, { borderColor: colors.primary }]}
@@ -260,7 +257,7 @@ export function BookScreen({
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Torna alla Libreria"
+          accessibilityLabel={t('books.backToLibrary')}
           testID="book-back"
           onPress={onBack}
           style={styles.iconButton}
@@ -282,14 +279,14 @@ export function BookScreen({
                 color: colors.textMuted,
               }}
             >
-              {`${formatNumber(book.wordCount)} parole · ${formatNumber(book.chapterCount)} ${book.chapterCount === 1 ? 'capitolo' : 'capitoli'}`}
+              {`${tn('books.words', book.wordCount, { formatted: formatNumber(book.wordCount) })} · ${tn('books.chapters', book.chapterCount, { formatted: formatNumber(book.chapterCount) })}`}
             </Text>
           )}
         </View>
         {onOpenNotes !== undefined ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Apri il Taccuino"
+            accessibilityLabel={t('books.openNotes')}
             testID="book-open-notes"
             onPress={() => onOpenNotes(book?.title ?? '')}
             style={styles.iconButton}
@@ -307,9 +304,9 @@ export function BookScreen({
           borderBottomColor: colors.hairline,
         }}
       >
-        {tabButton('chapters', 'Capitoli')}
-        {tabButton('synopsis', 'Sinossi')}
-        {tabButton('export', 'Export')}
+        {tabButton('chapters', t('books.tabChapters'))}
+        {tabButton('synopsis', t('books.tabSynopsis'))}
+        {tabButton('export', t('books.tabExport'))}
       </View>
 
       {tab === 'synopsis' &&
@@ -352,19 +349,19 @@ export function BookScreen({
           ListEmptyComponent={
             chapters === null
               ? null
-              : placeholder('Ancora nessun capitolo', 'Crea il primo capitolo e inizia a dettare.')
+              : placeholder(t('books.noChaptersTitle'), t('books.noChaptersBody'))
           }
           ListFooterComponent={
             <View style={{ padding: spacing.xl, gap: spacing.md }}>
               <PrimaryButton
-                label="Nuovo capitolo"
+                label={t('books.newChapter')}
                 testID="book-new-chapter"
                 icon={<Ionicons name="add" size={20} color={colors.onPrimary} />}
                 onPress={() => setCreating(true)}
               />
               {reordering ? (
                 <PrimaryButton
-                  label="Fine riordino"
+                  label={t('books.reorderDone')}
                   testID="book-reorder-done"
                   onPress={() => setReordering(false)}
                 />
@@ -377,7 +374,7 @@ export function BookScreen({
                     color: colors.textMuted,
                   }}
                 >
-                  Tieni premuto un capitolo per riordinare
+                  {t('books.reorderHint')}
                 </Text>
               )}
             </View>
@@ -401,14 +398,14 @@ export function BookScreen({
                 textAlign: 'center',
               }}
             >
-              Nuovo capitolo
+              {t('books.newChapter')}
             </Text>
             <OrnamentDivider />
             <TextInput
               testID="book-new-chapter-title"
               value={newTitle}
               onChangeText={setNewTitle}
-              placeholder="Titolo del capitolo"
+              placeholder={t('books.chapterTitlePlaceholder')}
               placeholderTextColor={colors.textMuted}
               autoFocus
               style={{
@@ -424,7 +421,7 @@ export function BookScreen({
               }}
             />
             <PrimaryButton
-              label="Crea capitolo"
+              label={t('books.createChapter')}
               testID="book-new-chapter-create"
               disabled={newTitle.trim() === ''}
               onPress={createChapter}
@@ -445,7 +442,7 @@ export function BookScreen({
                   color: colors.textMutedStrong,
                 }}
               >
-                Annulla
+                {t('books.cancel')}
               </Text>
             </Pressable>
           </Card>

@@ -11,6 +11,7 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
 import { MicButton, TranscriptComposer } from '../dictation';
 import type { DictationEngine, DictationErrorCode } from '../dictation';
+import { t } from '../../i18n';
 import { useTheme } from '../../theme';
 import { NOTE_TAGS } from './types';
 import type { NoteTag } from './types';
@@ -33,12 +34,10 @@ export interface NoteCaptureModalProps {
   saveLabel?: string;
 }
 
-const ERROR_MESSAGES: Partial<Record<DictationErrorCode, string>> = {
-  'permission-denied': 'Permesso microfono negato: concedilo dalle impostazioni.',
-  'audio-interruption': 'Il microfono è stato interrotto da un’altra app.',
-  network: 'Rete assente: il riconoscimento non raggiunge il cloud.',
-  unknown: 'Il motore di dettatura si è fermato in modo inatteso.',
-};
+function errorMessage(code: DictationErrorCode): string {
+  const known: DictationErrorCode[] = ['permission-denied', 'audio-interruption', 'network'];
+  return t(`notes.capture.err.${known.includes(code) ? code : 'unknown'}`);
+}
 
 export function NoteCaptureModal({
   visible,
@@ -48,8 +47,8 @@ export function NoteCaptureModal({
   onSave,
   initialText = '',
   initialTag = null,
-  title = 'Nuova idea',
-  saveLabel = 'Salva idea',
+  title = t('notes.capture.newTitle'),
+  saveLabel = t('notes.capture.save'),
 }: NoteCaptureModalProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
 
@@ -155,17 +154,17 @@ export function NoteCaptureModal({
             }}
           >
             {errorCode
-              ? (ERROR_MESSAGES[errorCode] ?? ERROR_MESSAGES.unknown)
+              ? errorMessage(errorCode)
               : listening
-                ? 'In ascolto — tocca per fermare'
-                : 'Tocca il microfono e detta la tua idea'}
+                ? t('notes.capture.listening')
+                : t('notes.capture.idle')}
           </Text>
 
           <TextInput
             testID="note-capture-text"
             value={text}
             onChangeText={editText}
-            placeholder="…oppure scrivi qui la tua idea"
+            placeholder={t('notes.capture.placeholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             style={{
@@ -196,15 +195,15 @@ export function NoteCaptureModal({
           ) : null}
 
           <View style={[styles.tagsRow, { gap: spacing.sm }]}>
-            {NOTE_TAGS.map((t) => (
+            {NOTE_TAGS.map((noteTag) => (
               <Chip
-                key={t}
-                label={t}
+                key={noteTag}
+                label={noteTag}
                 uppercase
                 tone="gold"
-                selected={tag === t}
-                onPress={() => setTag((current) => (current === t ? null : t))}
-                testID={`note-capture-tag-${t}`}
+                selected={tag === noteTag}
+                onPress={() => setTag((current) => (current === noteTag ? null : noteTag))}
+                testID={`note-capture-tag-${noteTag}`}
               />
             ))}
           </View>
@@ -228,7 +227,7 @@ export function NoteCaptureModal({
                 color: colors.textMutedStrong,
               }}
             >
-              Annulla
+              {t('notes.capture.cancel')}
             </Text>
           </Pressable>
         </Card>

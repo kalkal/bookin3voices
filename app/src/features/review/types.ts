@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { t } from '../../i18n';
+
 /** Categorie dei suggerimenti: stile, grammatica/refusi, ritmo. */
 export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
@@ -107,9 +109,15 @@ export interface SuggestionsProvider {
   refine(request: RefineRequest): Promise<RefineResult>;
 }
 
-/** Etichette italiane delle categorie, condivise da editor e review. */
+/** Category labels in the current UI language, shared by editor and review (read at render time). */
 export const KIND_LABELS: Record<SuggestionKind, string> = {
-  style: 'Stile',
-  grammar: 'Grammatica',
-  pacing: 'Ritmo',
+  get style() {
+    return t('review.kind.style');
+  },
+  get grammar() {
+    return t('review.kind.grammar');
+  },
+  get pacing() {
+    return t('review.kind.pacing');
+  },
 };

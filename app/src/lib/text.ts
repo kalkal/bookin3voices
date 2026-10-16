@@ -1,3 +1,5 @@
+import { uiLocale } from '../i18n';
+
 /**
  * Utility pure sul testo, condivise tra le feature.
  * Logica pura = target preferito degli unit test.
@@ -18,7 +20,7 @@ export function countWords(text: string): number {
  */
 export function formatNumber(value: number): string {
   try {
-    return new Intl.NumberFormat('it-IT').format(value);
+    return new Intl.NumberFormat(uiLocale()).format(value);
   } catch {
     return String(value);
   }
