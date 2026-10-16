@@ -11,6 +11,10 @@ import { AI_PROVIDER_IDS, DEFAULT_AI_PROVIDER_ID } from './aiProviders';
 export const THEME_PREFERENCES = ['paper', 'candlelight', 'auto'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
+/** Interface language: follow the device, or force English / Italian. */
+export const UI_LANGUAGES = ['system', 'en', 'it'] as const;
+export type UiLanguagePreference = (typeof UI_LANGUAGES)[number];
+
 /** Frequency of the Markdown backup (the real export arrives with the Backup feature). */
 export const BACKUP_FREQUENCIES = ['daily', 'weekly', 'monthly'] as const;
 export type BackupFrequency = (typeof BACKUP_FREQUENCIES)[number];
@@ -33,6 +37,8 @@ export const appSettingsSchema = z.object({
    * have it and must NOT fall back to DEFAULT_SETTINGS.
    */
   lastBackupAt: z.number().int().positive().nullable().default(null),
+  /** Interface language; absent in payloads saved before the setting existed = 'system'. */
+  uiLanguage: z.enum(UI_LANGUAGES).optional(),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
@@ -48,6 +54,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dailyGoalWords: 500,
   backupFrequency: 'weekly',
   lastBackupAt: null,
+  uiLanguage: 'system',
 };
 
 export interface SettingsRepository {

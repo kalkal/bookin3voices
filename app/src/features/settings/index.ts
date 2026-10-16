@@ -16,8 +16,15 @@ export {
   DAILY_GOAL_STEP,
   DEFAULT_SETTINGS,
   THEME_PREFERENCES,
+  UI_LANGUAGES,
 } from './types';
-export type { AppSettings, BackupFrequency, SettingsRepository, ThemePreference } from './types';
+export type {
+  AppSettings,
+  BackupFrequency,
+  SettingsRepository,
+  ThemePreference,
+  UiLanguagePreference,
+} from './types';
 export {
   BACKUP_FREQUENCY_DAYS,
   backupFileSchema,

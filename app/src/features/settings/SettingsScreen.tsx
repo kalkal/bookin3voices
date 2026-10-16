@@ -20,7 +20,7 @@ import { DEFAULT_STYLE_ID, STYLES } from '../books/styles';
 import { AI_PROVIDERS } from './aiProviders';
 import { backupStatus } from './backup';
 import type { BackupService } from './backup';
-import { DAILY_GOAL_STEP } from './types';
+import { DAILY_GOAL_STEP, UI_LANGUAGES } from './types';
 import type { BackupFrequency, SettingsRepository, ThemePreference } from './types';
 import { useBackupDownload } from './useBackupDownload';
 import { useSettingsController } from './useSettingsController';
@@ -189,6 +189,21 @@ export function SettingsScreen({
                 testID={`theme-${value}`}
                 selected={settings.theme === value}
                 onPress={() => controller.setThemePreference(value)}
+              />
+            ))}
+          </View>
+        </Card>
+
+        <Text style={sectionLabelStyle}>{t('settings.language.section')}</Text>
+        <Card>
+          <View style={[styles.chipRow, { gap: spacing.sm }]}>
+            {UI_LANGUAGES.map((value) => (
+              <Chip
+                key={value}
+                label={t(`settings.language.${value}`)}
+                testID={`language-${value}`}
+                selected={(settings.uiLanguage ?? 'system') === value}
+                onPress={() => controller.setUiLanguage(value)}
               />
             ))}
           </View>

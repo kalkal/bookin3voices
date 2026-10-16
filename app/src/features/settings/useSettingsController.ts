@@ -6,11 +6,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { resolveLanguage, setLanguage } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ThemeMode } from '../../theme';
 import type { AiProviderId } from './aiProviders';
 import { DAILY_GOAL_MAX, DAILY_GOAL_MIN, DEFAULT_SETTINGS } from './types';
-import type { AppSettings, BackupFrequency, SettingsRepository, ThemePreference } from './types';
+import type {
+  AppSettings,
+  BackupFrequency,
+  SettingsRepository,
+  ThemePreference,
+  UiLanguagePreference,
+} from './types';
 
 /**
  * Translates the saved preference into the ThemeProvider's concrete mode.
@@ -35,6 +42,8 @@ export interface SettingsController {
   setBackupFrequency: (frequency: BackupFrequency) => void;
   /** Records the time of the last successful backup (visual reminder). */
   setLastBackupAt: (at: number) => void;
+  /** Saves the interface language and switches the UI to it right away. */
+  setUiLanguage: (preference: UiLanguagePreference) => void;
 }
 
 export function useSettingsController(repository: SettingsRepository): SettingsController {
@@ -98,6 +107,13 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     [update],
   );
   const setLastBackupAt = useCallback((at: number) => update({ lastBackupAt: at }), [update]);
+  const setUiLanguage = useCallback(
+    (preference: UiLanguagePreference) => {
+      update({ uiLanguage: preference });
+      setLanguage(resolveLanguage(preference));
+    },
+    [update],
+  );
 
   return {
     ready,
@@ -107,5 +123,6 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     setDailyGoalWords,
     setBackupFrequency,
     setLastBackupAt,
+    setUiLanguage,
   };
 }

@@ -11,11 +11,12 @@
  * Dictation ("Capitolo I", as the flow expects).
  */
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { t } from './src/i18n';
+import { resolveLanguage, setLanguage, t } from './src/i18n';
+import { useLanguage } from './src/i18n/useLanguage';
 import { ThemeProvider, paperPalette, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
@@ -199,6 +200,15 @@ function ThemedStatusBar() {
 function AppNavigator({ services }: { services: AppServices }) {
   const [stack, setStack] = useState<Route[]>(INITIAL_STACK);
   const route = stack[stack.length - 1];
+  const language = useLanguage();
+
+  // apply the saved interface language at startup ('system' = device language)
+  useEffect(() => {
+    services.settingsRepository
+      .load()
+      .then((settings) => setLanguage(resolveLanguage(settings.uiLanguage ?? 'system')))
+      .catch(() => undefined);
+  }, [services]);
 
   const push = (next: Route) => setStack((current) => [...current, next]);
   const pop = () => setStack((current) => (current.length > 1 ? current.slice(0, -1) : current));
@@ -216,100 +226,106 @@ function AppNavigator({ services }: { services: AppServices }) {
     return () => subscription.remove();
   }, []);
 
-  switch (route.name) {
-    case 'book':
-      return (
-        <BookScreen
-          bookId={route.bookId}
-          bookRepository={services.bookRepository}
-          chapterRepository={services.chapterRepository}
-          exportService={services.exportService}
-          pendingSuggestions={services.pendingSuggestions}
-          exportFileSink={services.exportFileSink}
-          outlineService={services.outlineService}
-          onBack={pop}
-          onOpenChapter={(chapter, position) =>
-            push({
-              name: 'editor',
-              chapter: { bookId: chapter.bookId, chapterId: chapter.id },
-              title: `${toRoman(position)} · ${chapter.title}`,
-            })
-          }
-          onDictateChapter={(chapter, position) =>
-            push({
-              name: 'dictation',
-              chapter: { bookId: chapter.bookId, chapterId: chapter.id },
-              title: t('common.chapterTitle', { roman: toRoman(position), title: chapter.title }),
-            })
-          }
-          onOpenNotes={(bookTitle) => push({ name: 'notes', bookId: route.bookId, bookTitle })}
-        />
-      );
-    case 'dictation':
-      return (
-        <DictationScreen
-          // key: changing chapter remounts the screen (fresh session)
-          key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
-          chapter={route.chapter}
-          chapterTitle={route.title}
-          repository={services.chapterRepository}
-          outlineRepository={services.chapterRepository}
-          engine={e2eEngine}
-          preflightChecks={e2eChecks}
-          onBack={pop}
-        />
-      );
-    case 'editor':
-      return (
-        <ChapterReviewFlow
-          key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
-          chapter={route.chapter}
-          chapterTitle={route.title}
-          chapterRepository={services.chapterRepository}
-          revisionRepository={services.revisionRepository}
-          provider={services.suggestionsProvider}
-          onBack={pop}
-        />
-      );
-    case 'notes':
-      return (
-        <NotesScreen
-          key={route.bookId}
-          bookId={route.bookId}
-          bookTitle={route.bookTitle}
-          noteRepository={services.noteRepository}
-          onBack={pop}
-        />
-      );
-    case 'progress':
-      return (
-        <ProgressScreen
-          dailyProgressRepository={services.dailyProgressRepository}
-          settingsRepository={services.settingsRepository}
-          bookRepository={services.bookRepository}
-          onBack={pop}
-        />
-      );
-    case 'settings':
-      return (
-        <SettingsScreen
-          repository={services.settingsRepository}
-          backupService={services.backupService}
-          backupFileSink={services.exportFileSink}
-          onBack={pop}
-        />
-      );
-    default:
-      return (
-        <LibraryScreen
-          bookRepository={services.bookRepository}
-          settingsRepository={services.settingsRepository}
-          dailyProgressRepository={services.dailyProgressRepository}
-          onOpenBook={(book) => push({ name: 'book', bookId: book.id })}
-          onOpenSettings={() => push({ name: 'settings' })}
-          onOpenProgress={() => push({ name: 'progress' })}
-        />
-      );
+  // a language change re-renders the current screen with the new strings
+  // (the navigation stack is kept)
+  return <Fragment key={language}>{renderRoute()}</Fragment>;
+
+  function renderRoute() {
+    switch (route.name) {
+      case 'book':
+        return (
+          <BookScreen
+            bookId={route.bookId}
+            bookRepository={services.bookRepository}
+            chapterRepository={services.chapterRepository}
+            exportService={services.exportService}
+            pendingSuggestions={services.pendingSuggestions}
+            exportFileSink={services.exportFileSink}
+            outlineService={services.outlineService}
+            onBack={pop}
+            onOpenChapter={(chapter, position) =>
+              push({
+                name: 'editor',
+                chapter: { bookId: chapter.bookId, chapterId: chapter.id },
+                title: `${toRoman(position)} · ${chapter.title}`,
+              })
+            }
+            onDictateChapter={(chapter, position) =>
+              push({
+                name: 'dictation',
+                chapter: { bookId: chapter.bookId, chapterId: chapter.id },
+                title: t('common.chapterTitle', { roman: toRoman(position), title: chapter.title }),
+              })
+            }
+            onOpenNotes={(bookTitle) => push({ name: 'notes', bookId: route.bookId, bookTitle })}
+          />
+        );
+      case 'dictation':
+        return (
+          <DictationScreen
+            // key: changing chapter remounts the screen (fresh session)
+            key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
+            chapter={route.chapter}
+            chapterTitle={route.title}
+            repository={services.chapterRepository}
+            outlineRepository={services.chapterRepository}
+            engine={e2eEngine}
+            preflightChecks={e2eChecks}
+            onBack={pop}
+          />
+        );
+      case 'editor':
+        return (
+          <ChapterReviewFlow
+            key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
+            chapter={route.chapter}
+            chapterTitle={route.title}
+            chapterRepository={services.chapterRepository}
+            revisionRepository={services.revisionRepository}
+            provider={services.suggestionsProvider}
+            onBack={pop}
+          />
+        );
+      case 'notes':
+        return (
+          <NotesScreen
+            key={route.bookId}
+            bookId={route.bookId}
+            bookTitle={route.bookTitle}
+            noteRepository={services.noteRepository}
+            onBack={pop}
+          />
+        );
+      case 'progress':
+        return (
+          <ProgressScreen
+            dailyProgressRepository={services.dailyProgressRepository}
+            settingsRepository={services.settingsRepository}
+            bookRepository={services.bookRepository}
+            onBack={pop}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen
+            repository={services.settingsRepository}
+            backupService={services.backupService}
+            backupFileSink={services.exportFileSink}
+            onBack={pop}
+          />
+        );
+      default:
+        return (
+          <LibraryScreen
+            bookRepository={services.bookRepository}
+            settingsRepository={services.settingsRepository}
+            dailyProgressRepository={services.dailyProgressRepository}
+            onOpenBook={(book) => push({ name: 'book', bookId: book.id })}
+            onOpenSettings={() => push({ name: 'settings' })}
+            onOpenProgress={() => push({ name: 'progress' })}
+          />
+        );
+    }
   }
 }
 

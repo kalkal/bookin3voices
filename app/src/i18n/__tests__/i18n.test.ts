@@ -1,4 +1,13 @@
-import { NAMESPACES, setLanguage, t, tn, uiLocale } from '../index';
+import {
+  getLanguage,
+  NAMESPACES,
+  resolveLanguage,
+  setLanguage,
+  subscribeLanguage,
+  t,
+  tn,
+  uiLocale,
+} from '../index';
 
 describe('i18n', () => {
   afterEach(() => setLanguage('it'));
@@ -31,5 +40,23 @@ describe('i18n', () => {
     setLanguage('it');
     expect(uiLocale()).toBe('it-IT');
     expect(tn('missing.count', 1)).toBe('missing.count_one');
+  });
+});
+
+describe('language switching', () => {
+  afterEach(() => setLanguage('it'));
+
+  it('notifies subscribers once per change and resolves preferences', () => {
+    const calls: string[] = [];
+    const unsubscribe = subscribeLanguage(() => calls.push(getLanguage()));
+    setLanguage('en');
+    setLanguage('en');
+    setLanguage('it');
+    unsubscribe();
+    setLanguage('en');
+    expect(calls).toEqual(['en', 'it']);
+    expect(resolveLanguage('it')).toBe('it');
+    expect(resolveLanguage('en')).toBe('en');
+    expect(['en', 'it']).toContain(resolveLanguage('system'));
   });
 });

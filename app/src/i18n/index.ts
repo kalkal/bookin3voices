@@ -1,5 +1,6 @@
-// UI strings in English (default) and Italian. The language follows the device locale
-// at startup: Italian devices get Italian, every other device gets English. Unit tests run
+// UI strings in English (default) and Italian. By default the language follows the device
+// locale (Italian devices get Italian, every other device gets English); Settings can force
+// one, and setLanguage() switches it at runtime. Unit tests run
 // in Italian (see jest.setup.ts) so that their assertions stay readable for the existing
 // suites; the English dictionary is checked key-by-key against the Italian one.
 //
@@ -59,9 +60,30 @@ export function getLanguage(): Lang {
   return current;
 }
 
-/** Changes the UI language (used by tests; the app picks it once at startup). */
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+/** Notifies `listener` when the UI language changes; returns the unsubscribe function. */
+export function subscribeLanguage(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Changes the UI language and notifies the subscribers (the app re-renders). */
 export function setLanguage(lang: Lang): void {
+  if (lang === current) return;
   current = lang;
+  listeners.forEach((listener) => listener());
+}
+
+/** Interface language preference saved in Settings. */
+export type LanguagePreference = 'system' | Lang;
+
+/** Concrete language for a preference: 'system' follows the device. */
+export function resolveLanguage(preference: LanguagePreference): Lang {
+  return preference === 'system' ? detectLanguage() : preference;
 }
 
 /** BCP-47 locale for number and date formatting in the current UI language. */
