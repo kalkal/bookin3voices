@@ -32,6 +32,15 @@ tells you what Amazon would reject before you upload.
   backup of the raw text.
 - Notes, daily word goals and streaks.
 
+<p>
+  <img src="docs/images/book-styles.jpg" alt="Book screen with the style picker: Suspense / Horror, Mystery, Thriller" width="240">
+  <img src="docs/images/editor-suggestions.jpg" alt="Chapter editor with the passages Amazon Nova flagged highlighted" width="240">
+  <img src="docs/images/review-suggestions.jpg" alt="Suggestion cards with a reason and up to three proposals to accept or reject" width="240">
+</p>
+
+*Screenshots of the app (Italian UI) running on the Firebase emulators, with real suggestions
+from Amazon Nova Pro in the Suspense / Horror style.*
+
 ## How it works
 
 ![bookin3voice architecture: mobile app, Firebase, Amazon Nova on Bedrock, Amazon KDP](docs/images/architecture.svg)
