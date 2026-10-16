@@ -68,12 +68,12 @@ describe('App', () => {
 
     // Libreria
     expect(await screen.findByTestId('library-screen')).toBeOnTheScreen();
-    expect(screen.getByTestId('library-book-faro')).toHaveTextContent(/Il custode del faro/);
+    expect(await screen.findByTestId('library-book-faro')).toHaveTextContent(/Il custode del faro/);
 
     // Libreria → Libro
     await fireEvent.press(screen.getByTestId('library-book-faro'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
-    expect(screen.getByTestId('book-chapter-c1')).toHaveTextContent(/Le chiavi di casa/);
+    expect(await screen.findByTestId('book-chapter-c1')).toHaveTextContent(/Le chiavi di casa/);
 
     // Libro → Dettatura sul capitolo VERO via repository condiviso
     await fireEvent.press(screen.getByTestId('book-chapter-mic-c1'));

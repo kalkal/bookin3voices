@@ -72,8 +72,9 @@ describe('BookScreen', () => {
 
     expect(await screen.findByText('Il custode del faro')).toBeOnTheScreen();
     expect(screen.getByText(/24\.310 parole · 9 capitoli/)).toBeOnTheScreen();
+    // i capitoli arrivano dopo il libro: aspettarli, non darli per già caricati
     // nota: it-IT non raggruppa i numeri a 4 cifre (CLDR), quindi "3180"
-    expect(screen.getByTestId('book-chapter-c1')).toHaveTextContent(/Finale · 3180 parole/);
+    expect(await screen.findByTestId('book-chapter-c1')).toHaveTextContent(/Finale · 3180 parole/);
     expect(screen.getByTestId('book-chapter-c2')).toHaveTextContent(/Rifinito/);
     expect(screen.getByTestId('book-chapter-c3')).toHaveTextContent(/Bozza/);
     // numerali romani in ordine di lista
