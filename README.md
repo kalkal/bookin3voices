@@ -75,7 +75,7 @@ from Amazon Nova Pro in the Suspense / Horror style.*
 
 Repository layout: `app/` Expo app · `functions/` Cloud Functions (AI, export, backup) ·
 `content/style-profiles/` the style instructions and invented examples · `rules-tests/`
-security-rules tests · `e2e/` Maestro flows · `docs/` local-development notes (in Italian).
+security-rules tests · `e2e/` Maestro flows · [`docs/local-development.md`](docs/local-development.md) emulator setup.
 
 ## AI provider
 
