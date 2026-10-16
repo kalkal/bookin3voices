@@ -33,7 +33,8 @@ tells you what Amazon would reject before you upload.
 - **Export** to EPUB (checked with EPUBCheck, the W3C conformance checker) and DOCX, plus a Markdown
   backup of the raw text.
 - Notes, daily word goals and streaks.
-- English and Italian interface: the app follows the device language (`EXPO_PUBLIC_UI_LANG`
+- English and Italian interface: the app follows the device language, or the language picked in
+  Settings (`EXPO_PUBLIC_UI_LANG`
   forces one), and a new book is created in the interface language, which the AI uses.
 
 <p>
