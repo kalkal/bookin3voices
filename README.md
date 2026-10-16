@@ -33,6 +33,8 @@ tells you what Amazon would reject before you upload.
 - **Export** to EPUB (checked with EPUBCheck, the W3C conformance checker) and DOCX, plus a Markdown
   backup of the raw text.
 - Notes, daily word goals and streaks.
+- English and Italian interface: the app follows the device language (`EXPO_PUBLIC_UI_LANG`
+  forces one), and a new book is created in the interface language, which the AI uses.
 
 <p>
   <img src="docs/images/book-styles.jpg" alt="Book screen with the style picker: Suspense / Horror, Mystery, Thriller" width="240">
@@ -40,7 +42,7 @@ tells you what Amazon would reject before you upload.
   <img src="docs/images/review-suggestions.jpg" alt="Suggestion cards with a reason and up to three proposals to accept or reject" width="240">
 </p>
 
-*Screenshots of the app (Italian UI) running on the Firebase emulators, with real suggestions
+*Screenshots of the app running on the Firebase emulators, with real suggestions
 from Amazon Nova Pro in the Suspense / Horror style.*
 
 ## How it works
