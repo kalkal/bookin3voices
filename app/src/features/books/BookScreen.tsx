@@ -33,6 +33,8 @@ export interface BookScreenProps {
   exportService: BookExportService;
   pendingSuggestions: PendingSuggestionsRepository;
   exportFileSink: ExportFileSink;
+  /** Waits for local writes to reach the server before an export. */
+  waitForSync?: () => Promise<boolean>;
   outlineService: OutlineService;
   onBack: () => void;
   /** Tap on the row: opens the chapter Editor. `position` is 1-based. */
@@ -54,6 +56,7 @@ export function BookScreen({
   exportService,
   pendingSuggestions,
   exportFileSink,
+  waitForSync,
   outlineService,
   onBack,
   onOpenChapter,
@@ -328,6 +331,7 @@ export function BookScreen({
             exportService={exportService}
             pendingSuggestions={pendingSuggestions}
             fileSink={exportFileSink}
+            waitForSync={waitForSync}
           />
         ))}
 

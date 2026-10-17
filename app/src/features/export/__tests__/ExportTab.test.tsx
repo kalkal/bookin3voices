@@ -10,7 +10,11 @@ import {
 } from '../inMemory';
 import type { BookExportService } from '../types';
 
-function setup(options?: { pending?: number; exportService?: BookExportService }) {
+function setup(options?: {
+  pending?: number;
+  exportService?: BookExportService;
+  waitForSync?: () => Promise<boolean>;
+}) {
   const books = new InMemoryBookRepository();
   const book = books.seed({
     id: 'faro',
@@ -30,6 +34,7 @@ function setup(options?: { pending?: number; exportService?: BookExportService }
         exportService={exportService}
         pendingSuggestions={pendingSuggestions}
         fileSink={fileSink}
+        waitForSync={options?.waitForSync}
       />
     </ThemeProvider>,
   );
@@ -101,6 +106,47 @@ describe('ExportTab', () => {
     await fireEvent.press(await screen.findByTestId('export-generate'));
     expect(await screen.findByTestId('export-status')).toHaveTextContent(
       'Il libro non ha capitoli da esportare.',
+    );
+    await screen.unmount();
+  });
+
+  it('waits for local writes to be synced before calling the export', async () => {
+    const order: string[] = [];
+    let release: (synced: boolean) => void = () => {};
+    const waitForSync = () =>
+      new Promise<boolean>((resolve) => {
+        order.push('sync-started');
+        release = (synced) => {
+          order.push('sync-done');
+          resolve(synced);
+        };
+      });
+    const service = new InMemoryBookExportService();
+    const original = service.exportBook.bind(service);
+    service.exportBook = async (request) => {
+      order.push('export');
+      return original(request);
+    };
+    const { result, fileSink } = setup({ exportService: service, waitForSync });
+    const screen = await result;
+
+    await fireEvent.press(await screen.findByTestId('export-generate'));
+    await waitFor(() => expect(order).toEqual(['sync-started']));
+    release(true);
+    await waitFor(() => expect(fileSink.shared).toHaveLength(1));
+    expect(order).toEqual(['sync-started', 'sync-done', 'export']);
+    expect(await screen.findByTestId('export-status')).not.toHaveTextContent(/non ancora sincron/);
+    await screen.unmount();
+  });
+
+  it('if the sync times out it still exports and warns that changes may be missing', async () => {
+    const { result, fileSink } = setup({ waitForSync: async () => false });
+    const screen = await result;
+
+    await fireEvent.press(await screen.findByTestId('export-generate'));
+    await waitFor(() => expect(fileSink.shared).toHaveLength(1));
+    expect(await screen.findByTestId('export-status')).toHaveTextContent(
+      /non ancora sincronizzate/,
     );
     await screen.unmount();
   });

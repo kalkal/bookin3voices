@@ -9,6 +9,7 @@ export {
   InMemoryPendingSuggestionsRepository,
 } from './inMemory';
 export { makeRequestId } from './requestId';
+export { SYNC_WAIT_MS, waitForSyncedWrites } from './syncBarrier';
 export { ShareSheetExportFileSink } from './ShareSheetExportFileSink';
 export { EXPORT_FORMATS, FORMAT_LABELS, exportFileSchema } from './types';
 export type {

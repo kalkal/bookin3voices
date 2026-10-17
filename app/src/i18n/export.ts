@@ -31,6 +31,7 @@ export const exportStrings: Namespace = {
     'export.share.unavailable': 'Sharing is not available on this device.',
     'export.error.unexpected': 'Unexpected error during export.',
     'export.error.saveMetadata': 'Could not save the metadata.',
+    'export.note.notSynced': ' The export may not include changes that are not synced yet.',
     'export.progress.generating': 'Generating {format}…',
     'export.progress.opening': 'File ready, opening sharing…',
     'export.progress.done': '“{fileName}” generated ({size} KB).{note}',
@@ -86,6 +87,8 @@ export const exportStrings: Namespace = {
     'export.share.unavailable': 'La condivisione non è disponibile su questo dispositivo.',
     'export.error.unexpected': 'Errore inatteso durante l’export.',
     'export.error.saveMetadata': 'Salvataggio dei metadati non riuscito.',
+    'export.note.notSynced':
+      ' L’export potrebbe non includere le modifiche non ancora sincronizzate.',
     'export.progress.generating': 'Generazione {format} in corso…',
     'export.progress.opening': 'File pronto, apro la condivisione…',
     'export.progress.done': '«{fileName}» generato ({size} KB).{note}',

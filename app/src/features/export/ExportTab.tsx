@@ -29,6 +29,8 @@ export interface ExportTabProps {
   exportService: BookExportService;
   pendingSuggestions: PendingSuggestionsRepository;
   fileSink: ExportFileSink;
+  /** Resolves true when local writes reached the server, false on timeout. */
+  waitForSync?: () => Promise<boolean>;
 }
 
 type Progress =
@@ -48,6 +50,7 @@ export function ExportTab({
   exportService,
   pendingSuggestions,
   fileSink,
+  waitForSync,
 }: ExportTabProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
 
@@ -101,6 +104,8 @@ export function ExportTab({
       message: t('export.progress.generating', { format: FORMAT_LABELS[format] }),
     });
     try {
+      // the callable reads from the server: let the local saves reach it first
+      const synced = waitForSync ? await waitForSync().catch(() => false) : true;
       const file = await exportService.exportBook({
         bookId: book.id,
         format,
@@ -113,7 +118,7 @@ export function ExportTab({
         message: t('export.progress.done', {
           fileName: file.fileName,
           size: Math.max(1, Math.round(file.size / 1024)),
-          note: preflightNote(file),
+          note: preflightNote(file) + (synced ? '' : t('export.note.notSynced')),
         }),
       });
     } catch (error) {

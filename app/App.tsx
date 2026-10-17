@@ -38,6 +38,7 @@ import type { ChapterRef, ChapterRepository, KeyValueStorage } from './src/featu
 import { DictationScreen } from './src/features/dictation';
 import {
   CallableBookExportService,
+  waitForSyncedWrites,
   FirestorePendingSuggestionsRepository,
   InMemoryBookExportService,
   InMemoryExportFileSink,
@@ -90,6 +91,7 @@ export interface AppServices {
   exportService: BookExportService;
   pendingSuggestions: PendingSuggestionsRepository;
   exportFileSink: ExportFileSink;
+  waitForSync?: () => Promise<boolean>;
   backupService: BackupService;
   outlineService: OutlineService;
 }
@@ -126,6 +128,7 @@ function defaultServices(uid: string): AppServices {
     exportService: new CallableBookExportService({ functions }),
     pendingSuggestions: new FirestorePendingSuggestionsRepository({ db: firestore, uid }),
     exportFileSink: new ShareSheetExportFileSink(),
+    waitForSync: () => waitForSyncedWrites(firestore),
     backupService: new CallableBackupService({ functions }),
     outlineService: new CallableOutlineService({ functions }),
   };
@@ -241,6 +244,7 @@ function AppNavigator({ services }: { services: AppServices }) {
             exportService={services.exportService}
             pendingSuggestions={services.pendingSuggestions}
             exportFileSink={services.exportFileSink}
+            waitForSync={services.waitForSync}
             outlineService={services.outlineService}
             onBack={pop}
             onOpenChapter={(chapter, position) =>
