@@ -174,6 +174,17 @@ describe('exportBackup — whole library', () => {
     ]);
   });
 
+  it('pins every entry date, folders included, to createdAt (deterministic bytes)', () => {
+    const entries = Object.values(zip.files);
+    expect(entries.some((entry) => entry.dir)).toBe(true);
+    for (const entry of entries) {
+      expect({ name: entry.name, date: entry.date.getTime() }).toEqual({
+        name: entry.name,
+        date: NOW,
+      });
+    }
+  });
+
   it('the chapter Markdown is FAITHFUL to rawText (accents and quotes)', async () => {
     const md = await fileText(zip, 'il-faro-di-levante/01-il-ritorno.md');
     expect(md).toBe(

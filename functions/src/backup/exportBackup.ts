@@ -136,7 +136,7 @@ async function reserveBackup(
   });
 }
 
-/** Deterministic zip: file dates pinned to createdAt, stable order. */
+/** Deterministic zip: file and folder dates pinned to createdAt, stable order. */
 async function buildZip(books: BookForBackup[], generatedAt: Date): Promise<Buffer> {
   const zip = new JSZip();
   const usedFolders = new Set<string>();
@@ -145,6 +145,9 @@ async function buildZip(books: BookForBackup[], generatedAt: Date): Promise<Buff
     const fileNames = book.chapters.map((chapter, index) =>
       chapterFileName(index + 1, book.chapters.length, chapter.title),
     );
+    // Explicit folder entry: the one JSZip creates implicitly would carry
+    // the current time and break byte-for-byte idempotency on retry.
+    zip.file(`${folder}/`, null, { dir: true, date: generatedAt });
     zip.file(`${folder}/indice.md`, bookIndexMarkdown(book, fileNames, generatedAt), {
       date: generatedAt,
     });
