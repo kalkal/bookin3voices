@@ -24,6 +24,7 @@ import {
   doc,
   getFirestore,
   setDoc,
+  waitForPendingWrites,
   type Firestore,
 } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
@@ -105,7 +106,9 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     const pending = new FirestorePendingSuggestionsRepository({ db, uid });
     expect(await pending.countPending(book.id)).toBe(1);
 
-    // 3. export through the callable, as the Export tab would
+    // 3. export through the callable, as the Export tab would; the repositories
+    //    write optimistically, so let the server see every write first
+    await waitForPendingWrites(db);
     const exportService = new CallableBookExportService({ functions: getFunctions(app) });
     const file = await exportService.exportBook({
       bookId: book.id,
@@ -135,6 +138,8 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     const book = await books.createBook({ title: 'Doppio invio' });
     const capitolo = await chapters.createChapter(book.id, { title: 'Unico' });
     await chapters.saveRawText({ bookId: book.id, chapterId: capitolo.id }, 'Testo breve.');
+    // optimistic writes: the callable reads server-side, so wait for the ack
+    await waitForPendingWrites(db);
 
     const exportService = new CallableBookExportService({ functions: getFunctions(app) });
     const request = { bookId: book.id, format: 'epub' as const, requestId: 'e2e-retry-1' };
