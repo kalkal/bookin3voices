@@ -11,11 +11,11 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, OrnamentDivider } from '../../components';
+import { Card, CathedralBackdrop, OrnamentDivider } from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -36,6 +36,9 @@ export interface ProgressScreenProps {
 }
 
 /** Initial of the weekday (S M T W T F S, in the UI language) from the YYYY-MM-DD key. */
+// the eye that watches over the empty goal ring (gold line drawing, decorative)
+const EYE_SOURCE = require('../../../assets/ornaments/eye.png');
+
 function weekdayInitial(dateKey: string): string {
   const [year, month, day] = dateKey.split('-').map(Number);
   return t('books.weekdayInitials')[new Date(year, month - 1, day).getDay()];
@@ -212,6 +215,7 @@ export function ProgressScreen({
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['top', 'bottom']}
     >
+      <CathedralBackdrop kind="arches" />
       <View style={[styles.header, { paddingHorizontal: spacing.lg }]}>
         <Pressable
           testID="progress-back"
@@ -247,6 +251,13 @@ export function ProgressScreen({
               fillColor={colors.primary}
               holeColor={colors.background}
             >
+              {view.today.words === 0 && (
+                <Image
+                  testID="goal-eye"
+                  source={EYE_SOURCE}
+                  style={{ width: 92, height: 58, marginBottom: 2 }}
+                />
+              )}
               <Text
                 style={{
                   fontFamily: fonts.display,

@@ -71,6 +71,8 @@ describe('App', () => {
     // Library
     expect(await screen.findByTestId('library-screen')).toBeOnTheScreen();
     expect(await screen.findByTestId('library-book-faro')).toHaveTextContent(/Il custode del faro/);
+    // the rose window sits behind the Library (and only there: not in the editor)
+    expect(screen.getByTestId('cathedral-rose')).toBeOnTheScreen();
 
     // Library → Book
     await fireEvent.press(screen.getByTestId('library-book-faro'));

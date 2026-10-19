@@ -205,7 +205,7 @@ function AppNavigator({ services }: { services: AppServices }) {
   const [stack, setStack] = useState<Route[]>(INITIAL_STACK);
   const route = stack[stack.length - 1];
   const language = useLanguage();
-  const { setMode } = useTheme();
+  const { setMode, setOrnaments } = useTheme();
   const systemScheme = useColorScheme();
 
   // apply the saved interface language and theme at startup ('system' = device
@@ -219,12 +219,13 @@ function AppNavigator({ services }: { services: AppServices }) {
         if (cancelled) return;
         setLanguage(resolveLanguage(settings.uiLanguage ?? 'system'));
         setMode(resolveThemeMode(settings.theme, systemScheme));
+        setOrnaments(settings.ornaments ?? true);
       })
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [services, setMode, systemScheme]);
+  }, [services, setMode, setOrnaments, systemScheme]);
 
   const push = (next: Route) => setStack((current) => [...current, next]);
   const pop = () => setStack((current) => (current.length > 1 ? current.slice(0, -1) : current));

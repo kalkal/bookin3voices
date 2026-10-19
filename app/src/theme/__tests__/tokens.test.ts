@@ -1,17 +1,5 @@
+import { contrast } from '../testing/contrast';
 import { candlelightPalette, paperPalette, radius, spacing, typeScale } from '../tokens';
-
-/** WCAG 2.x contrast ratio between two #RRGGBB colours. */
-function contrast(foreground: string, background: string): number {
-  const luminance = (hex: string) => {
-    const [r, g, b] = [1, 3, 5].map((i) => {
-      const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
-      return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-    });
-    return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
-  };
-  const [light, dark] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
-  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
-}
 
 describe('paper palette (token table, exact values)', () => {
   it.each([

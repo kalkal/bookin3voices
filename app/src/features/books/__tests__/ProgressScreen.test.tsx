@@ -129,4 +129,24 @@ describe('ProgressScreen', () => {
     await fireEvent.press(getByTestId('progress-back'));
     expect(onBack).toHaveBeenCalled();
   });
+
+  it('the arches stand behind the screen, below the chart', async () => {
+    const { getByTestId } = await renderScreen();
+    expect(getByTestId('cathedral-arches')).toBeOnTheScreen();
+  });
+
+  describe('the eye in the goal ring', () => {
+    it('with no words written today an eye stands above the 0, which stays readable', async () => {
+      const { getByTestId, getByText } = await renderScreen({ days: {} });
+      expect(getByTestId('goal-eye')).toBeOnTheScreen();
+      expect(getByTestId('progress-ring')).toHaveTextContent(/^0di 500 parole$/);
+      expect(getByText(/di 500 parole/)).toBeOnTheScreen();
+    });
+
+    it('once words are written the eye gives way to the number', async () => {
+      const { queryByTestId, getByTestId } = await renderScreen();
+      expect(queryByTestId('goal-eye')).toBeNull();
+      expect(getByTestId('progress-ring')).toHaveTextContent(/^512di 500 parole$/);
+    });
+  });
 });

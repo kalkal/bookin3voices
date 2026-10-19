@@ -192,6 +192,14 @@ export function SettingsScreen({
               />
             ))}
           </View>
+          <View style={[styles.chipRow, { gap: spacing.sm, marginTop: spacing.md }]}>
+            <Chip
+              label={t('settings.ornaments.label')}
+              testID="ornaments-toggle"
+              selected={settings.ornaments ?? true}
+              onPress={() => controller.setOrnaments(!(settings.ornaments ?? true))}
+            />
+          </View>
         </Card>
 
         <Text style={sectionLabelStyle}>{t('settings.language.section')}</Text>

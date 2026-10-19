@@ -39,6 +39,8 @@ export interface SettingsController {
   settings: AppSettings;
   setAiProvider: (id: AiProviderId) => void;
   setThemePreference: (preference: ThemePreference) => void;
+  /** Switches the cathedral drawing on or off (saved, applied right away). */
+  setOrnaments: (on: boolean) => void;
   setDailyGoalWords: (words: number) => void;
   setBackupFrequency: (frequency: BackupFrequency) => void;
   /** Records the time of the last successful backup (visual reminder). */
@@ -48,7 +50,7 @@ export interface SettingsController {
 }
 
 export function useSettingsController(repository: SettingsRepository): SettingsController {
-  const { setMode } = useTheme();
+  const { setMode, setOrnaments: applyOrnaments } = useTheme();
   const systemScheme = useColorScheme();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [ready, setReady] = useState(false);
@@ -77,6 +79,12 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     setMode(resolveThemeMode(settings.theme, systemScheme));
   }, [ready, settings.theme, systemScheme, setMode]);
 
+  // the cathedral drawing follows its switch (absent = on)
+  useEffect(() => {
+    if (!ready) return;
+    applyOrnaments(settings.ornaments ?? true);
+  }, [ready, settings.ornaments, applyOrnaments]);
+
   const update = useCallback(
     (patch: Partial<AppSettings>) => {
       const next = { ...settingsRef.current, ...patch };
@@ -96,6 +104,7 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     (preference: ThemePreference) => update({ theme: preference, themeChosen: true }),
     [update],
   );
+  const setOrnaments = useCallback((on: boolean) => update({ ornaments: on }), [update]);
   const setDailyGoalWords = useCallback(
     (words: number) => {
       const clamped = Math.min(DAILY_GOAL_MAX, Math.max(DAILY_GOAL_MIN, Math.round(words)));
@@ -121,6 +130,7 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     settings,
     setAiProvider,
     setThemePreference,
+    setOrnaments,
     setDailyGoalWords,
     setBackupFrequency,
     setLastBackupAt,

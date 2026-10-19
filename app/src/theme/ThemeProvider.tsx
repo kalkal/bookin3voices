@@ -28,6 +28,9 @@ export interface Theme {
   letterSpacing: typeof letterSpacing;
   fonts: typeof fontFamilies;
   setMode: (mode: ThemeMode) => void;
+  /** Cathedral line drawing behind some screens (Settings can switch it off). */
+  ornaments: boolean;
+  setOrnaments: (on: boolean) => void;
 }
 
 const palettes: Record<ThemeMode, Palette> = {
@@ -41,11 +44,18 @@ interface ThemeProviderProps {
   children: ReactNode;
   /** Initial mode; the app default is black and gold ("candlelight"). */
   initialMode?: ThemeMode;
+  /** Cathedral drawing on or off; on by default. */
+  initialOrnaments?: boolean;
 }
 
-export function ThemeProvider({ children, initialMode = 'candlelight' }: ThemeProviderProps) {
+export function ThemeProvider({
+  children,
+  initialMode = 'candlelight',
+  initialOrnaments = true,
+}: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
   const setMode = useCallback((next: ThemeMode) => setModeState(next), []);
+  const [ornaments, setOrnaments] = useState(initialOrnaments);
 
   const theme = useMemo<Theme>(
     () => ({
@@ -57,8 +67,10 @@ export function ThemeProvider({ children, initialMode = 'candlelight' }: ThemePr
       letterSpacing,
       fonts: fontFamilies,
       setMode,
+      ornaments,
+      setOrnaments,
     }),
-    [mode, setMode],
+    [mode, setMode, ornaments],
   );
 
   return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;

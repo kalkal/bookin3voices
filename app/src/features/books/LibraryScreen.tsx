@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, OrnamentDivider, PrimaryButton } from '../../components';
+import { Card, CathedralBackdrop, OrnamentDivider, PrimaryButton } from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -212,6 +212,7 @@ export function LibraryScreen({
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['top', 'bottom']}
     >
+      <CathedralBackdrop kind="rose" />
       <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
         <View style={styles.headerRow}>
           <View style={{ width: 40 }} />

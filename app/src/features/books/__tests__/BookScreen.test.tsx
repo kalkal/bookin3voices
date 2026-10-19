@@ -36,11 +36,13 @@ function renderBook(overrides?: {
   onOpenChapter?: jest.Mock;
   onDictateChapter?: jest.Mock;
   onOpenNotes?: jest.Mock;
+  /** A book with no chapters yet. */
+  empty?: boolean;
 }) {
   const books = new InMemoryBookRepository();
   books.seed({ id: 'faro', title: 'Il custode del faro', wordCount: 24_310, chapterCount: 9 });
   const chapters = new InMemoryChapterRepository();
-  seedChapters(chapters);
+  if (overrides?.empty !== true) seedChapters(chapters);
   const onBack = jest.fn();
   const onOpenChapter = overrides?.onOpenChapter ?? jest.fn();
   const onDictateChapter = overrides?.onDictateChapter ?? jest.fn();
@@ -66,6 +68,16 @@ function renderBook(overrides?: {
 }
 
 describe('BookScreen', () => {
+  it('the arches stand behind a book with no chapters yet, not behind one with chapters', async () => {
+    const vuoto = await renderBook({ empty: true }).result;
+    expect(await vuoto.findByTestId('book-new-chapter')).toBeOnTheScreen();
+    expect(vuoto.getByTestId('cathedral-arches')).toBeOnTheScreen();
+    await vuoto.unmount();
+    const pieno = await renderBook().result;
+    expect(await pieno.findByText('La marea')).toBeOnTheScreen();
+    expect(pieno.queryByTestId('cathedral-arches')).toBeNull();
+  });
+
   it('shows header, Roman numerals and color-coded chapter statuses', async () => {
     const { result, books } = renderBook();
     const screen = await result;

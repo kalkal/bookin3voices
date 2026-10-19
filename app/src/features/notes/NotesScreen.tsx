@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
+import { Card, CathedralBackdrop, Chip, OrnamentDivider, PrimaryButton } from '../../components';
 import { ExpoDictationEngine } from '../dictation';
 import type { DictationEngine } from '../dictation';
 import { t, uiLocale } from '../../i18n';
@@ -166,6 +166,7 @@ export function NotesScreen({
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['top', 'bottom']}
     >
+      {notes !== null && notes.length === 0 && <CathedralBackdrop kind="arches" />}
       <View style={[styles.header, { gap: spacing.md, paddingHorizontal: spacing.lg }]}>
         <Pressable
           accessibilityRole="button"

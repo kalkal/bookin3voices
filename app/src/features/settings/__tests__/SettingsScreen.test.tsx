@@ -22,10 +22,15 @@ function memoryStorage(initial: Record<string, string> = {}) {
 
 const KEY = 'bookvoice/settings/app';
 
-/** Exposes the ThemeProvider's current mode next to the screen. */
+/** Exposes the ThemeProvider's current mode and cathedral switch next to the screen. */
 function ModeProbe() {
-  const { mode } = useTheme();
-  return <Text testID="mode-probe">{mode}</Text>;
+  const { mode, ornaments } = useTheme();
+  return (
+    <>
+      <Text testID="mode-probe">{mode}</Text>
+      <Text testID="ornaments-probe">{ornaments ? 'on' : 'off'}</Text>
+    </>
+  );
 }
 
 async function renderScreen(
@@ -195,5 +200,24 @@ describe('SettingsScreen', () => {
     expect(await screen.findByTestId('style-profile-mystery')).toHaveTextContent(/Mystery/);
     expect(await screen.findByTestId('style-profile-thriller')).toHaveTextContent(/Thriller/);
     await screen.unmount();
+  });
+
+  it('the cathedral drawing can be switched off in Settings, and it stays off after a restart', async () => {
+    const { storage, data } = memoryStorage();
+    const prima = await renderScreen(storage);
+    expect(await prima.findByTestId('ornaments-probe')).toHaveTextContent('on');
+    // Settings itself has little room for it: no arches behind this screen
+    expect(prima.queryByTestId('cathedral-arches')).toBeNull();
+
+    await fireEvent.press(await prima.findByTestId('ornaments-toggle'));
+    expect(prima.getByTestId('ornaments-probe')).toHaveTextContent('off');
+    await waitFor(() =>
+      expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({ ornaments: false }),
+    );
+    await prima.unmount();
+
+    const dopo = await renderScreen(storage);
+    await waitFor(() => expect(dopo.getByTestId('ornaments-probe')).toHaveTextContent('off'));
+    await dopo.unmount();
   });
 });

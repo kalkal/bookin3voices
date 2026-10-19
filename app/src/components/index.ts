@@ -1,4 +1,6 @@
 export { Card } from './Card';
+export { CathedralBackdrop } from './CathedralBackdrop';
+export type { CathedralKind } from './CathedralBackdrop';
 export { Chip } from './Chip';
 export type { ChipTone } from './Chip';
 export { DropCap } from './DropCap';

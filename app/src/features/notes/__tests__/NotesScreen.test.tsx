@@ -58,6 +58,16 @@ describe('NotesScreen — opening and list', () => {
     const { getByText } = await renderScreen();
     expect(getByText('Il taccuino è vuoto')).toBeTruthy();
   });
+
+  it('the arches stand behind the empty notebook, and only while it is empty', async () => {
+    const vuoto = await renderScreen();
+    expect(vuoto.getByTestId('cathedral-arches')).toBeOnTheScreen();
+    await vuoto.unmount();
+    const pieno = await renderScreen({
+      seed: (repo) => repo.seed(BOOK, { text: 'Una nota', tag: 'trama' }),
+    });
+    expect(pieno.queryByTestId('cathedral-arches')).toBeNull();
+  });
 });
 
 describe('NotesScreen — tag filter', () => {

@@ -43,6 +43,8 @@ export const appSettingsSchema = z.object({
    * have it and must NOT fall back to DEFAULT_SETTINGS.
    */
   lastBackupAt: z.number().int().positive().nullable().default(null),
+  /** Cathedral line drawing behind some screens; absent = on. */
+  ornaments: z.boolean().optional(),
   /** Interface language; absent in payloads saved before the setting existed = 'system'. */
   uiLanguage: z.enum(UI_LANGUAGES).optional(),
 });

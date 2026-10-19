@@ -14,7 +14,13 @@ import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, OrnamentDivider, PrimaryButton, RomanNumeral } from '../../components';
+import {
+  Card,
+  CathedralBackdrop,
+  OrnamentDivider,
+  PrimaryButton,
+  RomanNumeral,
+} from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -249,6 +255,7 @@ export function BookScreen({
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['top', 'bottom']}
     >
+      {chapters !== null && chapters.length === 0 && <CathedralBackdrop kind="arches" />}
       <View
         style={{
           flexDirection: 'row',
