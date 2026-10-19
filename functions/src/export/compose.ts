@@ -42,12 +42,41 @@ export interface ComposedChapter {
   paragraphs: string[];
 }
 
+/** Fixed texts the export adds to the book itself (not the author's words). */
+export interface ExportLabels {
+  /** Word before the chapter number: "Capitolo I", "Chapter I". */
+  chapter: string;
+  /** Title of the index / table of contents. */
+  contents: string;
+}
+
+const EXPORT_LABELS = {
+  it: { chapter: 'Capitolo', contents: 'Indice' },
+  en: { chapter: 'Chapter', contents: 'Contents' },
+} as const satisfies Record<string, ExportLabels>;
+
+const ITALIAN_NAMES: ReadonlySet<string> = new Set(['it', 'ita', 'italiano', 'italian']);
+
 /**
- * Chapter title in the exported book: "Capitolo <roman> — <title>" (Roman
- * numerals as in the app). `position` is 1-based.
+ * Fixed texts of the exported book in the book language: the ONE place where
+ * they live (exporters and chapter titles read them from here). Regional tags
+ * and letter case are ignored ("en-US", "EN_gb"); the language field of the
+ * app is free text, so the Italian names people type ("Italiano", "ita",
+ * "Italian") count as Italian too, as before this was language-aware. An empty
+ * language follows the export default; a language without a translation falls
+ * back to English, so a French book never gets Italian words.
  */
-export function chapterDisplayTitle(position: number, title: string): string {
-  const base = `Capitolo ${toRoman(position)}`;
+export function exportLabels(language: string): ExportLabels {
+  const primary = exportLanguage(language).toLowerCase().split(/[-_]/)[0] ?? '';
+  return ITALIAN_NAMES.has(primary) ? EXPORT_LABELS.it : EXPORT_LABELS.en;
+}
+
+/**
+ * Chapter title in the exported book: "<chapter word> <roman> — <title>" (Roman
+ * numerals as in the app), in the book language. `position` is 1-based.
+ */
+export function chapterDisplayTitle(position: number, title: string, language: string): string {
+  const base = `${exportLabels(language).chapter} ${toRoman(position)}`;
   const trimmed = title.trim();
   return trimmed === '' ? base : `${base} — ${trimmed}`;
 }
@@ -68,7 +97,7 @@ export function splitParagraphs(rawText: string): string[] {
 /** Composed chapters in reading order (the order is already that of `order`). */
 export function composeChapters(book: BookForExport): ComposedChapter[] {
   return book.chapters.map((chapter, index) => ({
-    displayTitle: chapterDisplayTitle(index + 1, chapter.title),
+    displayTitle: chapterDisplayTitle(index + 1, chapter.title, book.language),
     paragraphs: splitParagraphs(chapter.rawText),
   }));
 }

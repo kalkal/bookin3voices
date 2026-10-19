@@ -14,7 +14,7 @@ import {
   type ISectionOptions,
 } from 'docx';
 
-import { composeChapters, exportLanguage } from './compose';
+import { composeChapters, exportLabels, exportLanguage } from './compose';
 import type { BookForExport, Exporter } from './types';
 
 function titlePage(book: BookForExport): Paragraph[] {
@@ -58,7 +58,10 @@ export class DocxExporter implements Exporter {
 
     const indexSection: ISectionOptions = {
       children: [
-        new Paragraph({ heading: HeadingLevel.HEADING_1, text: 'Indice' }),
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          text: exportLabels(book.language).contents,
+        }),
         ...chapters.map((chapter) => new Paragraph({ text: chapter.displayTitle })),
       ],
     };

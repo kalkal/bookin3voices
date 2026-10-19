@@ -107,3 +107,31 @@ describe('DocxExporter', () => {
     expect(core).toContain('Jane Doe');
   });
 });
+
+describe('exports of an English book carry no Italian fixed texts', () => {
+  const ENGLISH_BOOK: BookForExport = {
+    ...BOOK,
+    title: 'The Dark Light',
+    language: 'en',
+    chapters: [{ title: 'The stairs', rawText: 'He climbed.' }],
+  };
+
+  it('EPUB: "Contents" index and "Chapter I" titles', async () => {
+    const zip = await JSZip.loadAsync(await new EpubExporter().render(ENGLISH_BOOK, GENERATED_AT));
+    const files = Object.keys(zip.files);
+    const toc = (await zip.file(files.find((n) => n.endsWith('toc.xhtml')) as string)?.async(
+      'string',
+    )) as string;
+    expect(toc).toContain('Contents');
+    expect(toc).toContain('Chapter I — The stairs');
+    expect(toc).not.toMatch(/Indice|Capitolo/);
+  });
+
+  it('DOCX: "Contents" index and "Chapter I" titles', async () => {
+    const zip = await JSZip.loadAsync(await new DocxExporter().render(ENGLISH_BOOK, GENERATED_AT));
+    const document = (await zip.file('word/document.xml')?.async('string')) as string;
+    expect(document).toContain('Contents');
+    expect(document).toContain('Chapter I — The stairs');
+    expect(document).not.toMatch(/Indice|Capitolo/);
+  });
+});

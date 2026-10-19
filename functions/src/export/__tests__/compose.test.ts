@@ -6,6 +6,7 @@ import {
   composeChapters,
   escapeHtml,
   exportFileName,
+  exportLabels,
   exportLanguage,
   splitParagraphs,
   toRoman,
@@ -27,13 +28,13 @@ describe('toRoman', () => {
 
 describe('chapterDisplayTitle', () => {
   it('composes "Capitolo <roman> — <title>"', () => {
-    expect(chapterDisplayTitle(1, 'Il ritorno')).toBe('Capitolo I — Il ritorno');
-    expect(chapterDisplayTitle(12, ' Il registro ')).toBe('Capitolo XII — Il registro');
+    expect(chapterDisplayTitle(1, 'Il ritorno', 'it')).toBe('Capitolo I — Il ritorno');
+    expect(chapterDisplayTitle(12, ' Il registro ', 'it')).toBe('Capitolo XII — Il registro');
   });
 
   it('without a title stays "Capitolo <roman>"', () => {
-    expect(chapterDisplayTitle(3, '')).toBe('Capitolo III');
-    expect(chapterDisplayTitle(3, '   ')).toBe('Capitolo III');
+    expect(chapterDisplayTitle(3, '', 'it')).toBe('Capitolo III');
+    expect(chapterDisplayTitle(3, '   ', 'it')).toBe('Capitolo III');
   });
 });
 
@@ -94,5 +95,55 @@ describe('exportLanguage', () => {
   it('uses the book language, defaulting to it when empty', () => {
     expect(exportLanguage('en')).toBe('en');
     expect(exportLanguage('  ')).toBe('it');
+  });
+});
+
+describe('exportLabels', () => {
+  it('gives the fixed texts of the book in the book language', () => {
+    expect(exportLabels('it')).toEqual({ chapter: 'Capitolo', contents: 'Indice' });
+    expect(exportLabels('en')).toEqual({ chapter: 'Chapter', contents: 'Contents' });
+  });
+
+  it('accepts regional tags and any letter case', () => {
+    expect(exportLabels('en-US').chapter).toBe('Chapter');
+    expect(exportLabels('EN_gb').contents).toBe('Contents');
+    expect(exportLabels(' it-IT ').chapter).toBe('Capitolo');
+  });
+
+  it('an empty language follows the export default (it)', () => {
+    expect(exportLabels('  ')).toEqual(exportLabels('it'));
+  });
+
+  it('an unsupported language falls back to English, never to Italian', () => {
+    expect(exportLabels('fr')).toEqual(exportLabels('en'));
+  });
+});
+
+describe('chapter titles in English', () => {
+  it('composes "Chapter <roman> — <title>"', () => {
+    expect(chapterDisplayTitle(2, 'The Dark Light', 'en')).toBe('Chapter II — The Dark Light');
+    expect(chapterDisplayTitle(4, '', 'en')).toBe('Chapter IV');
+  });
+
+  it('composeChapters follows the book language', () => {
+    const book: BookForExport = {
+      title: 'Test',
+      author: 'A',
+      description: '',
+      language: 'en',
+      genre: '',
+      chapters: [{ title: 'One', rawText: 'a' }],
+    };
+    expect(composeChapters(book)[0]?.displayTitle).toBe('Chapter I — One');
+  });
+});
+
+describe('exportLabels with the free-text language field', () => {
+  it.each(['Italiano', 'italian', 'ITA', ' it '])('%j is Italian', (language) => {
+    expect(exportLabels(language).chapter).toBe('Capitolo');
+  });
+
+  it.each(['English', 'eng', 'Inglese'])('%j is English', (language) => {
+    expect(exportLabels(language).chapter).toBe('Chapter');
   });
 });
