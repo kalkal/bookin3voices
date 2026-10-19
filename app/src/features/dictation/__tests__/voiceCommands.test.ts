@@ -1,4 +1,4 @@
-import { TranscriptComposer } from '../voiceCommands';
+import { TranscriptComposer, voiceCommandHints } from '../voiceCommands';
 
 describe('TranscriptComposer — voice commands (the engine gives no punctuation)', () => {
   it('maps «punto» and capitalizes the next sentence', () => {
@@ -88,5 +88,62 @@ describe('TranscriptComposer — voice commands (the engine gives no punctuation
     c.appendVerbatim('testo con punto dentro');
     c.appendVerbatim('secondo blocco');
     expect(c.value).toBe('testo con punto dentro secondo blocco');
+  });
+});
+
+describe('TranscriptComposer — English voice commands', () => {
+  const english = () => new TranscriptComposer('', 'en');
+
+  it('maps «period» / «full stop» and capitalizes the next sentence', () => {
+    const c = english();
+    c.append('it was raining period tomorrow we will see full stop');
+    expect(c.value).toBe('It was raining. Tomorrow we will see.');
+  });
+
+  it('maps «comma», «colon» and «semicolon»', () => {
+    const c = english();
+    c.append('bread comma milk colon eggs semicolon cheese');
+    expect(c.value).toBe('Bread, milk: eggs; cheese');
+  });
+
+  it('maps «new line» and «new paragraph»', () => {
+    const c = english();
+    c.append('first line new line second line new paragraph another paragraph');
+    expect(c.value).toBe('First line\nSecond line\n\nAnother paragraph');
+  });
+
+  it('maps «question mark» and «exclamation mark» as sentence ends', () => {
+    const c = english();
+    c.append('really question mark incredible exclamation mark yes');
+    expect(c.value).toBe('Really? Incredible! Yes');
+  });
+
+  it('does not apply Italian commands to an English dictation', () => {
+    const c = english();
+    c.append('the punto virgola');
+    expect(c.value).toBe('The punto virgola');
+  });
+
+  it('does not apply English commands to an Italian dictation (default)', () => {
+    const c = new TranscriptComposer();
+    c.append('the period comma');
+    expect(c.value).toBe('The period comma');
+  });
+});
+
+describe('voiceCommandHints — what the screen shows', () => {
+  it('lists the main commands of the dictation language', () => {
+    expect(voiceCommandHints('it')).toEqual([
+      '«punto»',
+      '«virgola»',
+      '«a capo»',
+      '«nuovo paragrafo»',
+    ]);
+    expect(voiceCommandHints('en')).toEqual([
+      '«period»',
+      '«comma»',
+      '«new line»',
+      '«new paragraph»',
+    ]);
   });
 });

@@ -2,7 +2,7 @@ import { DictationSession, type DictationSessionEvent } from '../DictationSessio
 import { FakeDictationEngine } from '../engines/FakeDictationEngine';
 import type { SessionState } from '../sessionMachine';
 
-function setup(options?: { autoEmitStart?: boolean; voiceCommands?: boolean }) {
+function setup(options?: { autoEmitStart?: boolean; voiceCommands?: boolean; lang?: string }) {
   const engine = new FakeDictationEngine();
   if (options?.autoEmitStart === false) engine.autoEmitStart = false;
   const onFlush = jest.fn<void, [string]>();
@@ -12,6 +12,7 @@ function setup(options?: { autoEmitStart?: boolean; voiceCommands?: boolean }) {
     engine,
     onFlush,
     voiceCommands: options?.voiceCommands,
+    lang: options?.lang,
     onStateChange: (s) => states.push(s),
     onEvent: (e) => events.push(e),
   });
@@ -272,5 +273,15 @@ describe('DictationSession — timed scripted scenario (driven Fake)', () => {
     expect(session.state).toBe('listening');
     session.pause();
     expect(onFlush).toHaveBeenLastCalledWith('Oggi piove. Domani vedremo, forse');
+  });
+});
+
+describe('DictationSession — dictation language', () => {
+  it("starts the engine in the chosen language and uses that language's commands", () => {
+    const { engine, session } = setup({ lang: 'en-US' });
+    session.start();
+    expect(engine.startCalls).toEqual([{ lang: 'en-US' }]);
+    engine.emitFinal('it was raining period tomorrow');
+    expect(session.text).toBe('It was raining. Tomorrow');
   });
 });

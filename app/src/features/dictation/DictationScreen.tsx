@@ -19,9 +19,11 @@ import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chap
 import { ExpoDictationEngine } from './engines/ExpoDictationEngine';
 import { MicButton, type MicVisualState } from './MicButton';
 import { OutlineTrack, type OutlineTrackRepository } from './OutlineTrack';
+import { commandLanguage, dictationLocale } from './dictationLanguage';
 import { downloadOfflineModel, type PreflightChecks, type PreflightIssue } from './preflight';
 import type { DictationEngine, DictationError } from './types';
 import { useDictationController } from './useDictationController';
+import { voiceCommandHints } from './voiceCommands';
 
 export interface DictationScreenProps {
   chapter: ChapterRef;
@@ -45,9 +47,6 @@ export interface DictationScreenProps {
   outlineStateStorage?: KeyValueStorage;
 }
 
-/** Recognized voice commands, shown in guillemets. */
-const VOICE_COMMAND_HINTS = ['«punto»', '«virgola»', '«a capo»', '«nuovo paragrafo»'];
-
 const ERROR_MESSAGE_KEYS: Record<DictationError['code'], string> = {
   'permission-denied': 'dictation.error.permissionDenied',
   'audio-interruption': 'dictation.error.audioInterruption',
@@ -69,6 +68,9 @@ export function DictationScreen({
   outlineStateStorage,
 }: DictationScreenProps) {
   const { colors, fonts, spacing, typeScale, letterSpacing } = useTheme();
+  // the ONE resolution of the dictation language: recognizer, commands, hints
+  // frozen for the session, like the engine and the session it feeds
+  const [locale] = useState(() => dictationLocale(lang));
   const scrollRef = useRef<ScrollView>(null);
   const [dismissedWarnings, setDismissedWarnings] = useState<ReadonlySet<string>>(new Set());
 
@@ -85,7 +87,7 @@ export function DictationScreen({
     repository,
     chapter,
     debounceMs,
-    lang,
+    lang: locale,
     preflightChecks,
   });
 
@@ -157,6 +159,7 @@ export function DictationScreen({
         <PreflightIssueCard
           key={issue.id}
           issue={issue}
+          locale={locale}
           onRetry={controller.rerunPreflight}
           onDismiss={
             issue.severity === 'warning'
@@ -261,7 +264,7 @@ export function DictationScreen({
         </View>
 
         <View style={[styles.chipsRow, { gap: spacing.sm }]}>
-          {VOICE_COMMAND_HINTS.map((hint) => (
+          {voiceCommandHints(commandLanguage(locale)).map((hint) => (
             <Chip key={hint} label={hint} italic />
           ))}
         </View>
@@ -339,10 +342,13 @@ function SaveIndicator({ status }: { status: 'saved' | 'pending' | 'saving' | 'e
 
 function PreflightIssueCard({
   issue,
+  locale,
   onRetry,
   onDismiss,
 }: {
   issue: PreflightIssue;
+  /** Recognition locale: the offline pack to download is the dictation language's. */
+  locale: string;
   onRetry: () => void;
   onDismiss?: () => void;
 }) {
@@ -382,7 +388,7 @@ function PreflightIssueCard({
             label={t('dictation.preflight.downloadOffline')}
             tone="green"
             onPress={() => {
-              downloadOfflineModel().catch(() => {});
+              downloadOfflineModel(locale).catch(() => {});
             }}
             testID="preflight-action-download-offline-model"
           />

@@ -35,7 +35,7 @@ import {
   OfflineFirstChapterRepository,
 } from './src/features/chapters';
 import type { ChapterRef, ChapterRepository, KeyValueStorage } from './src/features/chapters';
-import { DictationScreen } from './src/features/dictation';
+import { DictationRoute } from './src/features/dictation';
 import {
   CallableBookExportService,
   waitForSyncedWrites,
@@ -266,7 +266,8 @@ function AppNavigator({ services }: { services: AppServices }) {
         );
       case 'dictation':
         return (
-          <DictationScreen
+          <DictationRoute
+            bookRepository={services.bookRepository}
             // key: changing chapter remounts the screen (fresh session)
             key={`${route.chapter.bookId}/${route.chapter.chapterId}`}
             chapter={route.chapter}

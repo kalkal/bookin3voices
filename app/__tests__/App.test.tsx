@@ -130,4 +130,24 @@ describe('App', () => {
     expect(await screen.findByTestId('auth-error')).toBeOnTheScreen();
     await screen.unmount();
   });
+
+  it('dictation listens in the language of the BOOK, whatever the interface language', async () => {
+    const services = testServices();
+    services.books.seed({ id: 'dark', title: 'The Dark Light', chapterCount: 1, language: 'en' });
+    (services.chapterRepository as InMemoryChapterRepository).seed(
+      { bookId: 'dark', chapterId: 'c1' },
+      '',
+      { title: 'The stairs', order: 0 },
+    );
+    const screen = await render(
+      <App signIn={async () => 'utente-di-prova'} createServices={() => services} />,
+    );
+    await act(async () => {});
+    await fireEvent.press(await screen.findByTestId('library-book-dark'));
+    await fireEvent.press(await screen.findByTestId('book-chapter-mic-c1'));
+    expect(await screen.findByTestId('dictation-screen')).toBeOnTheScreen();
+    await act(async () => {});
+    expect(screen.getByText('«period»')).toBeOnTheScreen();
+    expect(screen.queryByText('«punto»')).toBeNull();
+  });
 });

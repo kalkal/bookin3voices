@@ -7,31 +7,80 @@
 // normal word («il punto di vista») is still converted; manual review is the
 // remedy, as in reference dictation apps.
 
+import type { CommandLanguage } from './dictationLanguage';
+
 type PunctuationCommand = { kind: 'punctuation'; char: string; endsSentence: boolean };
 type BreakCommand = { kind: 'break'; text: string };
 export type VoiceCommand = PunctuationCommand | BreakCommand;
 
-/**
- * Phrase → command map. Matching is case-insensitive and prefers the longest
- * phrase («punto e virgola» before «punto»). Extensible: one line is enough.
- */
-const COMMAND_PHRASES: readonly { phrase: string; command: VoiceCommand }[] = [
-  { phrase: 'punto e virgola', command: { kind: 'punctuation', char: ';', endsSentence: false } },
-  {
-    phrase: 'punto interrogativo',
-    command: { kind: 'punctuation', char: '?', endsSentence: true },
-  },
-  { phrase: 'punto esclamativo', command: { kind: 'punctuation', char: '!', endsSentence: true } },
-  { phrase: 'nuovo paragrafo', command: { kind: 'break', text: '\n\n' } },
-  { phrase: 'due punti', command: { kind: 'punctuation', char: ':', endsSentence: false } },
-  { phrase: 'a capo', command: { kind: 'break', text: '\n' } },
-  { phrase: 'punto', command: { kind: 'punctuation', char: '.', endsSentence: true } },
-  { phrase: 'virgola', command: { kind: 'punctuation', char: ',', endsSentence: false } },
-];
+type CommandPhrase = { phrase: string; command: VoiceCommand };
 
-const VOICE_COMMANDS: readonly { tokens: string[]; command: VoiceCommand }[] = COMMAND_PHRASES.map(
-  (c) => ({ command: c.command, tokens: c.phrase.split(' ') }),
-).sort((a, b) => b.tokens.length - a.tokens.length);
+/**
+ * Phrase → command map per dictation language. Matching is case-insensitive
+ * and prefers the longest phrase («punto e virgola» before «punto»).
+ * Extensible: one line is enough. The first four entries of each language are
+ * the hints the screen shows (voiceCommandHints).
+ */
+const COMMAND_PHRASES: Record<CommandLanguage, readonly CommandPhrase[]> = {
+  it: [
+    { phrase: 'punto', command: { kind: 'punctuation', char: '.', endsSentence: true } },
+    { phrase: 'virgola', command: { kind: 'punctuation', char: ',', endsSentence: false } },
+    { phrase: 'a capo', command: { kind: 'break', text: '\n' } },
+    { phrase: 'nuovo paragrafo', command: { kind: 'break', text: '\n\n' } },
+    {
+      phrase: 'punto e virgola',
+      command: { kind: 'punctuation', char: ';', endsSentence: false },
+    },
+    {
+      phrase: 'punto interrogativo',
+      command: { kind: 'punctuation', char: '?', endsSentence: true },
+    },
+    {
+      phrase: 'punto esclamativo',
+      command: { kind: 'punctuation', char: '!', endsSentence: true },
+    },
+    { phrase: 'due punti', command: { kind: 'punctuation', char: ':', endsSentence: false } },
+  ],
+  en: [
+    { phrase: 'period', command: { kind: 'punctuation', char: '.', endsSentence: true } },
+    { phrase: 'comma', command: { kind: 'punctuation', char: ',', endsSentence: false } },
+    { phrase: 'new line', command: { kind: 'break', text: '\n' } },
+    { phrase: 'new paragraph', command: { kind: 'break', text: '\n\n' } },
+    { phrase: 'full stop', command: { kind: 'punctuation', char: '.', endsSentence: true } },
+    { phrase: 'semicolon', command: { kind: 'punctuation', char: ';', endsSentence: false } },
+    { phrase: 'colon', command: { kind: 'punctuation', char: ':', endsSentence: false } },
+    {
+      phrase: 'question mark',
+      command: { kind: 'punctuation', char: '?', endsSentence: true },
+    },
+    {
+      phrase: 'exclamation mark',
+      command: { kind: 'punctuation', char: '!', endsSentence: true },
+    },
+    {
+      phrase: 'exclamation point',
+      command: { kind: 'punctuation', char: '!', endsSentence: true },
+    },
+  ],
+};
+
+const LOCALE: Record<CommandLanguage, string> = { it: 'it-IT', en: 'en-US' };
+
+/** Longest phrase first, so «punto e virgola» wins over «punto». */
+const byLongestPhrase = (phrases: readonly CommandPhrase[]) =>
+  phrases
+    .map((c) => ({ command: c.command, tokens: c.phrase.split(' ') }))
+    .sort((a, b) => b.tokens.length - a.tokens.length);
+
+const VOICE_COMMANDS: Record<CommandLanguage, ReturnType<typeof byLongestPhrase>> = {
+  it: byLongestPhrase(COMMAND_PHRASES.it),
+  en: byLongestPhrase(COMMAND_PHRASES.en),
+};
+
+/** The commands the screen shows to the author, in guillemets. */
+export function voiceCommandHints(language: CommandLanguage): string[] {
+  return COMMAND_PHRASES[language].slice(0, 4).map((c) => `«${c.phrase}»`);
+}
 
 const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
 
@@ -43,8 +92,10 @@ const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
 export class TranscriptComposer {
   private text: string;
   private capitalizeNext = true;
+  private readonly language: CommandLanguage;
 
-  constructor(initialText = '') {
+  constructor(initialText = '', language: CommandLanguage = 'it') {
+    this.language = language;
     this.text = initialText;
     if (endsWithWordChar(initialText) && !/[.!?]\s*$/.test(initialText)) {
       this.capitalizeNext = false;
@@ -88,10 +139,10 @@ export class TranscriptComposer {
     tokens: string[],
     from: number,
   ): { command: VoiceCommand; length: number } | undefined {
-    for (const { tokens: phraseTokens, command } of VOICE_COMMANDS) {
+    for (const { tokens: phraseTokens, command } of VOICE_COMMANDS[this.language]) {
       if (from + phraseTokens.length > tokens.length) continue;
       const matches = phraseTokens.every(
-        (t, k) => tokens[from + k].toLocaleLowerCase('it-IT') === t,
+        (t, k) => tokens[from + k].toLocaleLowerCase(LOCALE[this.language]) === t,
       );
       if (matches) return { command, length: phraseTokens.length };
     }
@@ -115,7 +166,7 @@ export class TranscriptComposer {
   private appendWord(word: string): void {
     const separator = this.text === '' || this.text.endsWith('\n') ? '' : ' ';
     const cased = this.capitalizeNext
-      ? word.charAt(0).toLocaleUpperCase('it-IT') + word.slice(1)
+      ? word.charAt(0).toLocaleUpperCase(LOCALE[this.language]) + word.slice(1)
       : word;
     this.text += separator + cased;
     this.capitalizeNext = false;

@@ -27,6 +27,8 @@ export type {
   PreflightAction,
   PreflightReport,
 } from './preflight';
+export { DictationRoute } from './DictationRoute';
+export type { DictationRouteProps } from './DictationRoute';
 export { DictationScreen } from './DictationScreen';
 export type { DictationScreenProps } from './DictationScreen';
 export { MicButton } from './MicButton';

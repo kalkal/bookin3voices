@@ -15,6 +15,7 @@ import {
   type SessionEventType,
   type SessionState,
 } from './sessionMachine';
+import { commandLanguage, dictationLocale } from './dictationLanguage';
 import { TranscriptComposer } from './voiceCommands';
 
 export type DictationSessionEvent =
@@ -28,7 +29,7 @@ export interface DictationSessionOptions {
   engine: DictationEngine;
   /** Persists the accumulated text: called on pause/stop/error/flush(). */
   onFlush: (text: string) => void;
-  /** Recognition language; defaults to it-IT. */
+  /** Recognition locale (BCP-47); defaults to the interface language's (dictationLocale). */
   lang?: string;
   /** Apply spoken punctuation commands to final results (default true). */
   voiceCommands?: boolean;
@@ -49,7 +50,8 @@ const RESTART_WINDOW_MS = 10_000;
 export class DictationSession {
   private readonly engine: DictationEngine;
   private readonly options: DictationSessionOptions;
-  private readonly composer = new TranscriptComposer();
+  private readonly composer: TranscriptComposer;
+  private readonly locale: string;
   private currentState: SessionState = 'idle';
   private engineActive = false;
   private restartTimestamps: number[] = [];
@@ -58,6 +60,8 @@ export class DictationSession {
 
   constructor(options: DictationSessionOptions) {
     this.options = options;
+    this.locale = dictationLocale(options.lang);
+    this.composer = new TranscriptComposer('', commandLanguage(this.locale));
     this.engine = options.engine;
     this.engine.setEvents({
       onStart: () => this.handleEngineStart(),
@@ -151,7 +155,7 @@ export class DictationSession {
   }
 
   private startEngine(): void {
-    this.engine.start({ lang: this.options.lang ?? 'it-IT' }).catch(() => {
+    this.engine.start({ lang: this.locale }).catch(() => {
       this.fail({ code: 'unknown', message: 'engine start failed', recoverable: false });
     });
   }

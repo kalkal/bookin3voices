@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import { ExpoSpeechRecognitionModule } from 'expo-speech-recognition';
 
 import { t } from '../../i18n';
+import { dictationLocale } from './dictationLanguage';
 
 export interface PreflightChecks {
   isRecognitionAvailable(): boolean;
@@ -41,7 +42,7 @@ export interface PreflightReport {
 
 export async function runPreflight(
   checks: PreflightChecks,
-  lang = 'it-IT',
+  lang = dictationLocale(),
 ): Promise<PreflightReport> {
   const issues: PreflightIssue[] = [];
 
@@ -116,6 +117,6 @@ export function createNativePreflightChecks(): PreflightChecks {
  * Fire-and-forget from the UI's point of view: when it finishes, the
  * pre-flight can be rerun to clear the warning.
  */
-export async function downloadOfflineModel(lang = 'it-IT'): Promise<void> {
+export async function downloadOfflineModel(lang = dictationLocale()): Promise<void> {
   await ExpoSpeechRecognitionModule.androidTriggerOfflineModelDownload({ locale: lang });
 }
