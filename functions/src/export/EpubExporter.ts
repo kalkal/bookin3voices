@@ -4,6 +4,7 @@
 // recommended for KDP ebooks.
 
 import epubGenModule from 'epub-gen-memory';
+import epub3PackageTemplate from 'epub-gen-memory/dist/lib/templates/epub3/content.opf.ejs';
 
 import { composeChapters, escapeHtml, exportLanguage } from './compose';
 import type { BookForExport, Exporter } from './types';
@@ -12,6 +13,20 @@ import type { BookForExport, Exporter } from './types';
 // the default may arrive nested.
 const epubGen: typeof epubGenModule =
   (epubGenModule as unknown as { default?: typeof epubGenModule }).default ?? epubGenModule;
+
+// The library always writes <dc:description>, even when empty, and EPUBCheck
+// rejects an empty element (RSC-005). KDP takes the description from its own
+// form, not from the file, so a blank one is simply left out. Only that line of
+// the library's own package template changes; if a library upgrade changes it,
+// fail loudly here instead of shipping an invalid EPUB.
+const DESCRIPTION_LINE = '<dc:description><%= description %></dc:description>';
+if (!epub3PackageTemplate.includes(DESCRIPTION_LINE)) {
+  throw new Error('epub-gen-memory package template changed: review the description handling');
+}
+const PACKAGE_TEMPLATE = epub3PackageTemplate.replace(
+  DESCRIPTION_LINE,
+  `<% if (description) { %>${DESCRIPTION_LINE}<% } %>`,
+);
 
 function titlePageHtml(book: BookForExport): string {
   const genre = book.genre.trim();
@@ -54,7 +69,8 @@ export class EpubExporter implements Exporter {
         title: book.title,
         ...(author === '' ? {} : { author }),
         lang: exportLanguage(book.language),
-        description: book.description,
+        description: book.description.trim(),
+        contentOPF: PACKAGE_TEMPLATE,
         tocTitle: 'Indice',
         prependChapterTitles: true,
         date: generatedAt.toISOString(),

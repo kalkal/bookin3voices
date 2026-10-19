@@ -72,6 +72,18 @@ describe('EpubExporter', () => {
     expect(opf).toContain('Romanzo di prova.');
     expect(opf).toContain('<dc:language>it</dc:language>');
   });
+
+  it.each(['', '   \n'])(
+    'omits dc:description when the description is blank (%j): an empty element fails EPUBCheck',
+    async (description) => {
+      const buffer = await new EpubExporter().render({ ...BOOK, description }, GENERATED_AT);
+      const zip = await JSZip.loadAsync(buffer);
+      const opfFile = Object.keys(zip.files).find((name) => name.endsWith('.opf'));
+      const opf = (await zip.file(opfFile as string)?.async('string')) as string;
+      expect(opf).not.toContain('dc:description');
+      expect(opf).toContain('<dc:language>it</dc:language>');
+    },
+  );
 });
 
 describe('DocxExporter', () => {

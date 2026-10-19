@@ -20,7 +20,7 @@
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1152.0",
     "docx": "^9.7.1",
-    "epub-gen-memory": "^1.1.2",
+    "epub-gen-memory": "1.1.2",
     "firebase-admin": "^13.0.0",
     "firebase-functions": "^6.0.0",
     "jszip": "^3.10.1",
