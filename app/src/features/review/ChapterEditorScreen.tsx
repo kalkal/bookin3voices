@@ -7,7 +7,7 @@
  * All logic lives in useChapterReview; only rendering is here.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -47,6 +47,10 @@ export function ChapterEditorScreen({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
+  // leaving this screen (also towards the Review) saves what was typed
+  const { flushDraft } = controller;
+  useEffect(() => flushDraft, [flushDraft]);
+
   const startEditing = () => {
     setDraft(controller.text);
     setEditing(true);
@@ -78,7 +82,10 @@ export function ChapterEditorScreen({
             accessibilityRole="button"
             accessibilityLabel={t('review.editor.backToBook')}
             testID="editor-back"
-            onPress={onBack}
+            onPress={() => {
+              flushDraft();
+              onBack();
+            }}
             style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
           >
             <Text style={{ color: colors.text, fontSize: typeScale.heading }}>‹</Text>
@@ -149,7 +156,10 @@ export function ChapterEditorScreen({
             multiline
             autoFocus
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={(next) => {
+              setDraft(next);
+              controller.editDraft(next);
+            }}
             style={{
               color: colors.text,
               fontFamily: fonts.body,
@@ -268,7 +278,10 @@ export function ChapterEditorScreen({
               controller.loadState !== 'ready' ||
               controller.text === ''
             }
-            onPress={() => void controller.refine()}
+            onPress={() => {
+              flushDraft();
+              void controller.refine();
+            }}
             icon={
               controller.refining ? (
                 <ActivityIndicator size="small" color={colors.onPrimary} />

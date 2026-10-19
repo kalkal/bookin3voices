@@ -5,9 +5,11 @@
 // controller: never the SDK or the session directly.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import type { ChapterRef, ChapterTextRepository } from '../chapters';
 import { makeRequestId } from '../../lib/requestId';
+import { DebouncedSaver } from '../dictation/autosave';
 import { ReviewSession } from './ReviewSession';
 import type { RevisionRepository } from './revisions';
 import { textHash } from './textHash';
@@ -46,6 +48,10 @@ export interface ChapterReviewController {
   acceptAll(kind: SuggestionKind): Promise<void>;
   undo(): Promise<void>;
   applyManualEdit(newText: string): Promise<void>;
+  /** Hand-typed text not confirmed yet: saved by itself after a pause, like dictation. */
+  editDraft(text: string): void;
+  /** Saves the pending hand-typed text right now (leaving the editor, refining). */
+  flushDraft(): void;
 }
 
 // same generator as the other callables (idempotency, Firestore id charset)
@@ -204,6 +210,27 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     [persistText, syncFromSession],
   );
 
+  // The draft is applied through the same path as the ✓, so suggestions are
+  // re-mapped/staled exactly the same; only the moment changes: after a pause
+  // (3 s) and whenever the editor is left, never only on ✓.
+  const draftSaverRef = useRef<DebouncedSaver | null>(null);
+  useEffect(() => {
+    const saver = new DebouncedSaver({ save: (draft) => applyManualEdit(draft) });
+    draftSaverRef.current = saver;
+    // locking the screen or switching app must not wait for the pause (dictation does the same)
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') saver.flushNow();
+    });
+    // closing the whole flow (Android back, navigation) never drops typed text
+    return () => {
+      subscription.remove();
+      saver.flushNow();
+      draftSaverRef.current = null;
+    };
+  }, [applyManualEdit]);
+  const editDraft = useCallback((draft: string) => draftSaverRef.current?.schedule(draft), []);
+  const flushDraft = useCallback(() => draftSaverRef.current?.flushNow(), []);
+
   const pendingCount = suggestions.filter((s) => s.state === 'pending').length;
   const staleCount = suggestions.filter((s) => s.state === 'stale').length;
   const pendingCountOf = useCallback(
@@ -230,5 +257,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     acceptAll,
     undo,
     applyManualEdit,
+    editDraft,
+    flushDraft,
   };
 }
