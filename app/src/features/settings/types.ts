@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { AI_PROVIDER_IDS, DEFAULT_AI_PROVIDER_ID } from './aiProviders';
 
-/** Theme preference: paper, candlelight, or automatic. */
+/** Theme preference: cream paper, black and gold ("candlelight"), or automatic. */
 export const THEME_PREFERENCES = ['paper', 'candlelight', 'auto'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
@@ -29,6 +29,12 @@ export const appSettingsSchema = z.object({
   schemaVersion: z.literal(1),
   aiProvider: z.enum(AI_PROVIDER_IDS),
   theme: z.enum(THEME_PREFERENCES),
+  /**
+   * The theme was picked in Settings. Absent in payloads saved before black and
+   * gold became the default: a saved "paper" there is the old default, not a
+   * choice (see LocalSettingsRepository.load).
+   */
+  themeChosen: z.boolean().optional(),
   dailyGoalWords: z.number().int().min(DAILY_GOAL_MIN).max(DAILY_GOAL_MAX),
   backupFrequency: z.enum(BACKUP_FREQUENCIES),
   /**
@@ -45,12 +51,12 @@ export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 /**
  * Starting values of the `settings/app` doc: Amazon Nova (bedrock) is the
- * DEFAULT provider; the app's default theme is paper.
+ * DEFAULT provider; the app's default theme is black and gold.
  */
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: 1,
   aiProvider: DEFAULT_AI_PROVIDER_ID,
-  theme: 'paper',
+  theme: 'candlelight',
   dailyGoalWords: 500,
   backupFrequency: 'weekly',
   lastBackupAt: null,

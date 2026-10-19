@@ -23,7 +23,7 @@ describe('LocalSettingsRepository', () => {
     const settings = await repo.load();
     expect(settings).toEqual(DEFAULT_SETTINGS);
     expect(settings.aiProvider).toBe('bedrock');
-    expect(settings.theme).toBe('paper');
+    expect(settings.theme).toBe('candlelight');
   });
 
   it('saves and re-reads the full document (round-trip)', async () => {
@@ -81,5 +81,31 @@ describe('LocalSettingsRepository', () => {
     });
     const repo = new LocalSettingsRepository(storage);
     await expect(repo.load()).resolves.toEqual(DEFAULT_SETTINGS);
+  });
+
+  describe('theme saved before black and gold became the default', () => {
+    const legacy = (theme: string, extra: object = {}) => ({
+      [KEY]: JSON.stringify({ ...DEFAULT_SETTINGS, theme, ...extra }),
+    });
+
+    it('a saved "paper" that was never chosen moves to black and gold', async () => {
+      // old documents were saved whole by any change, with the old default
+      const repo = new LocalSettingsRepository(memoryStorage(legacy('paper')).storage);
+      expect((await repo.load()).theme).toBe('candlelight');
+    });
+
+    it('a "paper" chosen on purpose is kept', async () => {
+      const repo = new LocalSettingsRepository(
+        memoryStorage(legacy('paper', { themeChosen: true })).storage,
+      );
+      expect((await repo.load()).theme).toBe('paper');
+    });
+
+    it('other saved themes are left alone', async () => {
+      for (const theme of ['auto', 'candlelight']) {
+        const repo = new LocalSettingsRepository(memoryStorage(legacy(theme)).storage);
+        expect((await repo.load()).theme).toBe(theme);
+      }
+    });
   });
 });

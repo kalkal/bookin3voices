@@ -23,6 +23,6 @@ describe('SettingsScreen in English', () => {
       </ThemeProvider>,
     );
     await waitFor(() => expect(getByText(/No backup yet/)).toBeTruthy());
-    expect(getByText('Candlelight')).toBeTruthy();
+    expect(getByText('Black and gold')).toBeTruthy();
   });
 });

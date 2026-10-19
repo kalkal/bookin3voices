@@ -12,12 +12,12 @@
  */
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { resolveLanguage, setLanguage, t } from './src/i18n';
 import { useLanguage } from './src/i18n/useLanguage';
-import { ThemeProvider, paperPalette, useAppFonts, useTheme } from './src/theme';
+import { ThemeProvider, candlelightPalette, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
   BookScreen,
@@ -73,6 +73,7 @@ import {
   InMemoryBackupService,
   LocalSettingsRepository,
   SettingsScreen,
+  resolveThemeMode,
 } from './src/features/settings';
 import type { BackupService, SettingsRepository } from './src/features/settings';
 import { ensureSignedIn } from './src/lib/auth';
@@ -204,14 +205,26 @@ function AppNavigator({ services }: { services: AppServices }) {
   const [stack, setStack] = useState<Route[]>(INITIAL_STACK);
   const route = stack[stack.length - 1];
   const language = useLanguage();
+  const { setMode } = useTheme();
+  const systemScheme = useColorScheme();
 
-  // apply the saved interface language at startup ('system' = device language)
+  // apply the saved interface language and theme at startup ('system' = device
+  // language; 'auto' theme follows the system scheme). Settings applies later
+  // changes by itself, but the saved choice must hold from the first screen.
   useEffect(() => {
+    let cancelled = false; // a slower, older read must not overwrite a newer one
     services.settingsRepository
       .load()
-      .then((settings) => setLanguage(resolveLanguage(settings.uiLanguage ?? 'system')))
+      .then((settings) => {
+        if (cancelled) return;
+        setLanguage(resolveLanguage(settings.uiLanguage ?? 'system'));
+        setMode(resolveThemeMode(settings.theme, systemScheme));
+      })
       .catch(() => undefined);
-  }, [services]);
+    return () => {
+      cancelled = true;
+    };
+  }, [services, setMode, systemScheme]);
 
   const push = (next: Route) => setStack((current) => [...current, next]);
   const pop = () => setStack((current) => (current.length > 1 ? current.slice(0, -1) : current));
@@ -364,9 +377,9 @@ export default function App({ createServices, signIn }: AppProps = {}) {
   }, [uid]);
 
   if (!fontsReady || (services === null && !authError)) {
-    // blank paper-colored screen until fonts and identity are ready
+    // blank screen in the default (black and gold) background until fonts and identity are ready
     // (no flash of the wrong serif, no Library without data)
-    return <View style={[styles.container, { backgroundColor: paperPalette.background }]} />;
+    return <View style={[styles.container, { backgroundColor: candlelightPalette.background }]} />;
   }
 
   return (
@@ -375,7 +388,10 @@ export default function App({ createServices, signIn }: AppProps = {}) {
         {services === null ? (
           <View
             testID="auth-error"
-            style={[styles.container, { backgroundColor: paperPalette.background, padding: 32 }]}
+            style={[
+              styles.container,
+              { backgroundColor: candlelightPalette.background, padding: 32 },
+            ]}
           >
             <Text style={styles.errorText}>
               L’app non riesce a preparare l’archivio. Riavviala; se succede in sviluppo, controlla
@@ -398,7 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorText: {
-    color: '#2C241B',
+    color: candlelightPalette.text,
     fontSize: 16,
     textAlign: 'center',
   },

@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "backgroundColor": "#F5EFE0",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#121012",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.kalkal.bookvoice",
@@ -19,7 +19,7 @@
       "package": "dev.kalkal.bookvoice",
       "permissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
-        "backgroundColor": "#F0E8D3",
+        "backgroundColor": "#121012",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

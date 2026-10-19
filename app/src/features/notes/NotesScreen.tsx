@@ -355,7 +355,7 @@ export function NotesScreen({
                     style={{
                       fontFamily: fonts.body,
                       fontSize: typeScale.body,
-                      color: colors.coverLeather,
+                      color: colors.danger,
                     }}
                   >
                     {t('notes.actions.delete')}

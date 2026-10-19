@@ -1,4 +1,4 @@
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import App, { type AppServices } from '../App';
 import { InMemoryBookRepository, LocalDailyProgressRepository } from '../src/features/books';
@@ -12,6 +12,8 @@ import { InMemoryNoteRepository } from '../src/features/notes';
 import { InMemoryRevisionRepository, FakeSuggestionsProvider } from '../src/features/review';
 import { InMemoryOutlineService } from '../src/features/outline';
 import { InMemoryBackupService, LocalSettingsRepository } from '../src/features/settings';
+import { DEFAULT_SETTINGS } from '../src/features/settings/types';
+import { paperPalette } from '../src/theme';
 
 // Google fonts do not load in the jest environment: loading is simulated as
 // completed so the real app tree can be tested.
@@ -149,5 +151,20 @@ describe('App', () => {
     await act(async () => {});
     expect(screen.getByText('«period»')).toBeOnTheScreen();
     expect(screen.queryByText('«punto»')).toBeNull();
+  });
+
+  it('applies the saved theme at launch, not only when Settings is opened', async () => {
+    const services = testServices();
+    await services.settingsRepository.save({
+      ...DEFAULT_SETTINGS,
+      theme: 'paper',
+      themeChosen: true,
+    });
+    const screen = await render(
+      <App signIn={async () => 'utente-di-prova'} createServices={() => services} />,
+    );
+    await act(async () => {});
+    const library = await screen.findByTestId('library-screen');
+    await waitFor(() => expect(library).toHaveStyle({ backgroundColor: paperPalette.background }));
   });
 });

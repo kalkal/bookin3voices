@@ -1,6 +1,6 @@
 /**
- * Two-mode theme provider: "paper" (default) and "candlelight"
- * (dark, sketched). Components read everything from `useTheme`,
+ * Two-mode theme provider: "candlelight" (black and gold, the default) and "paper"
+ * (cream). Components read everything from `useTheme`,
  * never from the raw tokens, so switching theme stays a provider detail.
  */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
@@ -39,11 +39,11 @@ const ThemeContext = createContext<Theme | null>(null);
 
 interface ThemeProviderProps {
   children: ReactNode;
-  /** Initial mode; the app default is the paper theme. */
+  /** Initial mode; the app default is black and gold ("candlelight"). */
   initialMode?: ThemeMode;
 }
 
-export function ThemeProvider({ children, initialMode = 'paper' }: ThemeProviderProps) {
+export function ThemeProvider({ children, initialMode = 'candlelight' }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
   const setMode = useCallback((next: ThemeMode) => setModeState(next), []);
 

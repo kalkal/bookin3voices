@@ -11,8 +11,9 @@ describe('resolveThemeMode', () => {
     expect(resolveThemeMode('auto', 'light')).toBe('paper');
   });
 
-  it('"automatic" without system information falls back to paper (the app default)', () => {
-    expect(resolveThemeMode('auto', null)).toBe('paper');
-    expect(resolveThemeMode('auto', undefined)).toBe('paper');
+  it('"automatic" without system information falls back to black and gold (the app default)', () => {
+    expect(resolveThemeMode('auto', null)).toBe('candlelight');
+    expect(resolveThemeMode('auto', undefined)).toBe('candlelight');
+    expect(resolveThemeMode('auto', 'unspecified')).toBe('candlelight');
   });
 });

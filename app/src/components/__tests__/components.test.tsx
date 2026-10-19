@@ -5,7 +5,7 @@ import { Card, Chip, DropCap, OrnamentDivider, PrimaryButton, RomanNumeral } fro
 import { ThemeProvider, paperPalette } from '../../theme';
 
 function renderWithTheme(ui: ReactElement) {
-  return render(<ThemeProvider>{ui}</ThemeProvider>);
+  return render(<ThemeProvider initialMode="paper">{ui}</ThemeProvider>);
 }
 
 describe('PrimaryButton', () => {

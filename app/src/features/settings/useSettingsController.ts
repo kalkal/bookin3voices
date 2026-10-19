@@ -22,13 +22,14 @@ import type {
 /**
  * Translates the saved preference into the ThemeProvider's concrete mode.
  * `systemScheme` is the value of `useColorScheme()` (in RN 0.86 it can also
- * be "unspecified"): everything that is not "dark" falls back to paper.
+ * be "unspecified"): only a system "light" scheme gives paper; anything else (dark, unspecified,
+ * unknown) gets the app default, black and gold.
  */
 export function resolveThemeMode(
   preference: ThemePreference,
   systemScheme: string | null | undefined,
 ): ThemeMode {
-  if (preference === 'auto') return systemScheme === 'dark' ? 'candlelight' : 'paper';
+  if (preference === 'auto') return systemScheme === 'light' ? 'paper' : 'candlelight';
   return preference;
 }
 
@@ -92,7 +93,7 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
 
   const setAiProvider = useCallback((id: AiProviderId) => update({ aiProvider: id }), [update]);
   const setThemePreference = useCallback(
-    (preference: ThemePreference) => update({ theme: preference }),
+    (preference: ThemePreference) => update({ theme: preference, themeChosen: true }),
     [update],
   );
   const setDailyGoalWords = useCallback(

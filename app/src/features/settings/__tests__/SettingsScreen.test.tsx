@@ -64,19 +64,23 @@ describe('SettingsScreen', () => {
   it('changing the theme applies to the ThemeProvider and persists across restart', async () => {
     const { storage, data } = memoryStorage();
     const prima = await renderScreen(storage);
-    expect(await prima.findByTestId('mode-probe')).toHaveTextContent('paper');
+    expect(await prima.findByTestId('mode-probe')).toHaveTextContent('candlelight');
 
-    await fireEvent.press(await prima.findByTestId('theme-candlelight'));
-    expect(prima.getByTestId('mode-probe')).toHaveTextContent('candlelight');
+    await fireEvent.press(await prima.findByTestId('theme-paper'));
+    expect(prima.getByTestId('mode-probe')).toHaveTextContent('paper');
     await waitFor(() =>
-      expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({ theme: 'candlelight' }),
+      expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({
+        theme: 'paper',
+        themeChosen: true,
+      }),
     );
     await prima.unmount();
 
     // "restart": new screen on the same persistence
     const dopo = await renderScreen(storage);
-    await waitFor(() => expect(dopo.getByTestId('mode-probe')).toHaveTextContent('candlelight'));
-    expect(dopo.getByTestId('theme-candlelight')).toHaveTextContent('A lume di candela');
+    await waitFor(() => expect(dopo.getByTestId('mode-probe')).toHaveTextContent('paper'));
+    expect(dopo.getByTestId('theme-paper')).toHaveTextContent('Carta');
+    expect(dopo.getByTestId('theme-candlelight')).toHaveTextContent('Nero e oro');
     await dopo.unmount();
   });
 

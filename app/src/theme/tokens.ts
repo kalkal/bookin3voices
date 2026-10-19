@@ -50,9 +50,11 @@ export interface Palette {
   coverLeather: string;
   /** Warm shadow (FAB, mic). */
   shadow: string;
+  /** Destructive actions (delete): readable on the background and on cards. */
+  danger: string;
 }
 
-/** Light "paper" theme — the default. */
+/** Cream "paper" theme: the alternative look, selectable in Settings. */
 export const paperPalette: Palette = {
   background: '#F5EFE0',
   surface: '#FBF6EA',
@@ -76,36 +78,40 @@ export const paperPalette: Palette = {
   coverGreen: '#24443A',
   coverLeather: '#5C4030',
   shadow: 'rgba(44, 36, 27, 0.25)',
+  danger: '#5C4030',
 };
 
 /**
- * Dark "candlelight" theme (near-black brown background, warm amber
- * text, same accents). A sketch to refine once the real screens exist;
- * the app default remains the paper theme.
+ * Black and gold theme (mode "candlelight"): the app's DEFAULT look, taken from
+ * the icon (gold #C9A24E on near-black #121012). Gold is the primary colour,
+ * with dark text on top of it. Contrast (WCAG AA) is pinned by tokens.test.ts:
+ * text 4.5:1, borders of controls 3:1. Shadows do not show on black, so
+ * surfaces are told apart by the lighter surface tone and the gold hairlines.
  */
 export const candlelightPalette: Palette = {
-  background: '#1A140B',
-  surface: '#251D11',
-  text: '#E9D8AE',
+  background: '#121012',
+  surface: '#1C191C',
+  text: '#F5EFE0',
   textMuted: '#A08D68',
-  textMutedStrong: '#BFA97D',
-  primary: '#3F6B56',
-  accent: '#C9A961',
-  accentLight: '#C9A961',
-  accentText: '#C9A961',
-  hairline: '#3C3120',
-  hairlineLight: '#332A1B',
-  hairlineGold: '#5C4B2E',
-  panel: '#211A0E',
-  track: '#332A1B',
-  selectedTint: '#22301F',
+  textMutedStrong: '#B3A589',
+  primary: '#C9A24E',
+  accent: '#C9A24E',
+  accentLight: '#DDBE78',
+  accentText: '#C9A24E',
+  hairline: '#3A332A',
+  hairlineLight: '#2A2528',
+  hairlineGold: '#8A7440',
+  panel: '#171417',
+  track: '#2A2528',
+  selectedTint: '#2A2314',
   highlight: '#3A2F14',
-  onPrimary: '#F5EFE0',
-  onAccent: '#1A140B',
+  onPrimary: '#121012',
+  onAccent: '#121012',
   statusDraft: '#7A6B50',
   coverGreen: '#24443A',
   coverLeather: '#5C4030',
-  shadow: 'rgba(0, 0, 0, 0.5)',
+  shadow: 'rgba(0, 0, 0, 0.6)',
+  danger: '#F2777A',
 };
 
 /** Spacing scale (px). */
