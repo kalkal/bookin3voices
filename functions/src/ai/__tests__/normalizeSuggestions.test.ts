@@ -1,6 +1,6 @@
 // Mechanical defenses of the contract: discards, hierarchy, cap, ordering.
 
-import { normalizeSuggestions, MAX_SUGGESTIONS } from '../normalizeSuggestions';
+import { densityCap, normalizeSuggestions, MAX_SUGGESTIONS } from '../normalizeSuggestions';
 import { suggestionSchema, type ModelOutput } from '../refineTypes';
 import { textHash } from '../textHash';
 
@@ -98,8 +98,9 @@ describe('normalizeSuggestions', () => {
   });
 
   it('absolute cap: never more than MAX_SUGGESTIONS', () => {
+    // 40 suggestions on a text long enough (2000 words) for the density cap to be 30
     const words = Array.from({ length: 40 }, (_, i) => `parola${String(i).padStart(2, '0')}`);
-    const longText = words.join(' ');
+    const longText = [...words, ...Array.from({ length: 1960 }, () => 'e')].join(' ');
     const { suggestions, discarded } = normalizeSuggestions(
       output(words.map((word) => ({ ...STYLE_BASE, original: word, proposals: ['x'] }))),
       longText,
@@ -133,5 +134,70 @@ describe('normalizeSuggestions: whitespace tolerance', () => {
     );
     expect(suggestions).toHaveLength(0);
     expect(discarded).toBe(1);
+  });
+});
+
+describe('normalizeSuggestions: density cap', () => {
+  it('densityCap: about one suggestion every 50 words, at least 3, never above 30', () => {
+    expect(densityCap(10)).toBe(3);
+    expect(densityCap(345)).toBe(7);
+    expect(densityCap(361)).toBe(8);
+    expect(densityCap(5000)).toBe(MAX_SUGGESTIONS);
+  });
+
+  it('cuts to the cap, keeping grammar first and then the text order', () => {
+    // 100 words → cap 3; 5 suggestions, the grammar one last in the text
+    const words = Array.from({ length: 100 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+    const text = words.join(' ');
+    const style = (word: string) => ({ ...STYLE_BASE, original: word, proposals: ['x'] });
+    const { suggestions, discarded } = normalizeSuggestions(
+      output([
+        style('w001'),
+        style('w010'),
+        style('w020'),
+        style('w030'),
+        { kind: 'grammar', rationale: 'r', original: 'w090', proposals: ['W090'] },
+      ]),
+      text,
+      textHash(text),
+      'req-cap',
+    );
+    expect(suggestions.map((s) => s.original)).toEqual(['w001', 'w010', 'w090']);
+    expect(suggestions.map((s) => s.id)).toEqual(['req-cap-1', 'req-cap-2', 'req-cap-3']);
+    expect(discarded).toBe(2);
+  });
+});
+
+describe('normalizeSuggestions: density cap spreads across the text', () => {
+  // 200 words → cap 4, four 50-word windows
+  const words = Array.from({ length: 200 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+  const text = words.join(' ');
+  const style = (word: string) => ({ ...STYLE_BASE, original: word, proposals: ['x'] });
+
+  it('keeps one suggestion per 50-word window before filling, so the end is not starved', () => {
+    // 8 suggestions crowded at the start, one in each later window
+    const crowded = ['w001', 'w002', 'w003', 'w004', 'w005'].map(style);
+    const later = ['w060', 'w120', 'w180'].map(style);
+    const { suggestions, densityCut } = normalizeSuggestions(
+      output([...crowded, ...later]),
+      text,
+      textHash(text),
+      'req-spread',
+    );
+    expect(suggestions.map((s) => s.original)).toEqual(['w001', 'w060', 'w120', 'w180']);
+    expect(densityCut).toBe(4);
+  });
+
+  it('grammar wins an overlap with a style span', () => {
+    const { suggestions } = normalizeSuggestions(
+      output([
+        { ...STYLE_BASE, original: 'w010 w011 w012', proposals: ['x'] },
+        { kind: 'grammar', rationale: 'r', original: 'w011', proposals: ['W011'] },
+      ]),
+      text,
+      textHash(text),
+      'req-overlap',
+    );
+    expect(suggestions.map((s) => s.kind)).toEqual(['grammar']);
   });
 });

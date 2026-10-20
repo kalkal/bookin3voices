@@ -267,6 +267,14 @@ export async function runRefineChapter(
   const normalized = normalizeSuggestions(output, input.text, input.textHash, input.requestId);
   const { suggestions } = normalized;
   const discarded = normalized.discarded + dropped;
+  if (normalized.densityCut > 0) {
+    logger.info('refineChapter: density cap applied', {
+      requestId: input.requestId,
+      raw: output.suggestions.length,
+      kept: suggestions.length,
+      cut: normalized.densityCut,
+    });
+  }
 
   // Atomic batch: registry + pending dedup + new suggestions in ONE
   // transaction, never 20 out of 40 because of a mid-way timeout. If another

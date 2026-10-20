@@ -188,11 +188,13 @@ function checkBrano(
   // the passage's human-set range.
   const [minExpected, maxExpected] = checks.expectedRange;
   const failThreshold = Math.min(Math.max(maxExpected, Math.ceil(words / 50)), MAX_SUGGESTIONS);
-  const densityOk = suggestions.length <= failThreshold;
+  // measured on the MODEL output: normalizeSuggestions now cuts to the cap, so the
+  // kept count would always pass and hide a prompt that ignores the density
+  const densityOk = raw.suggestions.length <= failThreshold;
   if (!densityOk) {
     violations.push({
       level: 'fail',
-      message: `density over the cap: ${suggestions.length} suggestions (cap ${failThreshold})`,
+      message: `model density over the cap: ${raw.suggestions.length} suggestions from the model (cap ${failThreshold}; the code keeps ${suggestions.length})`,
     });
   } else if (suggestions.length > maxExpected) {
     violations.push({
