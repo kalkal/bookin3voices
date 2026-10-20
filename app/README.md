@@ -35,6 +35,11 @@ app/
 Rules: components never touch the Firebase SDK (repository pattern), pure logic lives in
 `src/lib` or in the features, tests sit next to the code in `__tests__/`.
 
+- Failures are never silent: every error shows a plain message that says what to do next
+  (microphone unavailable or not allowed, suggestions did not arrive – try again, save
+  failed – your text is kept here).
+- «Saved» appears only once the text is really stored in a safe place, never before.
+
 ## Pre-commit (Husky + lint-staged)
 
 `npm install` (the `prepare` script) sets `core.hooksPath = app/.husky/_` in the

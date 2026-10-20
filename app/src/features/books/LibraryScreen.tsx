@@ -10,7 +10,13 @@ import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, CathedralBackdrop, OrnamentDivider, PrimaryButton } from '../../components';
+import {
+  Card,
+  CathedralBackdrop,
+  OrnamentDivider,
+  PrimaryButton,
+  Wordmark,
+} from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -216,18 +222,7 @@ export function LibraryScreen({
       <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
         <View style={styles.headerRow}>
           <View style={{ width: 40 }} />
-          <Text
-            style={{
-              flex: 1,
-              textAlign: 'center',
-              fontFamily: fonts.display,
-              fontSize: typeScale.display,
-              letterSpacing: letterSpacing.display,
-              color: colors.text,
-            }}
-          >
-            bookin3voice
-          </Text>
+          <Wordmark size={34} style={{ flex: 1 }} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('books.settings')}

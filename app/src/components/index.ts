@@ -7,3 +7,4 @@ export { DropCap } from './DropCap';
 export { OrnamentDivider } from './OrnamentDivider';
 export { PrimaryButton } from './PrimaryButton';
 export { RomanNumeral } from './RomanNumeral';
+export { Wordmark } from './Wordmark';

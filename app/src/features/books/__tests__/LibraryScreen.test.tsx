@@ -87,6 +87,21 @@ describe('LibraryScreen', () => {
     await screen.unmount();
   });
 
+  it('the title is the wordmark «book in 3 voices», the same artwork as the README header', async () => {
+    const { result } = renderLibrary();
+    const screen = await result;
+    const wordmark = await screen.findByLabelText('book in 3 voices');
+    expect(wordmark).toBeOnTheScreen();
+    // one image, tinted with the theme gold: the letters are artwork, not font text
+    expect(screen.getByTestId('wordmark-image')).toHaveProp(
+      'source',
+      require('../../../../assets/brand/wordmark.png'),
+    );
+    expect(screen.queryByText('voices')).toBeNull();
+    expect(screen.queryByText('bookin3voice')).toBeNull();
+    await screen.unmount();
+  });
+
   it('the FAB creates a book from the typed title and opens it', async () => {
     const onOpenBook = jest.fn();
     const { result, books } = renderLibrary({ onOpenBook });
