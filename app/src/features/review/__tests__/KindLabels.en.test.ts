@@ -7,5 +7,6 @@ describe('KIND_LABELS (English)', () => {
 
   it('follows the UI language at read time', () => {
     expect(KIND_LABELS.grammar).toBe('Grammar');
+    expect(KIND_LABELS.history).toBe('History');
   });
 });

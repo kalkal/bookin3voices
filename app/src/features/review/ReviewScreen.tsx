@@ -1,7 +1,9 @@
 /**
  * Suggestion review: original→proposal cards
  * with category and one-line rationale; for style up to 3 selectable
- * variants (tap = choose), for grammar/pacing a single proposal; swipe
+ * variants (tap = choose), for grammar/pacing a single proposal; history
+ * cards name their aspect (period detail or possible anachronism) and always
+ * say they are a hint to check, never a certain fact; swipe
  * right = accept, left = reject (same commands as the round buttons);
  * category filters with «accept all»; «Annulla» on the last command
  * (Command pattern with undo).
@@ -20,9 +22,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Chip } from '../../components';
+import type { ChipTone } from '../../components';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
-import { KIND_LABELS, SUGGESTION_KINDS } from './types';
+import { HISTORY_ASPECT_LABELS, KIND_LABELS, SUGGESTION_KINDS } from './types';
 import type { Suggestion, SuggestionKind } from './types';
 import type { ChapterReviewController } from './useChapterReview';
 
@@ -98,7 +101,21 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
         ))}
       </View>
 
-      {filter !== 'all' && visible.length > 0 ? (
+      {filter === 'history' && visible.length > 0 ? (
+        <Text
+          style={{
+            paddingHorizontal: spacing.xl,
+            paddingBottom: spacing.md,
+            color: colors.history,
+            fontFamily: fonts.body,
+            fontSize: typeScale.label,
+          }}
+          testID="review-history-one-by-one"
+        >
+          {t('review.history.oneByOne')}
+        </Text>
+      ) : null}
+      {filter !== 'all' && filter !== 'history' && visible.length > 0 ? (
         <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.md }}>
           <Chip
             label={t('review.screen.acceptAll', { count: visible.length })}
@@ -192,6 +209,14 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
 const SWIPE_THRESHOLD = 96;
 const VARIANT_LETTERS = ['A', 'B', 'C'] as const;
 
+/** Category tag colour on the card: history stands apart from the craft kinds. */
+const KIND_TONES: Record<SuggestionKind, ChipTone> = {
+  style: 'gold',
+  grammar: 'green',
+  pacing: 'gold',
+  history: 'history',
+};
+
 function SuggestionCard({
   suggestion,
   text,
@@ -231,7 +256,8 @@ function SuggestionCard({
   );
 
   const line = text.slice(0, suggestion.span.from).split('\n').length;
-  const tone = suggestion.kind === 'grammar' ? 'green' : 'gold';
+  const tone = KIND_TONES[suggestion.kind];
+  const isHistory = suggestion.kind === 'history';
   const hasVariants = suggestion.proposals.length > 1;
 
   return (
@@ -242,7 +268,17 @@ function SuggestionCard({
     >
       <Card style={{ gap: spacing.sm + 2 }}>
         <View style={styles.cardHeader}>
-          <Chip label={KIND_LABELS[suggestion.kind]} tone={tone} uppercase />
+          <View style={[styles.cardTag, { gap: spacing.sm }]}>
+            <Chip label={KIND_LABELS[suggestion.kind]} tone={tone} uppercase />
+            {suggestion.aspect ? (
+              <Text
+                testID={`review-aspect-${suggestion.id}`}
+                style={{ color: colors.history, fontFamily: fonts.body, fontSize: typeScale.label }}
+              >
+                {HISTORY_ASPECT_LABELS[suggestion.aspect]}
+              </Text>
+            ) : null}
+          </View>
           <Text
             style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: typeScale.label }}
           >
@@ -359,7 +395,7 @@ function SuggestionCard({
 
         <Text
           testID={`review-rationale-${suggestion.id}`}
-          numberOfLines={1}
+          numberOfLines={isHistory ? 3 : 1}
           style={{
             color: colors.textMutedStrong,
             fontFamily: fonts.bodyItalic,
@@ -368,6 +404,18 @@ function SuggestionCard({
         >
           {suggestion.rationale}
         </Text>
+        {isHistory ? (
+          <Text
+            testID={`review-to-check-${suggestion.id}`}
+            style={{
+              color: colors.textMutedStrong,
+              fontFamily: fonts.body,
+              fontSize: typeScale.micro,
+            }}
+          >
+            {t('review.history.toCheck')}
+          </Text>
+        ) : null}
 
         <View style={[styles.actions, { gap: spacing.md }]}>
           <Pressable
@@ -403,6 +451,7 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   footer: { borderTopWidth: 1, alignItems: 'center' },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardTag: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   singleProposal: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end' },
   actionButton: {

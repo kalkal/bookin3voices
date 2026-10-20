@@ -52,6 +52,8 @@ export interface Palette {
   shadow: string;
   /** Destructive actions (delete): readable on the background and on cards. */
   danger: string;
+  /** Sealing-wax red: history suggestions (category tag and inline underline). */
+  history: string;
 }
 
 /** Cream "paper" theme: the alternative look, selectable in Settings. */
@@ -79,6 +81,7 @@ export const paperPalette: Palette = {
   coverLeather: '#5C4030',
   shadow: 'rgba(44, 36, 27, 0.25)',
   danger: '#5C4030',
+  history: '#8B3A2B',
 };
 
 /**
@@ -112,6 +115,7 @@ export const candlelightPalette: Palette = {
   coverLeather: '#5C4030',
   shadow: 'rgba(0, 0, 0, 0.6)',
   danger: '#F2777A',
+  history: '#D98C6E',
 };
 
 /** Spacing scale (px). */

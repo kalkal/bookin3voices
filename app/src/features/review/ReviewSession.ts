@@ -203,6 +203,10 @@ export class ReviewSession {
    * A single command: one undo restores them all together.
    */
   acceptAll(kind: SuggestionKind): AcceptAllOutcome {
+    // history hints are unchecked facts: each one is accepted on its own, never in bulk
+    if (kind === 'history') {
+      return { accepted: 0, staled: 0, text: this.currentText, revisions: [] };
+    }
     const targets = [...this.pendingOf(kind)].sort((a, b) => b.span.from - a.span.from);
     if (targets.length === 0) {
       return { accepted: 0, staled: 0, text: this.currentText, revisions: [] };

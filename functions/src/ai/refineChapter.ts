@@ -24,7 +24,8 @@ import { logger } from 'firebase-functions';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
-import { isRetryableAiError } from './provider/types';
+import { mergeWithHistory, runHistoryCheckWithin } from './history/historyCheck';
+import { isRetryableAiError, type AiProvider } from './provider/types';
 import { normalizeSuggestions } from './normalizeSuggestions';
 import { buildRefinePrompt, REFINE_PROMPT_VERSION } from './refinePrompt';
 import {
@@ -63,6 +64,11 @@ export interface RefineChapterDeps {
   now?: () => number;
   /** Daily usage caps; defaults to DEFAULT_USAGE_LIMITS. */
   usageLimits?: Record<UsageAction, UsageLimit>;
+  /**
+   * History check provider per AI provider (two short calls, run in parallel with
+   * the refinement). Absent = no history suggestions.
+   */
+  history?: Record<AiProviderId, () => AiProvider>;
 }
 
 /**
@@ -259,18 +265,36 @@ export async function runRefineChapter(
     loadStyleProfile,
   });
 
-  const { output, dropped, modelName } = await generateValidatedSuggestions(
-    provider.primary,
-    provider.fallback,
-    prompt,
-  );
-  const normalized = normalizeSuggestions(output, input.text, input.textHash, input.requestId);
+  // the history check runs in parallel: it adds no latency, and a failure only
+  // means no history suggestions (degraded mode), never a failed refinement
+  const historyProvider = deps.history?.[providerId];
+  const [{ output, dropped, modelName }, history] = await Promise.all([
+    generateValidatedSuggestions(provider.primary, provider.fallback, prompt),
+    historyProvider === undefined
+      ? Promise.resolve(null)
+      : runHistoryCheckWithin({
+          provider: historyProvider(),
+          text: input.text,
+          language: book.language,
+        }),
+  ]);
+  if (history?.error !== undefined) {
+    logger.warn('refineChapter: history check failed, refinement without history', {
+      requestId: input.requestId,
+      kind: history.error.kind,
+      calls: history.calls,
+    });
+  }
+  const merged = {
+    suggestions: mergeWithHistory(output.suggestions, history?.suggestions ?? [], input.text),
+  };
+  const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId);
   const { suggestions } = normalized;
-  const discarded = normalized.discarded + dropped;
+  const discarded = normalized.discarded + dropped + (history?.dropped ?? 0);
   if (normalized.densityCut > 0) {
     logger.info('refineChapter: density cap applied', {
       requestId: input.requestId,
-      raw: output.suggestions.length,
+      raw: merged.suggestions.length,
       kept: suggestions.length,
       cut: normalized.densityCut,
     });

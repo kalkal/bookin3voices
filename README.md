@@ -22,8 +22,10 @@ tells you what Amazon would reject before you upload.
 
 - **Dictation** per chapter with voice commands ("new paragraph"), live autosave and an
   offline-first store that syncs when the network comes back.
-- **Style suggestions** anchored to exact spans of your text: category (style, grammar, pacing),
-  a one-line reason, one to three proposals. You accept or reject each one. The AI never
+- **Style suggestions** anchored to exact spans of your text: category (style, grammar, pacing,
+  history), a one-line reason, one to three proposals. **History** appears only when the text
+  names a past period: period details that bring the scene to life and possible anachronisms,
+  always as hints to check. You accept or reject each one. The AI never
   rewrites the chapter. Pick the style per book: **Suspense / Horror**, **Mystery (whodunit)**
   or **Thriller**.
 - **Outline generator**: from a synopsis to a chapter-by-chapter outline you confirm.

@@ -1,14 +1,15 @@
 /**
  * Pill chip from the mockup, in three uses:
  * - filter (Review): selected = solid green, otherwise muted gold border;
- * - category tag (suggestion card): small caps with a gold or green border;
+ * - category tag (suggestion card): small caps with a gold, green or (history)
+ *   sealing-wax border;
  * - voice command (Dictation): italic between guillemets «like this».
  */
 import { Pressable, Text } from 'react-native';
 
 import { useTheme } from '../theme';
 
-export type ChipTone = 'gold' | 'green';
+export type ChipTone = 'gold' | 'green' | 'history';
 
 interface ChipProps {
   label: string;
@@ -38,14 +39,13 @@ export function Chip({
 }: ChipProps) {
   const { colors, radius, spacing, typeScale, letterSpacing, fonts } = useTheme();
 
-  const borderColor =
-    tone === 'green' ? colors.primary : tone === 'gold' ? colors.accent : colors.hairlineGold;
-  const textColor =
-    tone === 'green'
-      ? colors.primary
-      : tone === 'gold'
-        ? colors.accentText
-        : colors.textMutedStrong;
+  const toneColors: Record<ChipTone, { border: string; text: string }> = {
+    green: { border: colors.primary, text: colors.primary },
+    gold: { border: colors.accent, text: colors.accentText },
+    history: { border: colors.history, text: colors.history },
+  };
+  const borderColor = tone ? toneColors[tone].border : colors.hairlineGold;
+  const textColor = tone ? toneColors[tone].text : colors.textMutedStrong;
 
   return (
     <Pressable

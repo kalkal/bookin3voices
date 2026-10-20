@@ -29,6 +29,23 @@ describe('suggestionSchema (contract shared with the refineChapter callable)', (
     ).not.toThrow();
   });
 
+  it('history carries its aspect (period tip or anachronism) and variants like style', () => {
+    const history = {
+      ...BASE,
+      kind: 'history' as const,
+      aspect: 'anachronism' as const,
+      original: 'il televisore',
+      span: { from: 5, to: 18 },
+      proposals: ['la radio', 'il grammofono'],
+      rationale: 'Da verificare: nel 1943 la televisione in casa non c’era ancora.',
+    };
+    expect(() => suggestionSchema.parse(history)).not.toThrow();
+    expect(() => suggestionSchema.parse({ ...history, aspect: 'period' })).not.toThrow();
+    // the aspect belongs to history only, and history always has one
+    expect(() => suggestionSchema.parse({ ...history, aspect: undefined })).toThrow();
+    expect(() => suggestionSchema.parse({ ...BASE, aspect: 'period' })).toThrow();
+  });
+
   it('rejects empty proposals and empty or reversed spans', () => {
     expect(() => suggestionSchema.parse({ ...BASE, proposals: [''] })).toThrow();
     expect(() =>

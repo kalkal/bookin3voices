@@ -149,6 +149,16 @@ describe('acceptAll (patches from the highest offset to the lowest)', () => {
     expect(session.pendingOf('grammar')).toHaveLength(2);
   });
 
+  it('never accepts history hints: they are accepted one at a time', () => {
+    const session = newSession([
+      sug('s-storico', 'history', 'Posò lentamente', ['Posò piano'], { aspect: 'anachronism' }),
+    ]);
+    const outcome = session.acceptAll('history');
+    expect(outcome).toMatchObject({ accepted: 0, staled: 0, revisions: [] });
+    expect(session.pendingOf('history')).toHaveLength(1);
+    expect(session.canUndo).toBe(false);
+  });
+
   it('without pendings in the category it produces no commands', () => {
     const session = newSession([STYLE_ADVERB()]);
     const outcome = session.acceptAll('grammar');

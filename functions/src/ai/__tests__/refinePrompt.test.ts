@@ -20,7 +20,7 @@ const BASE_INPUT = {
 
 describe('buildRefinePrompt', () => {
   it('the prompt version is the expected one (bump ONLY on purpose)', () => {
-    expect(REFINE_PROMPT_VERSION).toBe(1);
+    expect(REFINE_PROMPT_VERSION).toBe(3);
     expect(REFINE_TEMPERATURE).toBe(0.3);
   });
 

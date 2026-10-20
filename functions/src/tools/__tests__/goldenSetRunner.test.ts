@@ -1,6 +1,6 @@
 import { ProviderModel } from '../../ai/provider/ProviderModel';
 import { aiError, type AiProvider, type AiResult } from '../../ai/provider/types';
-import { generateWithRetry } from '../goldenSetRunner';
+import { checkBrano, generateWithRetry } from '../goldenSetRunner';
 
 const PROMPT = { systemInstruction: 's', userText: 'u', responseSchema: {} };
 const GOOD: AiResult = { ok: true, value: { suggestions: [] } };
@@ -37,5 +37,32 @@ describe('generateWithRetry', () => {
     const { model, calls } = scripted([{ ok: false, error: aiError('auth', 'no credentials') }]);
     await expect(generateWithRetry([model], PROMPT)).rejects.toThrow('AI auth');
     expect(calls()).toBe(1);
+  });
+});
+
+describe('checkBrano: density on the model output', () => {
+  it('fails on the raw model count even though the code keeps only the cap', () => {
+    const words = Array.from({ length: 100 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+    const text = words.join(' ');
+    const raw = {
+      suggestions: ['w001', 'w020', 'w040', 'w060', 'w080'].map((word) => ({
+        original: word,
+        kind: 'style' as const,
+        rationale: 'r',
+        proposals: ['x'],
+      })),
+    };
+    const report = checkBrano(
+      'test.md',
+      text,
+      { expectedRange: [1, 2], protected: [], expected: [] },
+      raw,
+      'fake-nova',
+    );
+    expect(report.count).toBe(3); // the code cap (min 3) keeps three
+    expect(report.failed).toBe(true);
+    expect(report.violations.map((v) => v.message)).toContainEqual(
+      expect.stringContaining('model density over the cap: 5 suggestions from the model'),
+    );
   });
 });

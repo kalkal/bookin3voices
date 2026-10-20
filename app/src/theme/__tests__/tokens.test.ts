@@ -73,6 +73,25 @@ describe('danger colour (delete and other destructive actions), both themes', ()
   });
 });
 
+describe('history colour (category tag and underline of history suggestions), both themes', () => {
+  it.each([
+    ['paper', paperPalette],
+    ['black and gold', candlelightPalette],
+  ] as const)('%s: readable on the background and on cards (4.5:1)', (_name, palette) => {
+    expect(contrast(palette.history, palette.background)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(palette.history, palette.surface)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each([
+    ['paper', paperPalette],
+    ['black and gold', candlelightPalette],
+  ] as const)('%s: told apart from the gold, green and danger colours', (_name, palette) => {
+    for (const other of [palette.accent, palette.accentText, palette.primary, palette.danger]) {
+      expect(palette.history).not.toBe(other);
+    }
+  });
+});
+
 describe('radii and spacing', () => {
   it('corners are nearly sharp: 3px', () => {
     expect(radius.sharp).toBe(3);

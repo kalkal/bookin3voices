@@ -9,8 +9,11 @@
 // material that changes (book/chapter context and text) is in the user text,
 // at the end.
 
-/** Prompt version: bump on EVERY change to the text or the schema. */
-export const REFINE_PROMPT_VERSION = 1;
+/**
+ * Prompt version: bump on EVERY change to the text or the schema. 3 = the v1 text
+ * again: the `history` rules of v2 moved to their own short calls (history/).
+ */
+export const REFINE_PROMPT_VERSION = 3;
 
 /** Refinement temperature: 0.3, low to stay close to the text. */
 export const REFINE_TEMPERATURE = 0.3;

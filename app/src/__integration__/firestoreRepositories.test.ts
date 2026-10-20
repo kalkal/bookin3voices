@@ -129,7 +129,7 @@ describe('FirestoreBookRepository', () => {
   it('updateBook updates the metadata and deleteBook also removes the chapters', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Racconti del mulino' });
-    const chapter = await chapterRepository.createChapter(book.id, { title: 'Il pontile' });
+    const chapter = await chapterRepository.createChapter(book.id, { title: 'Il mulino di sotto' });
     await bookRepository.updateBook(book.id, { status: 'refined', genre: 'Raccolta' });
     await waitForPendingWrites(db);
     expect(await bookRepository.getBook(book.id)).toMatchObject({

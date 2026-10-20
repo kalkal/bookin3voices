@@ -153,7 +153,7 @@ interface BranoReport {
   failed: boolean;
 }
 
-function checkBrano(
+export function checkBrano(
   file: string,
   text: string,
   checks: BranoChecks,

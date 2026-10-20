@@ -51,6 +51,43 @@ describe('normalizeSuggestions', () => {
     expect(suggestions.map((s) => s.original)).toEqual(['uscì fuori']);
   });
 
+  it('history keeps its aspect and its variants; the other kinds never carry one', () => {
+    const scene = 'Napoli, 1943. Nel basso, la madre accese il televisore.';
+    const { suggestions } = normalizeSuggestions(
+      output([
+        {
+          kind: 'history',
+          aspect: 'period',
+          rationale: 'Da verificare: nel 1943 le sirene dell’allarme aereo erano quotidiane.',
+          original: 'Napoli, 1943.',
+          proposals: [
+            'Napoli, 1943. In lontananza suonava la sirena.',
+            'Napoli, 1943. Le finestre erano oscurate.',
+          ],
+        },
+        {
+          kind: 'history',
+          aspect: 'anachronism',
+          rationale: 'Da verificare: nel 1943 la televisione in casa non c’era ancora.',
+          original: 'il televisore',
+          proposals: ['la radio', 'il grammofono'],
+        },
+        { ...STYLE_BASE, aspect: 'period', original: 'Nel basso,', proposals: ['Nel basso'] },
+      ]),
+      scene,
+      textHash(scene),
+      'req-h',
+    );
+    expect(suggestions.map((s) => [s.kind, s.aspect])).toEqual([
+      ['history', 'period'],
+      ['style', undefined],
+      ['history', 'anachronism'],
+    ]);
+    expect(suggestions[0]?.proposals).toHaveLength(2);
+    expect(suggestions[1]).not.toHaveProperty('aspect');
+    for (const sug of suggestions) expect(suggestionSchema.parse(sug)).toBeTruthy();
+  });
+
   it('grammar: keeps only the first proposal (hierarchy)', () => {
     const { suggestions } = normalizeSuggestions(
       output([
@@ -199,5 +236,81 @@ describe('normalizeSuggestions: density cap spreads across the text', () => {
       'req-overlap',
     );
     expect(suggestions.map((s) => s.kind)).toEqual(['grammar']);
+  });
+});
+
+describe('normalizeSuggestions: history in the density cap', () => {
+  it('the cap cuts a period tip before style and keeps the anachronism', () => {
+    // 100 words → cap 3; all four in the first 50-word block, so only the ranking decides
+    const words = Array.from({ length: 100 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+    const text = words.join(' ');
+    const { suggestions } = normalizeSuggestions(
+      output([
+        { ...STYLE_BASE, original: 'w001', proposals: ['x'] },
+        { ...STYLE_BASE, original: 'w005', proposals: ['x'] },
+        {
+          kind: 'history',
+          aspect: 'period',
+          rationale: 'r',
+          original: 'w002',
+          proposals: ['w002 y'],
+        },
+        {
+          kind: 'history',
+          aspect: 'anachronism',
+          rationale: 'r',
+          original: 'w008',
+          proposals: ['z'],
+        },
+      ]),
+      text,
+      textHash(text),
+      'req-history-cap',
+    );
+    expect(suggestions.map((s) => s.original)).toEqual(['w001', 'w005', 'w008']);
+  });
+});
+
+describe('normalizeSuggestions: density cap, grammar and long chapters', () => {
+  it('grammar is counted before the one-per-window picks', () => {
+    // 200 words → cap 4; seven grammar fixes in the first window, one style pick later on
+    const words = Array.from({ length: 200 }, (_, i) => `w${String(i).padStart(3, '0')}`);
+    const text = words.join(' ');
+    const grammar = ['w001', 'w003', 'w005', 'w007', 'w009', 'w011', 'w013'].map((word) => ({
+      kind: 'grammar' as const,
+      rationale: 'r',
+      original: word,
+      proposals: [word.toUpperCase()],
+    }));
+    const style = ['w060', 'w120', 'w180'].map((word) => ({
+      ...STYLE_BASE,
+      original: word,
+      proposals: ['x'],
+    }));
+    const { suggestions } = normalizeSuggestions(
+      output([...style, ...grammar]),
+      text,
+      textHash(text),
+      'req-grammar-first',
+    );
+    expect(suggestions.map((s) => s.original)).toEqual(['w001', 'w003', 'w005', 'w007']);
+  });
+
+  it('a 2000-word chapter keeps 30 suggestions spread from the start to the end', () => {
+    const words = Array.from({ length: 2000 }, (_, i) => `w${String(i).padStart(4, '0')}`);
+    const text = words.join(' ');
+    // one style suggestion in each of the 40 windows of 50 words
+    const picks = Array.from({ length: 40 }, (_, i) => `w${String(i * 50).padStart(4, '0')}`);
+    const { suggestions, densityCut } = normalizeSuggestions(
+      output(picks.map((word) => ({ ...STYLE_BASE, original: word, proposals: ['x'] }))),
+      text,
+      textHash(text),
+      'req-long',
+    );
+    expect(suggestions).toHaveLength(MAX_SUGGESTIONS);
+    expect(densityCut).toBe(10);
+    expect(suggestions[0]?.original).toBe('w0000');
+    // the last windows are still represented
+    expect(suggestions.some((s) => s.span.from > text.indexOf('w1800'))).toBe(true);
   });
 });

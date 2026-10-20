@@ -5,6 +5,7 @@ export const review: Namespace = {
     'review.kind.style': 'Style',
     'review.kind.grammar': 'Grammar',
     'review.kind.pacing': 'Pacing',
+    'review.kind.history': 'History',
 
     'review.editor.backToBook': 'Back to the Book',
     'review.editor.chapterFallback': 'Chapter',
@@ -38,11 +39,16 @@ export const review: Namespace = {
     'review.card.variants': '{count} variants — tap to choose',
     'review.card.reject': 'Reject',
     'review.card.accept': 'Accept',
+    'review.history.period': 'Period detail',
+    'review.history.anachronism': 'Possible anachronism',
+    'review.history.toCheck': 'A hint to check on a reliable source, not a certain fact.',
+    'review.history.oneByOne': 'History hints are accepted one at a time.',
   },
   it: {
     'review.kind.style': 'Stile',
     'review.kind.grammar': 'Grammatica',
     'review.kind.pacing': 'Ritmo',
+    'review.kind.history': 'Storico',
 
     'review.editor.backToBook': 'Torna al Libro',
     'review.editor.chapterFallback': 'Capitolo',
@@ -79,5 +85,9 @@ export const review: Namespace = {
     'review.card.variants': '{count} varianti — tocca per scegliere',
     'review.card.reject': 'Rifiuta',
     'review.card.accept': 'Accetta',
+    'review.history.period': 'Dettaglio d’epoca',
+    'review.history.anachronism': 'Possibile anacronismo',
+    'review.history.toCheck': 'Spunto da verificare su una fonte affidabile, non un fatto certo.',
+    'review.history.oneByOne': 'Gli spunti storici si accettano uno alla volta.',
   },
 };

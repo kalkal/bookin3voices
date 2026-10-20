@@ -156,6 +156,62 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await screen.unmount();
   });
 
+  it('history: the Storico filter shows a period detail and an anachronism, both «to check»', async () => {
+    const scene =
+      'Napoli, 1943. La strada era deserta sotto la luna. ' +
+      'Nel basso, la madre accese il televisore per sentire le notizie.';
+    const { screen, chapterRepository } = await setup(scene);
+
+    await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
+
+    const filter = await screen.findByTestId('review-filter-history');
+    expect(filter).toHaveTextContent('Storico');
+    await fireEvent.press(filter);
+
+    const preview = await new FakeSuggestionsProvider().refine({
+      ...CHAPTER,
+      text: scene,
+      textHash: textHash(scene),
+      requestId: 'preview',
+    });
+    const tip = preview.suggestions.find((s) => s.aspect === 'period');
+    const anachronism = preview.suggestions.find((s) => s.aspect === 'anachronism');
+    if (!tip || !anachronism) throw new Error('history suggestions missing');
+    expect(screen.getByTestId(`review-aspect-${tip.id}`)).toHaveTextContent('Dettaglio d’epoca');
+    expect(screen.getByTestId(`review-aspect-${anachronism.id}`)).toHaveTextContent(
+      'Possibile anacronismo',
+    );
+    expect(screen.getByTestId(`review-to-check-${anachronism.id}`)).toHaveTextContent(
+      /da verificare/i,
+    );
+
+    await fireEvent.press(await screen.findByTestId(`review-accept-${anachronism.id}`));
+    await waitFor(async () => {
+      expect(await chapterRepository.loadRawText(CHAPTER)).toContain('la madre accese la radio');
+    });
+    await screen.unmount();
+  });
+
+  it('history: no «accept all» under the Storico filter, hints are accepted one at a time', async () => {
+    const scene =
+      'Napoli, 1943. La strada era deserta sotto la luna. ' +
+      'Nel basso, la madre accese il televisore per sentire le notizie.';
+    const { screen } = await setup(scene);
+
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
+    await fireEvent.press(await screen.findByTestId('review-filter-history'));
+
+    expect(screen.queryByTestId('review-accept-all')).toBeNull();
+    expect(screen.getByTestId('review-history-one-by-one')).toHaveTextContent(
+      'Gli spunti storici si accettano uno alla volta.',
+    );
+    await screen.unmount();
+  });
+
   it('a manual edit touching a span invalidates the suggestion (stale)', async () => {
     const { screen } = await setup();
     const preview = await previewSuggestions();

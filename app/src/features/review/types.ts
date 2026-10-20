@@ -9,9 +9,21 @@ import { z } from 'zod';
 
 import { t } from '../../i18n';
 
-/** Suggestion categories: style, grammar/slips, pacing. */
-export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing'] as const;
+/**
+ * Suggestion categories: style, grammar/slips, pacing, and history (only when
+ * the text names a recognisable past period).
+ */
+export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing', 'history'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
+
+/**
+ * The two parts of a history suggestion, always hints to check, never facts:
+ * `period` = a detail of the time that brings the scene to life (objects,
+ * habits, sounds, places, sayings); `anachronism` = something that did not
+ * exist yet, or was not in use, at that time.
+ */
+export const HISTORY_ASPECTS = ['period', 'anachronism'] as const;
+export type HistoryAspect = (typeof HISTORY_ASPECTS)[number];
 
 /**
  * Lifecycle states (coexistence rule):
@@ -36,12 +48,15 @@ export type Span = z.infer<typeof spanSchema>;
  * the hash of the `rawText` the suggestion was born on; if the text changed
  * on return, the suggestion is born `stale`.
  * Proposal hierarchy: grammar ONE proposal,
- * style AND pacing up to 3 variants, as per the Style Bible.
+ * style, pacing AND history up to 3 variants, as per the Style Bible.
+ * `aspect` is present on history suggestions, and only on them.
  */
 export const suggestionSchema = z
   .object({
     id: z.string().min(1),
     kind: z.enum(SUGGESTION_KINDS),
+    /** history only: period tip or anachronism warning. */
+    aspect: z.enum(HISTORY_ASPECTS).optional(),
     span: spanSchema,
     /** Current text at the span: the patch verifies it matches before applying. */
     original: z.string().min(1),
@@ -60,6 +75,13 @@ export const suggestionSchema = z
         code: 'custom',
         message: 'grammar: a single proposal (hierarchy)',
         path: ['proposals'],
+      });
+    }
+    if ((sug.kind === 'history') !== (sug.aspect !== undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'aspect: required on history, absent on the other kinds',
+        path: ['aspect'],
       });
     }
     if (sug.acceptedProposal !== undefined && sug.acceptedProposal >= sug.proposals.length) {
@@ -119,5 +141,18 @@ export const KIND_LABELS: Record<SuggestionKind, string> = {
   },
   get pacing() {
     return t('review.kind.pacing');
+  },
+  get history() {
+    return t('review.kind.history');
+  },
+};
+
+/** Labels of the two history aspects in the current UI language (read at render time). */
+export const HISTORY_ASPECT_LABELS: Record<HistoryAspect, string> = {
+  get period() {
+    return t('review.history.period');
+  },
+  get anachronism() {
+    return t('review.history.anachronism');
   },
 };

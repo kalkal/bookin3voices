@@ -3,7 +3,8 @@
  * (track-changes style from the Editor mockup):
  * - style: golden paper background + dotted gold underline;
  * - grammar: solid green underline;
- * - pacing: dashed gold underline.
+ * - pacing: dashed gold underline;
+ * - history: double sealing-wax underline (period details, anachronisms).
  * The first paragraph opens with a green drop cap (visual signature).
  */
 import { Text } from 'react-native';
@@ -53,6 +54,11 @@ export function HighlightedChapterText({
       textDecorationLine: 'underline',
       textDecorationStyle: 'dashed',
       textDecorationColor: colors.accentText,
+    },
+    history: {
+      textDecorationLine: 'underline',
+      textDecorationStyle: 'double',
+      textDecorationColor: colors.history,
     },
   };
 

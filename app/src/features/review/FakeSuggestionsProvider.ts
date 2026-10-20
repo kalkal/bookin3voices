@@ -6,12 +6,21 @@
 // The rules follow the categories of the golden set
 // (content/style-profiles/suspense/golden-set/): -mente adverbs and filter
 // verbs (style), dictation slips such as elisions and lowercase (grammar),
-// long sentences to split (pacing). It is NOT a style model: it is a
+// long sentences to split (pacing). History has two parts, both phrased as
+// hints to check: a period detail for a year it knows
+// (history/period) and objects that did not exist yet (history/anachronism);
+// no recognisable period, no history at all. It is NOT a style model: it is a
 // deterministic generator for UI and tests; real suggestion quality is the
 // job of the refineChapter callable and of human editorial judgment.
 
 import { textHash } from './textHash';
-import type { RefineRequest, RefineResult, Suggestion, SuggestionsProvider } from './types';
+import type {
+  HistoryAspect,
+  RefineRequest,
+  RefineResult,
+  Suggestion,
+  SuggestionsProvider,
+} from './types';
 
 /** Golden-set density: 5-8 suggestions per passage, never a downpour. */
 const MAX_SUGGESTIONS = 8;
@@ -45,6 +54,7 @@ export class FakeSuggestionsProvider implements SuggestionsProvider {
       ...findMissingElisions(text),
       ...findLowercaseSentenceStarts(text),
       ...findLongSentences(text),
+      ...findHistory(text),
     ].sort((a, b) => a.span.from - b.span.from);
 
     // no overlapping spans in the same batch: keep the first
@@ -60,6 +70,7 @@ export class FakeSuggestionsProvider implements SuggestionsProvider {
     const suggestions: Suggestion[] = kept.map((draft, index) => ({
       id: `fake-${hash}-${index}`,
       kind: draft.kind,
+      ...(draft.aspect ? { aspect: draft.aspect } : {}),
       span: draft.span,
       original: text.slice(draft.span.from, draft.span.to),
       proposals: draft.proposals,
@@ -73,6 +84,7 @@ export class FakeSuggestionsProvider implements SuggestionsProvider {
 
 interface Draft {
   kind: Suggestion['kind'];
+  aspect?: HistoryAspect;
   span: { from: number; to: number };
   proposals: string[];
   rationale: string;
@@ -180,6 +192,120 @@ function findLongSentences(text: string): Draft[] {
       proposals: [`. ${capitalized}`],
       rationale: 'Frase molto lunga: una spezzatura qui le ridà fiato.',
     });
+  }
+  return drafts;
+}
+
+/**
+ * The year a passage is set in: the first year it names up to 1979
+ * («Napoli, 1943.»). Later years and texts without one are contemporary.
+ */
+const SETTING_YEAR = /(?<!\d)(1[0-8]\d{2}|19[0-7]\d)(?!\d)/;
+
+interface Period {
+  from: number;
+  to: number;
+  /** Why the details fit, after «Da verificare: nel <year>». */
+  why: string;
+  /** Sentences that could follow the one naming the year. */
+  details: string[];
+}
+
+/** The few periods the fake knows: any other year gets no history at all, never a guess. */
+const PERIODS: Period[] = [
+  {
+    from: 1880,
+    to: 1899,
+    why: 'le strade di città avevano lampioni a gas, carrozze a cavalli e venditori ambulanti che gridavano la merce',
+    details: [
+      'I lampioni a gas si accendevano uno dopo l’altro.',
+      'Sul selciato passò una carrozza.',
+    ],
+  },
+  {
+    from: 1940,
+    to: 1945,
+    why: 'in tempo di guerra sirene dell’allarme aereo, tessere annonarie e oscuramento erano parte della vita di ogni giorno',
+    details: [
+      'In lontananza suonava la sirena dell’allarme aereo.',
+      'Le finestre erano oscurate, come ogni sera.',
+      'In tasca, la tessera annonaria.',
+    ],
+  },
+  {
+    from: 1955,
+    to: 1969,
+    why: 'gli anni del boom avevano la Vespa, il juke-box nei bar e il telefono a gettoni',
+    details: ['Da un bar arrivava la musica di un juke-box.', 'Una Vespa passò sotto le finestre.'],
+  },
+];
+
+interface PeriodObject {
+  /** The thing, as it is named in the rationale. */
+  name: string;
+  /** What is matched in the text: article included, so the proposals agree. */
+  term: string;
+  /** Roughly when it enters ordinary Italian homes and speech. */
+  since: number;
+  /** What the period had instead, the most conservative first. */
+  proposals: string[];
+}
+
+const PERIOD_OBJECTS: PeriodObject[] = [
+  {
+    name: 'televisore',
+    term: 'il televisore',
+    since: 1954,
+    proposals: ['la radio', 'il grammofono'],
+  },
+  {
+    name: 'cellulare',
+    term: 'il cellulare',
+    since: 1990,
+    proposals: ['il telefono', 'il telegramma'],
+  },
+  { name: 'computer', term: 'il computer', since: 1980, proposals: ['la macchina da scrivere'] },
+  { name: 'biro', term: 'la biro', since: 1950, proposals: ['la stilografica', 'la matita'] },
+];
+
+/** «Napoli, 1943. … il televisore» → a period detail on the year's sentence, a warning on the object. */
+function findHistory(text: string): Draft[] {
+  const setting = SETTING_YEAR.exec(text);
+  if (!setting) return [];
+  const year = Number(setting[1]);
+  const period = PERIODS.find((p) => year >= p.from && year <= p.to);
+  if (!period) return [];
+
+  // the sentence that names the year, with its closing punctuation
+  const from = text.slice(0, setting.index).search(/[^.!?\s][^.!?]*$/);
+  const start = from === -1 ? setting.index : from;
+  const end = text.slice(setting.index).search(/[.!?]/);
+  const to = end === -1 ? text.length : setting.index + end + 1;
+  const sentence = text.slice(start, to);
+
+  const drafts: Draft[] = [
+    {
+      kind: 'history',
+      aspect: 'period',
+      span: { from: start, to },
+      proposals: period.details.map((detail) => `${sentence} ${detail}`),
+      rationale: `Da verificare: nel ${year} ${period.why}. Un dettaglio così dà vita alla scena.`,
+    },
+  ];
+
+  for (const { name, term, since, proposals } of PERIOD_OBJECTS) {
+    if (year >= since) continue;
+    const regex = new RegExp(`(?<!\\p{L})${term}(?!\\p{L})`, 'giu');
+    for (const match of text.matchAll(regex)) {
+      const capitalized = match[0][0] !== match[0][0].toLowerCase();
+      drafts.push({
+        kind: 'history',
+        aspect: 'anachronism',
+        span: { from: match.index, to: match.index + match[0].length },
+        proposals: proposals.map((p) => (capitalized ? p[0].toUpperCase() + p.slice(1) : p)),
+        rationale: `Da verificare: nel ${year} «${name}» non era ancora d’uso comune (in Italia si diffonde verso il ${since}).`,
+      });
+    }
   }
   return drafts;
 }

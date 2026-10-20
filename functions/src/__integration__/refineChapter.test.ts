@@ -21,6 +21,9 @@ import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import type { CallableRequest } from 'firebase-functions/v2/https';
 
 import { GeminiHttpError } from '../ai/GeminiRefineModel';
+import { logger } from 'firebase-functions';
+
+import type { AiProvider, AiResult } from '../ai/provider/types';
 import { createRefineChapterHandler, type RefineChapterDeps } from '../ai/refineChapter';
 import type { RefinePrompt } from '../ai/refinePrompt';
 import type { RefineChapterResponse, RefineModel } from '../ai/refineTypes';
@@ -428,6 +431,129 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
     await expect(run(deps, uid, { bookId })).rejects.toMatchObject({ code: 'invalid-argument' });
     await expect(run(deps, uid, input(bookId, 'cap-fantasma', 'req-y'))).rejects.toMatchObject({
       code: 'not-found',
+    });
+  });
+});
+
+describe('refineChapter with the history check (Firestore emulator, fake models)', () => {
+  const TESTO_STORICO =
+    'Napoli, 1943. In cucina la madre aveva lasciato la lavatrice accesa. Elena uscì in strada.';
+  const MAIN_STORICO = {
+    suggestions: [
+      {
+        original: 'Elena uscì in strada.',
+        kind: 'style',
+        rationale: 'Ritmo.',
+        proposals: ['Elena uscì.'],
+      },
+    ],
+  };
+
+  function historyProvider(results: AiResult[]): AiProvider {
+    let calls = 0;
+    return {
+      name: 'gemini',
+      modelName: 'fake-history',
+      generateJson: async () => results[Math.min(calls++, results.length - 1)] as AiResult,
+    };
+  }
+
+  function depsWithHistory(provider: AiProvider): RefineChapterDeps {
+    const deps = makeDeps(new FakeRefineModel([MAIN_STORICO]));
+    return { ...deps, history: { gemini: () => provider, bedrock: () => provider } };
+  }
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('stores the history suggestions with their aspect next to the refinement', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid);
+    const provider = historyProvider([
+      {
+        ok: true,
+        value: { period_named: true, quote: 'Napoli, 1943', period_label: 'Naples, 1943' },
+      },
+      {
+        ok: true,
+        value: {
+          anachronisms: [
+            {
+              trigger_quote: 'lavatrice',
+              category: 'technology',
+              severity: 'unlikely',
+              replacement: 'tinozza',
+              note_for_author: 'Nel 1943 era probabilmente rarissima.',
+            },
+          ],
+          period_details: [],
+        },
+      },
+    ]);
+
+    const response = await run(
+      depsWithHistory(provider),
+      uid,
+      input(bookId, chapterId, 'req-history-1', TESTO_STORICO),
+    );
+
+    const history = response.suggestions.find((s) => s.kind === 'history');
+    expect(history).toMatchObject({
+      aspect: 'anachronism',
+      original: 'lavatrice',
+      rationale: 'Da verificare: Nel 1943 era probabilmente rarissima.',
+    });
+    expect(response.suggestions.some((s) => s.kind === 'style')).toBe(true);
+    const stored = await listSuggestions(uid, bookId, chapterId);
+    expect(stored.find((s) => s.kind === 'history')).toMatchObject({ aspect: 'anachronism' });
+  });
+
+  it('degraded mode: a failing history check leaves the refinement intact and logs a warning', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid);
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+    const provider = historyProvider([
+      { ok: false, error: { kind: 'throttled', retryable: true, message: 'slow down' } },
+    ]);
+
+    const response = await run(
+      depsWithHistory(provider),
+      uid,
+      input(bookId, chapterId, 'req-history-2', TESTO_STORICO),
+    );
+
+    expect(response.suggestions.map((s) => s.kind)).toEqual(['style']);
+    expect(warn).toHaveBeenCalledWith(
+      'refineChapter: history check failed, refinement without history',
+      expect.objectContaining({ requestId: 'req-history-2', kind: 'throttled' }),
+    );
+  });
+});
+
+describe('refineChapter density log (Firestore emulator, fake model)', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('logs the density cut with requestId and counts, never the text', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid);
+    const info = jest.spyOn(logger, 'info').mockImplementation(() => undefined);
+    const five = {
+      suggestions: ['Elena', 'la tazza', 'sul tavolo', 'qualcosa non andava', 'in giardino'].map(
+        (original) => ({ original, kind: 'style', rationale: 'r', proposals: ['x'] }),
+      ),
+    };
+
+    const response = await run(
+      makeDeps(new FakeRefineModel([five])),
+      uid,
+      input(bookId, chapterId, 'req-density'),
+    );
+
+    expect(response.suggestions).toHaveLength(3); // 17 words → cap 3
+    expect(info).toHaveBeenCalledWith('refineChapter: density cap applied', {
+      requestId: 'req-density',
+      raw: 5,
+      kept: 3,
+      cut: 2,
     });
   });
 });

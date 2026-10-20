@@ -1,0 +1,181 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`history prompts snapshot: detect step 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "period_label": {
+        "description": "short English label, or """,
+        "type": "STRING",
+      },
+      "period_named": {
+        "description": "true only if a period is literally named in the passage",
+        "type": "BOOLEAN",
+      },
+      "quote": {
+        "description": "exact text from the passage, or """,
+        "type": "STRING",
+      },
+    },
+    "required": [
+      "period_named",
+      "quote",
+      "period_label",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "You are a strict text locator. Your only job is to find out whether the passage
+EXPLICITLY names a historical period: a year, a decade, a century, a named era or a
+dated historical event.
+
+## Rules
+- "Explicitly named" means the passage literally contains it, e.g. "1943", "Napoli,
+  1943", "il Settecento", "in the 1880s", "dopo la caduta del Muro di Berlino".
+- DO NOT infer a period from style, objects, clothes, places or mood. DO NOT guess.
+- The present day, "a winter evening" or "years ago" are NOT a named period.
+- If nothing is named: period_named MUST be false, quote MUST be "" and period_label
+  MUST be "". This is the CORRECT answer for most passages.
+- quote MUST be copied character by character from the passage, as short as possible
+  (the place and the date only). Never paraphrase.
+- period_label: a short English label with place and time, e.g. "Naples, 1943".
+
+## Examples
+Passage: "Napoli, 1943. Il bucato era steso sul balcone." -> period_named=true,
+  quote="Napoli, 1943", period_label="Naples, 1943"
+Passage: "Il bucato asciugava mentre il sole calava." -> period_named=false,
+  quote="", period_label=""
+Passage: "She checked her phone at the station." -> period_named=false, quote="",
+  period_label=""",
+  "userText": "[PASSAGE START]
+Napoli, 1943. La strada era deserta.
+[PASSAGE END]
+
+Does the passage explicitly name a period? Use the tool.",
+}
+`;
+
+exports[`history prompts snapshot: report step, with the period given by the code 1`] = `
+{
+  "responseSchema": {
+    "properties": {
+      "anachronisms": {
+        "items": {
+          "properties": {
+            "category": {
+              "description": "one of: technology, objects, money, transport, language, clothing, institutions",
+              "type": "STRING",
+            },
+            "note_for_author": {
+              "description": "one short cautious sentence",
+              "type": "STRING",
+            },
+            "replacement": {
+              "description": "period-correct alternative",
+              "type": "STRING",
+            },
+            "severity": {
+              "description": "impossible or unlikely",
+              "type": "STRING",
+            },
+            "trigger_quote": {
+              "description": "exact words from the passage",
+              "type": "STRING",
+            },
+          },
+          "required": [
+            "trigger_quote",
+            "category",
+            "severity",
+            "replacement",
+            "note_for_author",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+      "period_details": {
+        "items": {
+          "properties": {
+            "anchor_quote": {
+              "description": "exact sentence from the passage",
+              "type": "STRING",
+            },
+            "category": {
+              "description": "one of: technology, objects, money, transport, language, clothing, institutions",
+              "type": "STRING",
+            },
+            "note_for_author": {
+              "description": "one short cautious sentence",
+              "type": "STRING",
+            },
+            "rewrite": {
+              "description": "the anchor sentence with the detail added",
+              "type": "STRING",
+            },
+          },
+          "required": [
+            "anchor_quote",
+            "category",
+            "rewrite",
+            "note_for_author",
+          ],
+          "type": "OBJECT",
+        },
+        "type": "ARRAY",
+      },
+    },
+    "required": [
+      "anachronisms",
+      "period_details",
+    ],
+    "type": "OBJECT",
+  },
+  "systemInstruction": "You check one historical setting for a fiction writer. The period is GIVEN: do not
+question it.
+Period: Naples, 1943. Evidence in the passage: "Napoli, 1943".
+
+## Task
+1. anachronisms FIRST: read the passage sentence by sentence and list the named
+   technologies, devices, currencies, vehicles, garments or words that did not exist
+   yet, or were very unlikely, at that place and time.
+2. period_details: 1 to 2 concrete, well-established details of that place and time
+   that the author could ADD to an existing sentence of the passage.
+
+## Rules
+- If something in the passage did not exist yet, it MUST go in anachronisms, NEVER in
+  period_details. A period detail only adds words: it never removes or replaces any.
+- NEVER report ordinary things that have existed for centuries (a hat, a door, a
+  house, a bag, coffee, a street, a shop): they are not anachronisms.
+- Allowed categories ONLY: technology, objects, money, transport, language, clothing, institutions.
+- Every item MUST have a quote copied EXACTLY from the passage: anchor_quote (the
+  sentence the detail goes into) or trigger_quote (the anachronistic words, as few
+  as possible). No exact quote = do not report it.
+- period_details: rewrite = the anchor sentence with the detail added, in the
+  author's voice and in the passage's language.
+- anachronisms: replacement takes the place of the trigger_quote words ONLY, so the
+  sentence must read correctly with it: do not repeat the words around the quote.
+  Example: in "poured the milk from a plastic bottle", trigger_quote "plastic" ->
+  replacement "glass", NOT "a glass bottle".
+- severity="impossible" ONLY if the thing certainly did not exist yet; if it existed
+  but was rare or unusual there, severity="unlikely".
+- DO NOT report things that existed and were common then. When in doubt, DO NOT
+  report. An empty anachronisms list is a good answer.
+- Use only facts that are widely known about that place and time. If you are not
+  sure a fact is true THERE and THEN, leave it out: fewer details are better than a
+  wrong one. DO NOT cite books, authors, archives or exact dates.
+- Write note_for_author and rewrite/replacement in Italian. note_for_author
+  is one short, cautious sentence ("usually", "probably").
+- At most 3 anachronisms and 2 period_details.
+
+## Example (period: Rome, 1950)
+Passage: "Rome, 1950. He wore a grey hat and sent her a text message from the bar."
+-> anachronisms: [{ trigger_quote: "sent her a text message", category: "technology",
+   severity: "impossible", replacement: "left her a note" }]. The grey hat and the bar
+   are NOT anachronisms.",
+  "userText": "[PASSAGE START]
+Napoli, 1943. La strada era deserta.
+[PASSAGE END]
+
+List the period details and the anachronisms for the given period. Use the tool.",
+}
+`;

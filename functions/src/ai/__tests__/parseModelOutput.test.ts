@@ -16,6 +16,25 @@ describe('parseModelOutput', () => {
     expect(parsed).toEqual({ output: { suggestions: [GOOD] }, dropped: 0 });
   });
 
+  it('accepts the history kind with its aspect, drops a history without one', () => {
+    const history = {
+      original: 'il televisore',
+      kind: 'history',
+      aspect: 'anachronism',
+      rationale: 'Da verificare: nel 1943 la televisione in casa non c’era ancora.',
+      proposals: ['la radio'],
+    };
+    expect(parseModelOutput({ suggestions: [history] })).toEqual({
+      output: { suggestions: [history] },
+      dropped: 0,
+    });
+    const withoutAspect = { ...history, aspect: undefined };
+    expect(parseModelOutput({ suggestions: [GOOD, withoutAspect] })).toEqual({
+      output: { suggestions: [GOOD] },
+      dropped: 1,
+    });
+  });
+
   it('accepts a valid response with no suggestions', () => {
     expect(parseModelOutput({ suggestions: [] })).toEqual({
       output: { suggestions: [] },

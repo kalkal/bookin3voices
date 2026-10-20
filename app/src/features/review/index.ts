@@ -3,6 +3,8 @@
 // provider, and the Editor/Review Editor/Review screens.
 
 export {
+  HISTORY_ASPECT_LABELS,
+  HISTORY_ASPECTS,
   KIND_LABELS,
   refineResultSchema,
   spanSchema,
@@ -11,6 +13,7 @@ export {
   suggestionSchema,
 } from './types';
 export type {
+  HistoryAspect,
   RefineRequest,
   RefineResult,
   Span,

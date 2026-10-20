@@ -95,6 +95,11 @@ export const refineChapter = onCall(
         fallback: modelFor('fallback', REFINE_TEMPERATURE, 'gemini'),
       },
     },
+    // history check: two short calls on the primary model, in parallel with the refinement
+    history: {
+      bedrock: () => createProvider(providerDeps, 'primary', 'bedrock'),
+      gemini: () => createProvider(providerDeps, 'primary', 'gemini'),
+    },
   }),
 );
 

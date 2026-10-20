@@ -8,12 +8,17 @@
 // updates the other in the same change.
 //
 // Proposal hierarchy:
-// grammar = exactly 1 proposal; style and pacing = up to 3 variants.
+// grammar = exactly 1 proposal; style, pacing and history = up to 3 variants.
+// history carries an `aspect` (period = a detail of the time, anachronism =
+// something that did not exist yet), present on history and only there.
 
 import { z } from 'zod';
 
-export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing'] as const;
+export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing', 'history'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
+
+export const HISTORY_ASPECTS = ['period', 'anachronism'] as const;
+export type HistoryAspect = (typeof HISTORY_ASPECTS)[number];
 
 /**
  * What we ask of the MODEL (structured output): no numeric offsets, since
@@ -21,12 +26,19 @@ export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
  * which the server locates in the chapter. An `original` that does not match
  * the text (absent or ambiguous) is discarded server-side.
  */
-export const modelSuggestionSchema = z.object({
-  original: z.string().min(1).max(2000),
-  kind: z.enum(SUGGESTION_KINDS),
-  rationale: z.string().min(1).max(500),
-  proposals: z.array(z.string().max(2000)).min(1).max(3),
-});
+export const modelSuggestionSchema = z
+  .object({
+    original: z.string().min(1).max(2000),
+    kind: z.enum(SUGGESTION_KINDS),
+    /** history only; on other kinds normalizeSuggestions drops it. */
+    aspect: z.enum(HISTORY_ASPECTS).optional(),
+    rationale: z.string().min(1).max(500),
+    proposals: z.array(z.string().max(2000)).min(1).max(3),
+  })
+  .refine((sug) => sug.kind !== 'history' || sug.aspect !== undefined, {
+    message: 'history: aspect required',
+    path: ['aspect'],
+  });
 
 export const modelOutputSchema = z.object({
   suggestions: z.array(modelSuggestionSchema).max(40),
@@ -67,6 +79,7 @@ export const suggestionSchema = z
   .object({
     id: z.string().min(1),
     kind: z.enum(SUGGESTION_KINDS),
+    aspect: z.enum(HISTORY_ASPECTS).optional(),
     span: spanSchema,
     original: z.string().min(1),
     proposals: z.array(z.string().min(1)).min(1).max(3),
@@ -80,6 +93,13 @@ export const suggestionSchema = z
         code: 'custom',
         message: 'grammar: exactly one proposal',
         path: ['proposals'],
+      });
+    }
+    if ((sug.kind === 'history') !== (sug.aspect !== undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'aspect: required on history, absent on the other kinds',
+        path: ['aspect'],
       });
     }
     if (sug.original.length !== sug.span.to - sug.span.from) {
