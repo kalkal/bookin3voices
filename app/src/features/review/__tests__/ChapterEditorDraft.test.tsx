@@ -11,12 +11,12 @@ import { FakeSuggestionsProvider } from '../FakeSuggestionsProvider';
 import { InMemoryRevisionRepository } from '../revisions';
 
 const CHAPTER = { bookId: 'libro', chapterId: 'cap-1' };
-const ORIGINAL = 'Il faro era spento.';
-const TYPED = 'Il faro era spento. Nora salì le scale.';
+const ORIGINAL = 'Il mulino era fermo.';
+const TYPED = 'Il mulino era fermo. Nora salì le scale.';
 // long enough for the fake provider to find suggestions
 const LONG =
-  'Irene posò lentamente il bicchiere nel lavello. aprì il rubinetto e mentre ' +
-  'beveva sentì che qualcosa non andava. Prese un altra tazza dallo scolapiatti.';
+  'Nora posò lentamente il telefono sul davanzale. aprì la finestra e mentre ' +
+  'guardava la macchia sentì che qualcosa non andava. Prese un altra tazza dalla credenza.';
 
 async function setup(onBack?: () => void, initialText = ORIGINAL) {
   const chapterRepository = new InMemoryChapterRepository();
@@ -25,7 +25,7 @@ async function setup(onBack?: () => void, initialText = ORIGINAL) {
     <ThemeProvider>
       <ChapterReviewFlow
         chapter={CHAPTER}
-        chapterTitle="I · Il faro"
+        chapterTitle="I · Il mulino"
         chapterRepository={chapterRepository}
         revisionRepository={new InMemoryRevisionRepository()}
         provider={new FakeSuggestionsProvider()}

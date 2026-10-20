@@ -6,8 +6,8 @@ import type { RefineResult } from '../types';
 // passage in the spirit of the golden set (adverbs, filter verb, dictation
 // slips): the fake provider must find all three categories in it
 const BRANO =
-  'Irene posò lentamente il bicchiere nel lavello. aprì il rubinetto e mentre ' +
-  'beveva sentì che qualcosa non andava. Prese un altra tazza dallo scolapiatti.';
+  'Nora posò lentamente il telefono sul davanzale. aprì la finestra e mentre ' +
+  'guardava la macchia sentì che qualcosa non andava. Prese un altra tazza dalla credenza.';
 
 async function refine(text: string): Promise<RefineResult> {
   const provider = new FakeSuggestionsProvider();
@@ -65,10 +65,10 @@ describe('FakeSuggestionsProvider (behind the refineChapter callable interface)'
 
   it('very long sentence → pacing with a cautious split', async () => {
     const lunga =
-      'Scese il primo gradino e poi il secondo e il legno scricchiolava come sempre ' +
-      'e lei continuava a dirsi che era la caldaia che era soltanto la caldaia che domani ' +
-      'avrebbe chiamato il tecnico e sarebbe finita lì e invece i colpi continuavano ' +
-      'a salire dal buio della cantina come se qualcuno chiedesse di entrare.';
+      'Salì il primo gradino della scala e poi il secondo e il metallo scricchiolava ' +
+      'e lei continuava a dirsi che era il tubo del bagno di sopra che era soltanto il tubo ' +
+      'che il tecnico sarebbe arrivato e sarebbe finita lì e invece la macchia continuava ' +
+      'ad allargarsi sul soffitto come se qualcuno la spingesse dall’altra parte.';
     const result = await refine(lunga);
     const pacing = result.suggestions.find((s) => s.kind === 'pacing');
     expect(pacing).toBeDefined();
@@ -95,7 +95,7 @@ describe('FakeSuggestionsProvider (behind the refineChapter callable interface)'
   });
 
   it('text without flaws → no suggestions (no noise)', async () => {
-    const result = await refine('Il molo era deserto. Nora posò la tazza.');
+    const result = await refine('Il cortile era deserto. Nora posò la tazza.');
     expect(result.suggestions).toHaveLength(0);
   });
 });

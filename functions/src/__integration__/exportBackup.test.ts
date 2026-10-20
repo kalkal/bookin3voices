@@ -28,8 +28,8 @@ const PROPOSTA_PENDING = 'PROPOSTA-PENDING-CHE-NON-DEVE-ENTRARE';
 // text with accents, guillemets and typographic apostrophes: the backup must
 // return it IDENTICAL (fidelity to the raw text)
 const TESTO_CAP_1 = [
-  'Il traghetto delle sette e un quarto attraccò con mezz’ora di ritardo.',
-  'Diciassette anni senza mettere piede sull’isola: «un’eternità», avrebbe detto lo zio.',
+  'La corriera delle sette e un quarto arrivò in valle con mezz’ora di ritardo.',
+  'Diciassette anni senza mettere piede nella valle: «un’eternità», avrebbe detto Olga.',
   'Perché — si chiese — proprio adesso? Èva non l’avrebbe mai saputo…',
 ].join('\n');
 const TESTO_CAP_2 = 'Il registro era lì: date, orari & coordinate <in codice>.';
@@ -44,9 +44,9 @@ async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
   const bookRef = db.doc(`users/${uid}/books/${mainBookId}`);
   await bookRef.set({
     schemaVersion: 1,
-    title: 'Il faro di Levante',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
-    description: 'Nora Vescovi eredita un faro e il segreto che custodiva.',
+    description: 'Viola rileva le arnie di un mulino e il segreto che custodivano.',
     synopsis: '',
     genre: 'romanzo',
     language: 'it',
@@ -84,8 +84,8 @@ async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
     .set({
       id: 'sug-1',
       kind: 'style',
-      span: { from: 0, to: 12 },
-      original: 'Il traghetto',
+      span: { from: 0, to: 11 },
+      original: 'La corriera',
       proposals: [PROPOSTA_PENDING],
       rationale: 'prova',
       state: 'pending',
@@ -167,9 +167,9 @@ describe('exportBackup — whole library', () => {
         .filter((name) => !zip.files[name]?.dir)
         .sort(),
     ).toEqual([
-      'il-faro-di-levante/01-il-ritorno.md',
-      'il-faro-di-levante/02-il-registro.md',
-      'il-faro-di-levante/indice.md',
+      'il-mulino-di-rocca-bassa/01-il-ritorno.md',
+      'il-mulino-di-rocca-bassa/02-il-registro.md',
+      'il-mulino-di-rocca-bassa/indice.md',
       'quaderno-nuovo/indice.md',
     ]);
   });
@@ -186,7 +186,7 @@ describe('exportBackup — whole library', () => {
   });
 
   it('the chapter Markdown is FAITHFUL to rawText (accents and quotes)', async () => {
-    const md = await fileText(zip, 'il-faro-di-levante/01-il-ritorno.md');
+    const md = await fileText(zip, 'il-mulino-di-rocca-bassa/01-il-ritorno.md');
     expect(md).toBe(
       [
         '---',
@@ -203,8 +203,8 @@ describe('exportBackup — whole library', () => {
   });
 
   it('the book index lists metadata and chapters', async () => {
-    const indice = await fileText(zip, 'il-faro-di-levante/indice.md');
-    expect(indice).toContain('# Il faro di Levante');
+    const indice = await fileText(zip, 'il-mulino-di-rocca-bassa/indice.md');
+    expect(indice).toContain('# Il mulino di Rocca Bassa');
     expect(indice).toContain('- Autore: Jane Doe');
     expect(indice).toContain('1. [Il ritorno](01-il-ritorno.md) — draft, 30 parole');
     expect(indice).toContain('2. [Il registro](02-il-registro.md) — refined, 12 parole');
@@ -247,11 +247,11 @@ describe('exportBackup — single book', () => {
   it('exports only the requested book, with the slug in the file name', async () => {
     const { mainBookId } = await seedLibrary(uid);
     const response = await callBackup(uid, { bookId: mainBookId, requestId: 'bak-uno-1' });
-    expect(response.fileName).toBe('backup-il-faro-di-levante-2026-09-06.zip');
+    expect(response.fileName).toBe('backup-il-mulino-di-rocca-bassa-2026-09-06.zip');
     expect(response.bookCount).toBe(1);
     const zip = await unzip(response);
     expect(zip.file('quaderno-nuovo/indice.md')).toBeNull();
-    expect(zip.file('il-faro-di-levante/indice.md')).not.toBeNull();
+    expect(zip.file('il-mulino-di-rocca-bassa/indice.md')).not.toBeNull();
   });
 });
 

@@ -11,8 +11,8 @@ import type { RefineResult } from '../types';
 const CHAPTER = { bookId: 'libro', chapterId: 'cap-1' };
 
 const BRANO =
-  'Irene posò lentamente il bicchiere nel lavello. aprì il rubinetto e mentre ' +
-  'beveva sentì che qualcosa non andava. Prese un altra tazza dallo scolapiatti.';
+  'Nora posò lentamente il telefono sul davanzale. aprì la finestra e mentre ' +
+  'guardava la macchia sentì che qualcosa non andava. Prese un altra tazza dalla credenza.';
 
 /** Suggestions the fake provider will generate on BRANO (deterministic ids). */
 async function previewSuggestions(): Promise<RefineResult> {
@@ -32,7 +32,7 @@ async function setup(initialText = BRANO) {
     <ThemeProvider>
       <ChapterReviewFlow
         chapter={CHAPTER}
-        chapterTitle="VII · La marea"
+        chapterTitle="VII · La piena"
         chapterRepository={chapterRepository}
         revisionRepository={revisionRepository}
         provider={new FakeSuggestionsProvider()}
@@ -127,7 +127,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await fireEvent.press(await screen.findByTestId(`review-variant-${adverb.id}-1`));
     await fireEvent.press(await screen.findByTestId(`review-accept-${adverb.id}`));
     await waitFor(async () => {
-      expect(await chapterRepository.loadRawText(CHAPTER)).toContain('posò, piano, il bicchiere');
+      expect(await chapterRepository.loadRawText(CHAPTER)).toContain('posò, piano, il telefono');
     });
     await screen.unmount();
   });
@@ -144,7 +144,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
     await waitFor(async () => {
       const saved = await chapterRepository.loadRawText(CHAPTER);
       expect(saved).toContain("un'altra tazza");
-      expect(saved).toContain('. Aprì il rubinetto');
+      expect(saved).toContain('. Aprì la finestra');
     });
     const revisions = await revisionRepository.list(CHAPTER);
     expect(revisions.filter((r) => r.decision === 'accepted')).toHaveLength(2);

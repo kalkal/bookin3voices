@@ -16,9 +16,9 @@ const GENERATED_AT = new Date('2026-09-06T10:00:00.000Z');
 
 function libro(overrides: Partial<BookForBackup> = {}): BookForBackup {
   return {
-    title: 'Il faro di Levante',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
-    description: 'Nora eredita un faro e il segreto che custodiva.',
+    description: 'Viola rileva le arnie di un mulino e il segreto che custodivano.',
     language: 'it',
     genre: 'romanzo',
     chapters: [
@@ -38,7 +38,7 @@ describe('yamlText', () => {
 
 describe('chapterMarkdown', () => {
   it('frontmatter with title/order/status/word count and faithful body', () => {
-    const rawText = 'Diciassette anni: «un’eternità», avrebbe detto lo zio.\nE poi — daccapo.';
+    const rawText = 'Diciassette anni: «un’eternità», avrebbe detto Olga.\nE poi — daccapo.';
     const md = chapterMarkdown(3, {
       order: 2,
       title: 'L’attesa',
@@ -91,12 +91,12 @@ describe('bookIndexMarkdown', () => {
   it('lists metadata and chapters with link, status and word count', () => {
     const book = libro();
     const md = bookIndexMarkdown(book, ['01-il-ritorno.md', '02-il-registro.md'], GENERATED_AT);
-    expect(md).toContain('# Il faro di Levante');
+    expect(md).toContain('# Il mulino di Rocca Bassa');
     expect(md).toContain('- Autore: Jane Doe');
     expect(md).toContain('- Capitoli: 2');
     expect(md).toContain('- Parole (dettate): 42');
     expect(md).toContain('- Backup del: 2026-09-06');
-    expect(md).toContain('Nora eredita un faro e il segreto che custodiva.');
+    expect(md).toContain('Viola rileva le arnie di un mulino e il segreto che custodivano.');
     expect(md).toContain('1. [Il ritorno](01-il-ritorno.md) — draft, 30 parole');
     expect(md).toContain('2. [Il registro](02-il-registro.md) — refined, 12 parole');
   });
@@ -111,8 +111,8 @@ describe('bookIndexMarkdown', () => {
 describe('bookFolderName', () => {
   it('title slug, with progressive suffixes on collisions', () => {
     const used = new Set<string>();
-    expect(bookFolderName('Il faro di Levante', used)).toBe('il-faro-di-levante');
-    expect(bookFolderName('Il faro di Levante', used)).toBe('il-faro-di-levante-2');
+    expect(bookFolderName('Il mulino di Rocca Bassa', used)).toBe('il-mulino-di-rocca-bassa');
+    expect(bookFolderName('Il mulino di Rocca Bassa', used)).toBe('il-mulino-di-rocca-bassa-2');
     expect(bookFolderName('???', used)).toBe('libro');
     expect(bookFolderName('', used)).toBe('libro-2');
   });
@@ -121,8 +121,8 @@ describe('bookFolderName', () => {
 describe('backupZipFileName', () => {
   it('whole library vs single book, with the backup date', () => {
     expect(backupZipFileName(null, GENERATED_AT)).toBe('backup-bookvoice-2026-09-06.zip');
-    expect(backupZipFileName('Il faro di Levante', GENERATED_AT)).toBe(
-      'backup-il-faro-di-levante-2026-09-06.zip',
+    expect(backupZipFileName('Il mulino di Rocca Bassa', GENERATED_AT)).toBe(
+      'backup-il-mulino-di-rocca-bassa-2026-09-06.zip',
     );
     expect(backupZipFileName('', GENERATED_AT)).toBe('backup-libro-2026-09-06.zip');
   });

@@ -90,11 +90,11 @@ describe('FirestoreNoteRepository', () => {
   it('createNote writes a schema-conforming document and observeNotes emits it', async () => {
     const repo = makeRepo();
     const created = await repo.createNote(BOOK, {
-      text: 'E se il faro fosse la prigione?',
+      text: 'E se il mulino fosse la prigione?',
       tag: 'trama',
     });
     expect(created).toMatchObject({
-      text: 'E se il faro fosse la prigione?',
+      text: 'E se il mulino fosse la prigione?',
       tag: 'trama',
       bookId: BOOK,
     });
@@ -104,7 +104,7 @@ describe('FirestoreNoteRepository', () => {
       (list) => list.length === 1,
       'observeNotes emits the created note',
     );
-    expect(notes[0]).toMatchObject({ id: created.id, text: 'E se il faro fosse la prigione?' });
+    expect(notes[0]).toMatchObject({ id: created.id, text: 'E se il mulino fosse la prigione?' });
 
     await waitForPendingWrites(db);
     const fetched = await repo.getNote({ bookId: BOOK, noteId: created.id });

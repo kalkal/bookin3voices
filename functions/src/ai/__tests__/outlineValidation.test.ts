@@ -6,8 +6,8 @@ import { generateOutlineInputSchema, outlineSchema } from '../types';
 
 const capitolo = (extra: Partial<Record<string, unknown>> = {}) => ({
   title: 'Il ritorno',
-  summary: 'Nora torna sull’isola dopo diciassette anni.',
-  beats: ['Il traghetto attracca', 'La valigia troppo pesante', 'La casa dello zio'],
+  summary: 'Viola torna nella valle dopo diciassette anni.',
+  beats: ['La corriera arriva in valle', 'La valigia troppo pesante', 'Il mulino sulla roggia'],
   ...extra,
 });
 
@@ -58,9 +58,9 @@ describe('sanitizeOutlineCandidate', () => {
     const candidate = {
       chapters: [
         {
-          title: ' L’isola della ruggine ',
-          summary: ' Nora arriva sull’isola. ',
-          beats: ['L’arrivo', ' Il faro spento ', ''],
+          title: ' La valle delle arnie ',
+          summary: ' Viola arriva al mulino. ',
+          beats: ['L’arrivo', ' Il mulino fermo ', ''],
         },
       ],
     };

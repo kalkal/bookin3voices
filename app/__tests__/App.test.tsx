@@ -37,9 +37,9 @@ function memoryStorage() {
 
 function testServices(): AppServices & { books: InMemoryBookRepository } {
   const books = new InMemoryBookRepository();
-  books.seed({ id: 'faro', title: 'Il custode del faro', chapterCount: 1 });
+  books.seed({ id: 'mulino', title: 'Le arnie del mulino', chapterCount: 1 });
   const chapters = new InMemoryChapterRepository();
-  chapters.seed({ bookId: 'faro', chapterId: 'c1' }, 'Il faro era spento.', {
+  chapters.seed({ bookId: 'mulino', chapterId: 'c1' }, 'Il mulino era fermo.', {
     title: 'Le chiavi di casa',
     order: 0,
   });
@@ -70,12 +70,14 @@ describe('App', () => {
 
     // Library
     expect(await screen.findByTestId('library-screen')).toBeOnTheScreen();
-    expect(await screen.findByTestId('library-book-faro')).toHaveTextContent(/Il custode del faro/);
+    expect(await screen.findByTestId('library-book-mulino')).toHaveTextContent(
+      /Le arnie del mulino/,
+    );
     // the rose window sits behind the Library (and only there: not in the editor)
     expect(screen.getByTestId('cathedral-rose')).toBeOnTheScreen();
 
     // Library → Book
-    await fireEvent.press(screen.getByTestId('library-book-faro'));
+    await fireEvent.press(screen.getByTestId('library-book-mulino'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
     expect(await screen.findByTestId('book-chapter-c1')).toHaveTextContent(/Le chiavi di casa/);
 
@@ -84,7 +86,7 @@ describe('App', () => {
     expect(await screen.findByTestId('dictation-screen')).toBeOnTheScreen();
     await act(async () => {}); // caricamento capitolo + pre-flight
     expect(screen.getByText(/CAPITOLO I · LE CHIAVI DI CASA/)).toBeOnTheScreen();
-    expect(screen.getByText(/Il faro era spento\./)).toBeOnTheScreen();
+    expect(screen.getByText(/Il mulino era fermo\./)).toBeOnTheScreen();
 
     // Dictation → back to the Book
     await fireEvent.press(screen.getByTestId('dictation-back'));
@@ -93,7 +95,7 @@ describe('App', () => {
     // Book → Notebook from the header action, with the book's eyebrow
     await fireEvent.press(screen.getByTestId('book-open-notes'));
     expect(await screen.findByTestId('notes-screen')).toBeOnTheScreen();
-    expect(screen.getByText('Il custode del faro')).toBeOnTheScreen();
+    expect(screen.getByText('Le arnie del mulino')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('notes-back'));
     expect(await screen.findByTestId('book-screen')).toBeOnTheScreen();
 
@@ -101,7 +103,7 @@ describe('App', () => {
     await fireEvent.press(screen.getByTestId('book-chapter-c1'));
     expect(await screen.findByTestId('editor-screen')).toBeOnTheScreen();
     await act(async () => {});
-    expect(screen.getByText(/Il faro era spento\./)).toBeOnTheScreen();
+    expect(screen.getByText(/Il mulino era fermo\./)).toBeOnTheScreen();
 
     await screen.unmount();
   });

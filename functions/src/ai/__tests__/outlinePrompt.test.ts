@@ -5,15 +5,15 @@
 import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION } from '../outlinePrompt';
 
 const SINOSSI_FITTIZIA = [
-  'Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro',
-  'dismesso su un’isola del Levante e scopre nei registri del guardiano',
-  'annotazioni cifrate su navi mai arrivate in porto.',
+  'Viola, apicoltrice, rileva le arnie abbandonate di un apicoltore scomparso',
+  'nella valle di Rocca Bassa e scopre nei quaderni del vecchio mulino',
+  'annotazioni su sciami mai tornati alle arnie.',
 ].join(' ');
 
 describe('buildOutlinePrompt', () => {
   const base = {
     synopsis: SINOSSI_FITTIZIA,
-    book: { title: 'Il faro di Levante', genre: 'romanzo', language: 'it' },
+    book: { title: 'Il mulino di Rocca Bassa', genre: 'romanzo', language: 'it' },
     writtenChapterTitles: [],
   };
 

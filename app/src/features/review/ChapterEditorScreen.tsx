@@ -29,7 +29,7 @@ import type { ChapterReviewController } from './useChapterReview';
 
 export interface ChapterEditorScreenProps {
   controller: ChapterReviewController;
-  /** Header, e.g. "VII · La marea". */
+  /** Header, e.g. "VII · La piena". */
   chapterTitle?: string;
   /** Opens the Review screen. */
   onOpenReview: () => void;

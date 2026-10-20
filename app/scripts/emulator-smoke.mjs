@@ -59,7 +59,7 @@ if (process.env.GEMINI_SMOKE === '1') {
   console.log('[extra] geminiSmoke callable with fake text...');
   const geminiSmoke = httpsCallable(functions, 'geminiSmoke');
   const testoFittizio =
-    'Brano di prova inventato: il faro di Punta Brema lampeggiava tre volte, ' +
+    'Brano di prova inventato: la ruota del mulino di Rocca Bassa girò tre volte, ' +
     'poi taceva. Rispondi con una sola frase di conferma che hai letto il brano.';
   const result = await geminiSmoke({ text: testoFittizio });
   console.log(`      OK — ${JSON.stringify(result.data).slice(0, 300)}`);

@@ -2,7 +2,7 @@ import { ReviewSession } from '../ReviewSession';
 import { textHash } from '../textHash';
 import type { RefineResult, Suggestion, SuggestionKind } from '../types';
 
-const TEXT = 'Posò lentamente il bicchiere. aprì il rubinetto e un altra tazza cadde.';
+const TEXT = 'Posò lentamente il telefono. aprì la finestra e un altra tazza cadde.';
 
 /** Builds a pending suggestion with the span computed from the fragment. */
 function sug(
@@ -73,9 +73,7 @@ describe('accept (Command with verified patch)', () => {
     const session = newSession([STYLE_ADVERB()]);
     const outcome = session.accept('s-avverbio', 1);
     if (!outcome.ok) throw new Error('accept failed');
-    expect(outcome.text).toBe(
-      'Posò, piano, il bicchiere. aprì il rubinetto e un altra tazza cadde.',
-    );
+    expect(outcome.text).toBe('Posò, piano, il telefono. aprì la finestra e un altra tazza cadde.');
     expect(outcome.revision).toMatchObject({
       before: 'Posò lentamente',
       after: 'Posò, piano,',
@@ -139,7 +137,7 @@ describe('acceptAll (patches from the highest offset to the lowest)', () => {
     expect(outcome.accepted).toBe(2);
     expect(outcome.staled).toBe(0);
     expect(session.text).toBe(
-      "Posò lentamente il bicchiere. Aprì il rubinetto e un'altra tazza cadde.",
+      "Posò lentamente il telefono. Aprì la finestra e un'altra tazza cadde.",
     );
     // style stays pending, with its span intact (the patches were further ahead)
     expect(session.pendingOf('style')).toHaveLength(1);
@@ -178,7 +176,7 @@ describe('undo (LIFO over the local history)', () => {
     session.accept('s-avverbio', 0);
     session.accept('s-elisione', 0);
     expect(session.undo().ok).toBe(true); // undoes the elision
-    expect(session.text).toBe('Posò il bicchiere. aprì il rubinetto e un altra tazza cadde.');
+    expect(session.text).toBe('Posò il telefono. aprì la finestra e un altra tazza cadde.');
     expect(session.undo().ok).toBe(true); // undoes the adverb
     expect(session.text).toBe(TEXT);
     expect(session.undo()).toEqual({ ok: false, reason: 'nothing-to-undo' });

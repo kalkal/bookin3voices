@@ -16,7 +16,7 @@ import { useChapterReview } from './useChapterReview';
 
 export interface ChapterReviewFlowProps {
   chapter: ChapterRef;
-  /** E.g. "VII · La marea". */
+  /** E.g. "VII · La piena". */
   chapterTitle?: string;
   chapterRepository: ChapterTextRepository;
   revisionRepository: RevisionRepository;

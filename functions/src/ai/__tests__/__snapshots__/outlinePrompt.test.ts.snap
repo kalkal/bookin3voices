@@ -56,7 +56,7 @@ Se ti vengono elencati capitoli già scritti, NON riproporli e non riscriverli:
 la tua scaletta copre solo la parte di storia che manca, proseguendo con coerenza
 da dove i capitoli esistenti sono arrivati.
 Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.",
-  "userText": "Libro: «Il faro di Levante»
+  "userText": "Libro: «Il mulino di Rocca Bassa»
 Genere: romanzo
 Lingua del libro: it
 
@@ -65,7 +65,7 @@ Capitoli GIÀ SCRITTI (in ordine — non riproporli, la scaletta prosegue dopo d
 2. Il registro
 
 Sinossi:
-Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso su un’isola del Levante e scopre nei registri del guardiano annotazioni cifrate su navi mai arrivate in porto.",
+Viola, apicoltrice, rileva le arnie abbandonate di un apicoltore scomparso nella valle di Rocca Bassa e scopre nei quaderni del vecchio mulino annotazioni su sciami mai tornati alle arnie.",
 }
 `;
 
@@ -125,11 +125,11 @@ Se ti vengono elencati capitoli già scritti, NON riproporli e non riscriverli:
 la tua scaletta copre solo la parte di storia che manca, proseguendo con coerenza
 da dove i capitoli esistenti sono arrivati.
 Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.",
-  "userText": "Libro: «Il faro di Levante»
+  "userText": "Libro: «Il mulino di Rocca Bassa»
 Genere: romanzo
 Lingua del libro: it
 
 Sinossi:
-Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso su un’isola del Levante e scopre nei registri del guardiano annotazioni cifrate su navi mai arrivate in porto.",
+Viola, apicoltrice, rileva le arnie abbandonate di un apicoltore scomparso nella valle di Rocca Bassa e scopre nei quaderni del vecchio mulino annotazioni su sciami mai tornati alle arnie.",
 }
 `;

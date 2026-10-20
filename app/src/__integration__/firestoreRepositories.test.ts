@@ -104,9 +104,9 @@ afterAll(async () => {
 describe('FirestoreBookRepository', () => {
   it('createBook writes a schema-conforming document and observeBooks emits it', async () => {
     const { bookRepository } = makeRepos();
-    const created = await bookRepository.createBook({ title: 'Il custode del faro' });
+    const created = await bookRepository.createBook({ title: 'Le arnie del mulino' });
     expect(created).toMatchObject({
-      title: 'Il custode del faro',
+      title: 'Le arnie del mulino',
       wordCount: 0,
       chapterCount: 0,
       status: 'draft',
@@ -118,17 +118,17 @@ describe('FirestoreBookRepository', () => {
       (list) => list.length === 1,
       'observeBooks emits the created book',
     );
-    expect(books[0]).toMatchObject({ id: created.id, title: 'Il custode del faro' });
+    expect(books[0]).toMatchObject({ id: created.id, title: 'Le arnie del mulino' });
 
     await waitForPendingWrites(db);
     const fetched = await bookRepository.getBook(created.id);
-    expect(fetched).toMatchObject({ schemaVersion: 1, title: 'Il custode del faro' });
+    expect(fetched).toMatchObject({ schemaVersion: 1, title: 'Le arnie del mulino' });
     expect(typeof fetched?.createdAt).toBe('number');
   });
 
   it('updateBook updates the metadata and deleteBook also removes the chapters', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
-    const book = await bookRepository.createBook({ title: 'Racconti del molo' });
+    const book = await bookRepository.createBook({ title: 'Racconti del mulino' });
     const chapter = await chapterRepository.createChapter(book.id, { title: 'Il pontile' });
     await bookRepository.updateBook(book.id, { status: 'refined', genre: 'Raccolta' });
     await waitForPendingWrites(db);
@@ -198,9 +198,9 @@ describe('FirestoreBookRepository', () => {
 describe('FirestoreChapterRepository', () => {
   it('createChapter appends with increasing order and increments chapterCount', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
-    const book = await bookRepository.createBook({ title: 'Il custode del faro' });
+    const book = await bookRepository.createBook({ title: 'Le arnie del mulino' });
     const primo = await chapterRepository.createChapter(book.id, { title: 'Le chiavi di casa' });
-    const secondo = await chapterRepository.createChapter(book.id, { title: 'La bassa marea' });
+    const secondo = await chapterRepository.createChapter(book.id, { title: 'La piena del fiume' });
     expect(primo.order).toBe(0);
     expect(secondo.order).toBe(1);
 
@@ -209,7 +209,7 @@ describe('FirestoreChapterRepository', () => {
       (list) => list.length === 2,
       'observeChapters emits the two chapters',
     );
-    expect(chapters.map((c) => c.title)).toEqual(['Le chiavi di casa', 'La bassa marea']);
+    expect(chapters.map((c) => c.title)).toEqual(['Le chiavi di casa', 'La piena del fiume']);
 
     await waitForPendingWrites(db);
     expect(await bookRepository.getBook(book.id)).toMatchObject({ chapterCount: 2 });
@@ -217,20 +217,20 @@ describe('FirestoreChapterRepository', () => {
 
   it('saveRawText updates wordCount of the chapter and of the book (denormalized)', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
-    const book = await bookRepository.createBook({ title: 'Il custode del faro' });
-    const chapter = await chapterRepository.createChapter(book.id, { title: 'La marea' });
+    const book = await bookRepository.createBook({ title: 'Le arnie del mulino' });
+    const chapter = await chapterRepository.createChapter(book.id, { title: 'La piena' });
     const ref = { bookId: book.id, chapterId: chapter.id };
 
-    await chapterRepository.saveRawText(ref, 'Il faro era spento da tre giorni.');
+    await chapterRepository.saveRawText(ref, 'Il mulino era fermo da tre giorni.');
     await waitForPendingWrites(db);
     expect(await chapterRepository.getChapter(ref)).toMatchObject({
-      rawText: 'Il faro era spento da tre giorni.',
+      rawText: 'Il mulino era fermo da tre giorni.',
       wordCount: 7,
     });
     expect(await bookRepository.getBook(book.id)).toMatchObject({ wordCount: 7 });
 
     // second save: the book receives the DELTA, not the blind sum
-    await chapterRepository.saveRawText(ref, 'Il faro era spento.');
+    await chapterRepository.saveRawText(ref, 'Il mulino era fermo.');
     await waitForPendingWrites(db);
     expect(await bookRepository.getBook(book.id)).toMatchObject({ wordCount: 4 });
   });
@@ -238,10 +238,10 @@ describe('FirestoreChapterRepository', () => {
   it('outline: round-trip on create and update, null for chapters without one', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
     const book = await bookRepository.createBook({ title: 'Con scaletta' });
-    const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'], beatsDone: [] };
+    const outline = { summary: 'Il fiume sale.', beats: ['La ruota', 'La gola'], beatsDone: [] };
 
     const conOutline = await chapterRepository.createChapter(book.id, {
-      title: 'La marea',
+      title: 'La piena',
       outline,
     });
     const senzaOutline = await chapterRepository.createChapter(book.id, { title: 'Bozza' });
@@ -335,8 +335,8 @@ describe('FirestoreChapterRepository', () => {
 describe('offline → sync check', () => {
   it('changes made with the network off sync on reconnection', async () => {
     const { bookRepository, chapterRepository } = makeRepos();
-    const book = await bookRepository.createBook({ title: 'Il custode del faro' });
-    const chapter = await chapterRepository.createChapter(book.id, { title: 'La marea' });
+    const book = await bookRepository.createBook({ title: 'Le arnie del mulino' });
+    const chapter = await chapterRepository.createChapter(book.id, { title: 'La piena' });
     const ref = { bookId: book.id, chapterId: chapter.id };
     await chapterRepository.saveRawText(ref, 'Prima riga dettata online.');
     await waitForPendingWrites(db);

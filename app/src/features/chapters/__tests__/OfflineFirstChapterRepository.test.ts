@@ -75,9 +75,9 @@ function makeRepo(options?: { onWordsAdded?: (delta: number) => void }) {
 describe('OfflineFirstChapterRepository', () => {
   it('saves to the mirror first and then to the remote', async () => {
     const { repo, mirror, remote } = makeRepo();
-    await repo.saveRawText(REF, 'Il faro era spento.');
-    expect(await mirror.loadRawText(REF)).toBe('Il faro era spento.');
-    expect(remote.saveRawText).toHaveBeenCalledWith(REF, 'Il faro era spento.');
+    await repo.saveRawText(REF, 'Il mulino era fermo.');
+    expect(await mirror.loadRawText(REF)).toBe('Il mulino era fermo.');
+    expect(remote.saveRawText).toHaveBeenCalledWith(REF, 'Il mulino era fermo.');
   });
 
   it('a failing remote does not fail the save (text is in the mirror)', async () => {

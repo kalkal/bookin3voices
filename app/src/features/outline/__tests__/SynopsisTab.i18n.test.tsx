@@ -13,7 +13,7 @@ describe('SynopsisTab in English', () => {
   it('shows English labels', async () => {
     setLanguage('en');
     const books = new InMemoryBookRepository();
-    const book = books.seed({ id: 'faro', title: 'The Lighthouse', synopsis: 'A plot.' });
+    const book = books.seed({ id: 'mulino', title: 'The Mill Hives', synopsis: 'A plot.' });
     const screen = await render(
       <ThemeProvider>
         <SynopsisTab

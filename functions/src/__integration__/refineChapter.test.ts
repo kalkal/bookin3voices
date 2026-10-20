@@ -100,10 +100,12 @@ async function seed(
   const bookRef = db.doc(`users/${uid}/books/libro-di-prova`);
   await bookRef.set({
     schemaVersion: 1,
-    title: 'Il faro di Levante',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
     description: 'Interamente fittizio.',
-    synopsis: withOutline ? 'Nora eredita un faro dismesso e scopre un patto col mare.' : '',
+    synopsis: withOutline
+      ? 'Viola rileva le arnie di un mulino e scopre un patto con la valle.'
+      : '',
     genre: 'romanzo',
     language: 'it',
     status: 'draft',
@@ -125,7 +127,7 @@ async function seed(
       rawText: TESTO,
       outline: withOutline
         ? {
-            summary: 'La prima notte al faro.',
+            summary: 'La prima notte al mulino.',
             beats: ['L’arrivo', 'Il registro strappato'],
             beatsDone: [],
           }
@@ -223,7 +225,7 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
     const prompt = model.prompts[0];
     expect(prompt?.systemInstruction).toContain('Test Style Bible');
     expect(prompt?.systemInstruction).toContain('Fake example');
-    expect(prompt?.userText).toContain('Nora eredita un faro dismesso');
+    expect(prompt?.userText).toContain('Viola rileva le arnie di un mulino');
     expect(prompt?.userText).toContain('1. L’arrivo');
     expect(prompt?.userText).toContain('Il registro strappato');
     expect(prompt?.userText).toContain(TESTO);

@@ -5,14 +5,14 @@ import type { GenerateOutlineRequest, OutlineCard, OutlineProposal, OutlineServi
 
 const SCALETTA_DEFAULT: OutlineCard[] = [
   {
-    title: 'La secca',
-    summary: 'La protagonista scopre cosa vive nella secca davanti al faro.',
-    beats: ['La bassa marea', 'Le ossa di una chiglia', 'Il canto sott’acqua'],
+    title: 'La gola chiusa',
+    summary: 'La protagonista scopre cosa vive nella gola sopra il mulino.',
+    beats: ['La frana sul sentiero', 'Il favo nella cappella', 'Il ronzio sotto la ruota'],
   },
   {
     title: 'Il patto',
-    summary: 'Il barista del molo confessa il patto dei pescatori.',
-    beats: ['La cantina del bar', 'Il quaderno delle quote', 'La lite sul molo'],
+    summary: 'L’anziana del paese confessa il patto della valle.',
+    beats: ['Il retro del bar', 'Il quaderno delle quote', 'La lite in piazza'],
   },
 ];
 

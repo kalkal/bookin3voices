@@ -3,10 +3,10 @@ import { decodeChapterDoc, toChapter, toChapterSummary } from '../chapterCodec';
 const validDoc = {
   schemaVersion: 1,
   order: 2,
-  title: 'La marea',
+  title: 'La piena',
   status: 'draft',
   wordCount: 1248,
-  rawText: 'Il faro era spento.',
+  rawText: 'Il mulino era fermo.',
   updatedAt: 1_757_000_000_000,
 };
 
@@ -16,7 +16,7 @@ describe('chapterCodec', () => {
   });
 
   it('decodes a document with an outline', () => {
-    const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'] };
+    const outline = { summary: 'Il fiume sale.', beats: ['La ruota', 'La gola'] };
     expect(decodeChapterDoc({ ...validDoc, outline })).toEqual({
       ...validDoc,
       // beatsDone absent (documents predating the outline) → normalized to [] without a bump
@@ -26,7 +26,7 @@ describe('chapterCodec', () => {
   });
 
   it('keeps the beats ticked in dictation and rejects invalid indices', () => {
-    const outline = { summary: 'La marea sale.', beats: ['Il molo', 'La secca'], beatsDone: [1] };
+    const outline = { summary: 'Il fiume sale.', beats: ['La ruota', 'La gola'], beatsDone: [1] };
     expect(decodeChapterDoc({ ...validDoc, outline })).toEqual({ ...validDoc, outline });
     expect(decodeChapterDoc({ ...validDoc, outline: { ...outline, beatsDone: [-1] } })).toBeNull();
   });
@@ -49,7 +49,7 @@ describe('chapterCodec', () => {
       id: 'cap-1',
       bookId: 'libro-1',
       order: 2,
-      title: 'La marea',
+      title: 'La piena',
       status: 'draft',
       wordCount: 1248,
       updatedAt: validDoc.updatedAt,

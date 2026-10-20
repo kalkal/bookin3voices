@@ -12,20 +12,20 @@ import { BookScreen } from '../BookScreen';
 import { InMemoryBookRepository } from '../InMemoryBookRepository';
 
 function seedChapters(chapters: InMemoryChapterRepository) {
-  chapters.seed({ bookId: 'faro', chapterId: 'c1' }, 'testo uno', {
+  chapters.seed({ bookId: 'mulino', chapterId: 'c1' }, 'testo uno', {
     title: 'Le chiavi di casa',
     order: 0,
     status: 'final',
     wordCount: 3180,
   });
-  chapters.seed({ bookId: 'faro', chapterId: 'c2' }, 'testo due', {
-    title: 'La bassa marea',
+  chapters.seed({ bookId: 'mulino', chapterId: 'c2' }, 'testo due', {
+    title: 'La piena del fiume',
     order: 1,
     status: 'refined',
     wordCount: 2940,
   });
-  chapters.seed({ bookId: 'faro', chapterId: 'c3' }, 'testo tre', {
-    title: 'La marea',
+  chapters.seed({ bookId: 'mulino', chapterId: 'c3' }, 'testo tre', {
+    title: 'La piena',
     order: 2,
     status: 'draft',
     wordCount: 1248,
@@ -40,7 +40,7 @@ function renderBook(overrides?: {
   empty?: boolean;
 }) {
   const books = new InMemoryBookRepository();
-  books.seed({ id: 'faro', title: 'Il custode del faro', wordCount: 24_310, chapterCount: 9 });
+  books.seed({ id: 'mulino', title: 'Le arnie del mulino', wordCount: 24_310, chapterCount: 9 });
   const chapters = new InMemoryChapterRepository();
   if (overrides?.empty !== true) seedChapters(chapters);
   const onBack = jest.fn();
@@ -50,7 +50,7 @@ function renderBook(overrides?: {
   const result = render(
     <ThemeProvider>
       <BookScreen
-        bookId="faro"
+        bookId="mulino"
         bookRepository={books}
         chapterRepository={chapters}
         exportService={new InMemoryBookExportService()}
@@ -74,7 +74,7 @@ describe('BookScreen', () => {
     expect(vuoto.getByTestId('cathedral-arches')).toBeOnTheScreen();
     await vuoto.unmount();
     const pieno = await renderBook().result;
-    expect(await pieno.findByText('La marea')).toBeOnTheScreen();
+    expect(await pieno.findByText('La piena')).toBeOnTheScreen();
     expect(pieno.queryByTestId('cathedral-arches')).toBeNull();
   });
 
@@ -82,7 +82,7 @@ describe('BookScreen', () => {
     const { result, books } = renderBook();
     const screen = await result;
 
-    expect(await screen.findByText('Il custode del faro')).toBeOnTheScreen();
+    expect(await screen.findByText('Le arnie del mulino')).toBeOnTheScreen();
     expect(screen.getByText(/24\.310 parole · 9 capitoli/)).toBeOnTheScreen();
     // chapters arrive after the book: wait for them, do not assume they are loaded
     // note: it-IT does not group 4-digit numbers (CLDR), so "3180"
@@ -92,7 +92,7 @@ describe('BookScreen', () => {
     // Roman numerals in list order
     expect(screen.getByTestId('book-chapter-c2')).toHaveTextContent(/^II/);
     // on open, the self-healing counter reconciliation starts
-    expect(books.reconcileCalls).toContain('faro');
+    expect(books.reconcileCalls).toContain('mulino');
     await screen.unmount();
   });
 
@@ -117,7 +117,7 @@ describe('BookScreen', () => {
     await fireEvent.press(await screen.findByTestId('book-chapter-down-c1'));
 
     await waitFor(async () => {
-      const list = await chapters.getChapter({ bookId: 'faro', chapterId: 'c1' });
+      const list = await chapters.getChapter({ bookId: 'mulino', chapterId: 'c1' });
       expect(list?.order).toBe(1);
     });
     // in reorder mode, tapping the row does not open the editor
@@ -139,7 +139,7 @@ describe('BookScreen', () => {
     await fireEvent.press(screen.getByTestId('book-new-chapter-create'));
 
     await waitFor(async () => {
-      const created = await chapters.getChapter({ bookId: 'faro', chapterId: 'capitolo-1' });
+      const created = await chapters.getChapter({ bookId: 'mulino', chapterId: 'capitolo-1' });
       expect(created).toMatchObject({ title: 'Il registro delle tempeste', order: 3 });
     });
     await screen.unmount();
@@ -151,7 +151,7 @@ describe('BookScreen', () => {
     const screen = await result;
 
     await fireEvent.press(await screen.findByTestId('book-open-notes'));
-    expect(onOpenNotes).toHaveBeenCalledWith('Il custode del faro');
+    expect(onOpenNotes).toHaveBeenCalledWith('Le arnie del mulino');
     await screen.unmount();
   });
 

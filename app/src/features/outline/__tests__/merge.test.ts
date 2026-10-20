@@ -7,7 +7,7 @@ import type { ChapterSummary } from '../../chapters';
 import { applyOutlineMerge, planOutlineMerge } from '../merge';
 import type { OutlineCard } from '../types';
 
-const BOOK = 'faro';
+const BOOK = 'mulino';
 
 function summary(
   id: string,

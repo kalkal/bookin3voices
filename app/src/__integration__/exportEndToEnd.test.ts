@@ -70,17 +70,17 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
     const books = new FirestoreBookRepository({ db, uid });
     const chapters = new FirestoreChapterRepository({ db, uid });
     const book = await books.createBook({
-      title: 'Il faro di Levante',
+      title: 'Il mulino di Rocca Bassa',
       author: 'Jane Doe',
       language: 'it',
     });
     await books.updateBook(book.id, {
-      description: 'Nora Vescovi eredita un faro e il segreto che custodiva.',
+      description: 'Viola rileva le arnie di un mulino e il segreto che custodivano.',
     });
     const capitolo1 = await chapters.createChapter(book.id, { title: 'Il ritorno' });
     await chapters.saveRawText(
       { bookId: book.id, chapterId: capitolo1.id },
-      'Il traghetto attraccò con mezz’ora di ritardo.\nMarta scese sulla banchina — «finalmente», pensò.',
+      'La corriera arrivò in valle con mezz’ora di ritardo.\nViola scese davanti al mulino — «finalmente», pensò.',
     );
     const capitolo2 = await chapters.createChapter(book.id, { title: 'Il registro' });
     await chapters.saveRawText(
@@ -95,8 +95,8 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
       {
         id: 'sug-1',
         kind: 'style',
-        span: { from: 0, to: 12 },
-        original: 'Il traghetto',
+        span: { from: 0, to: 11 },
+        original: 'La corriera',
         proposals: ['PROPOSTA-PENDING-CHE-NON-DEVE-ENTRARE'],
         rationale: 'prova',
         state: 'pending',
@@ -116,7 +116,7 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
       requestId: 'e2e-epub-1',
     });
 
-    expect(file.fileName).toBe('il-faro-di-levante.epub');
+    expect(file.fileName).toBe('il-mulino-di-rocca-bassa.epub');
     expect(file.mimeType).toBe('application/epub+zip');
     const bytes = base64ToUint8Array(file.base64);
     expect(bytes.length).toBe(file.size);

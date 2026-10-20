@@ -135,7 +135,7 @@ function findMissingElisions(text: string): Draft[] {
   return drafts;
 }
 
-/** «. aprì il rubinetto» → capital after the period (dictation slip). */
+/** «. aprì la finestra» → capital after the period (dictation slip). */
 function findLowercaseSentenceStarts(text: string): Draft[] {
   const drafts: Draft[] = [];
   const regex = /[.!?]\s+(\p{Ll})/gu;

@@ -82,7 +82,9 @@ describe('escapeHtml', () => {
 
 describe('exportFileName', () => {
   it('ASCII title slug with accents reduced to the base letter', () => {
-    expect(exportFileName('Il faro di Levante', 'epub')).toBe('il-faro-di-levante.epub');
+    expect(exportFileName('Il mulino di Rocca Bassa', 'epub')).toBe(
+      'il-mulino-di-rocca-bassa.epub',
+    );
     expect(exportFileName('Perché no? È così!', 'docx')).toBe('perche-no-e-cosi.docx');
   });
 

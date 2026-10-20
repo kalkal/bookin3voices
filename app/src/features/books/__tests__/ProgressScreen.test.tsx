@@ -118,10 +118,10 @@ describe('ProgressScreen', () => {
 
   it('book row: title and counters of the most recent book', async () => {
     const books = new InMemoryBookRepository();
-    books.seed({ id: 'faro', title: 'Il custode del faro', wordCount: 24_310, chapterCount: 9 });
+    books.seed({ id: 'mulino', title: 'Le arnie del mulino', wordCount: 24_310, chapterCount: 9 });
     const { getByTestId } = await renderScreen({ books });
     const row = getByTestId('progress-book');
-    expect(row).toHaveTextContent(/Il custode del faro/);
+    expect(row).toHaveTextContent(/Le arnie del mulino/);
     expect(row).toHaveTextContent(/9 capitoli/);
     expect(row).toHaveTextContent(/24\.310 parole/);
   });

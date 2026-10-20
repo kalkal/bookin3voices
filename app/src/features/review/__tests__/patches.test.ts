@@ -1,7 +1,7 @@
 import { applyPatch, diffAsPatch, invertPatch, remapSpan } from '../patches';
 import type { TextPatch } from '../patches';
 
-const TEXT = 'Posò lentamente il bicchiere nel lavello.';
+const TEXT = 'Posò lentamente il telefono sul davanzale.';
 
 function patchOf(before: string, after: string, from: number): TextPatch {
   return { span: { from, to: from + before.length }, before, after };
@@ -11,7 +11,7 @@ describe('applyPatch (never blind application)', () => {
   it('applies the patch when original matches', () => {
     const patch = patchOf('Posò lentamente', 'Posò', 0);
     const result = applyPatch(TEXT, patch);
-    expect(result).toEqual({ ok: true, text: 'Posò il bicchiere nel lavello.' });
+    expect(result).toEqual({ ok: true, text: 'Posò il telefono sul davanzale.' });
   });
 
   it('cleanly rejects if the text at the span no longer matches', () => {

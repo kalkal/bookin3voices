@@ -29,14 +29,14 @@ const NOW = 1757800000000;
 const OUTLINE_FINTO = {
   chapters: [
     {
-      title: 'La secca',
-      summary: 'Nora scopre cosa vive nella secca davanti al faro.',
-      beats: ['La bassa marea', 'Le ossa di una chiglia', 'Il canto sott’acqua'],
+      title: 'La gola chiusa',
+      summary: 'Viola scopre cosa vive nella gola sopra il mulino.',
+      beats: ['La frana sul sentiero', 'Il favo nella cappella', 'Il ronzio sotto la ruota'],
     },
     {
       title: 'Il patto',
-      summary: 'Ruggero confessa il patto dei pescatori.',
-      beats: ['La cantina del bar', 'Il quaderno delle quote', 'La lite sul molo'],
+      summary: 'Olga confessa il patto della valle.',
+      beats: ['Il retro del bar', 'Il quaderno delle quote', 'La lite in piazza'],
     },
   ],
 };
@@ -66,7 +66,7 @@ async function seedBook(uid: string, bookId = 'libro-di-prova'): Promise<string>
   const bookRef = db.doc(`users/${uid}/books/${bookId}`);
   await bookRef.set({
     schemaVersion: 1,
-    title: 'Il faro di Levante',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
     description: 'Sinossi e capitoli interamente fittizi.',
     synopsis: '',
@@ -86,7 +86,7 @@ async function seedBook(uid: string, bookId = 'libro-di-prova'): Promise<string>
     title: 'Il ritorno',
     status: 'draft',
     wordCount: 8,
-    rawText: 'Il traghetto attraccò con mezz’ora di ritardo.',
+    rawText: 'La corriera arrivò in valle con mezz’ora di ritardo.',
     updatedAt: NOW,
   });
   await chapters.doc('cap-2').set({
@@ -114,7 +114,7 @@ function callableRequest(uid: string | undefined, data: unknown): CallableReques
   return { auth: uid === undefined ? undefined : { uid }, data } as CallableRequest<unknown>;
 }
 
-const SINOSSI = 'Nora eredita un faro dismesso e scopre un patto antico col mare.';
+const SINOSSI = 'Viola rileva le arnie di un mulino e scopre un patto antico con la valle.';
 
 function input(bookId: string, requestId: string) {
   return { bookId, synopsis: SINOSSI, requestId };

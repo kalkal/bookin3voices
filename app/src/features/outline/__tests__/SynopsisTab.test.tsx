@@ -11,24 +11,24 @@ import { SynopsisTab } from '../SynopsisTab';
 import type { OutlineCard } from '../types';
 
 const CARDS: OutlineCard[] = [
-  { title: 'La secca', summary: 'Riassunto uno.', beats: ['beat 1a', 'beat 1b'] },
+  { title: 'La gola chiusa', summary: 'Riassunto uno.', beats: ['beat 1a', 'beat 1b'] },
   { title: 'Il patto', summary: 'Riassunto due.', beats: ['beat 2a'] },
 ];
 
 function setup(options?: { cards?: OutlineCard[]; seedChapters?: boolean }) {
   const books = new InMemoryBookRepository();
   const book = books.seed({
-    id: 'faro',
-    title: 'Il faro di Levante',
-    synopsis: 'Una custode di faro e un patto antico.',
+    id: 'mulino',
+    title: 'Il mulino di Rocca Bassa',
+    synopsis: 'Le arnie di un mulino e un patto antico.',
   });
   const chapters = new InMemoryChapterRepository();
   if (options?.seedChapters === true) {
-    chapters.seed({ bookId: 'faro', chapterId: 'scritto-1' }, 'Testo già dettato.', {
+    chapters.seed({ bookId: 'mulino', chapterId: 'scritto-1' }, 'Testo già dettato.', {
       title: 'Il ritorno',
       order: 0,
     });
-    chapters.seed({ bookId: 'faro', chapterId: 'vuoto-1' }, '', {
+    chapters.seed({ bookId: 'mulino', chapterId: 'vuoto-1' }, '', {
       title: 'Segnaposto',
       order: 1,
     });
@@ -49,9 +49,9 @@ function setup(options?: { cards?: OutlineCard[]; seedChapters?: boolean }) {
 
 async function chaptersOf(repo: InMemoryChapterRepository) {
   return new Promise<Awaited<ReturnType<InMemoryChapterRepository['getChapter']>>[]>((resolve) => {
-    repo.observeChapters('faro', (summaries) => {
+    repo.observeChapters('mulino', (summaries) => {
       void Promise.all(
-        summaries.map((s) => repo.getChapter({ bookId: 'faro', chapterId: s.id })),
+        summaries.map((s) => repo.getChapter({ bookId: 'mulino', chapterId: s.id })),
       ).then(resolve);
     });
   });
@@ -72,13 +72,13 @@ describe('SynopsisTab', () => {
 
     expect(await screen.findByTestId('synopsis-input')).toHaveProp(
       'value',
-      'Una custode di faro e un patto antico.',
+      'Le arnie di un mulino e un patto antico.',
     );
     await fireEvent.changeText(screen.getByTestId('synopsis-input'), 'Trama di prova nuova.');
     await fireEvent.press(screen.getByTestId('synopsis-save'));
 
     await waitFor(async () => {
-      const saved = await books.getBook('faro');
+      const saved = await books.getBook('mulino');
       expect(saved?.synopsis).toBe('Trama di prova nuova.');
     });
     expect(await screen.findByTestId('synopsis-saved')).toBeOnTheScreen();
@@ -92,13 +92,13 @@ describe('SynopsisTab', () => {
     await fireEvent.press(await screen.findByTestId('synopsis-generate'));
 
     const card = await screen.findByTestId('outline-card-0');
-    expect(card).toHaveTextContent(/La secca/);
+    expect(card).toHaveTextContent(/La gola chiusa/);
     expect(card).toHaveTextContent(/beat 1a/);
     expect(screen.getByTestId('outline-card-1')).toHaveTextContent(/Il patto/);
     // the synopsis sent is the field's one, with an idempotency requestId
     expect(outlineService.requests[0]).toMatchObject({
-      bookId: 'faro',
-      synopsis: 'Una custode di faro e un patto antico.',
+      bookId: 'mulino',
+      synopsis: 'Le arnie di un mulino e un patto antico.',
     });
     expect(outlineService.requests[0]?.requestId).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
     await screen.unmount();
@@ -117,7 +117,7 @@ describe('SynopsisTab', () => {
 
     // edit the first: title and beats (one per line, empty lines discarded)
     await fireEvent.press(screen.getByTestId('outline-card-edit-0'));
-    await fireEvent.changeText(screen.getByTestId('outline-edit-title'), 'La secca, rivista');
+    await fireEvent.changeText(screen.getByTestId('outline-edit-title'), 'La gola chiusa, rivista');
     await fireEvent.changeText(
       screen.getByTestId('outline-edit-beats'),
       'beat nuovo 1\n\n  beat nuovo 2  ',
@@ -125,7 +125,7 @@ describe('SynopsisTab', () => {
     await fireEvent.press(screen.getByTestId('outline-edit-save'));
 
     const card = await screen.findByTestId('outline-card-0');
-    expect(card).toHaveTextContent(/La secca, rivista/);
+    expect(card).toHaveTextContent(/La gola chiusa, rivista/);
     expect(card).toHaveTextContent(/beat nuovo 1/);
     expect(card).toHaveTextContent(/beat nuovo 2/);
     await screen.unmount();
@@ -142,7 +142,7 @@ describe('SynopsisTab', () => {
       const all = await chaptersOf(chapters);
       expect(all).toHaveLength(2);
       expect(all[0]).toMatchObject({
-        title: 'La secca',
+        title: 'La gola chiusa',
         status: 'draft',
         rawText: '',
         outline: { summary: 'Riassunto uno.', beats: ['beat 1a', 'beat 1b'] },
@@ -175,7 +175,7 @@ describe('SynopsisTab', () => {
       });
       // the empty slot took the title and outline of the first card
       expect(all[1]).toMatchObject({
-        title: 'La secca',
+        title: 'La gola chiusa',
         rawText: '',
         outline: { summary: 'Riassunto uno.', beats: ['beat 1a', 'beat 1b'] },
       });

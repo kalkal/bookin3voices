@@ -26,7 +26,7 @@ async function renderScreen(options?: { seed?: (repo: InMemoryNoteRepository) =>
     <ThemeProvider>
       <NotesScreen
         bookId={BOOK}
-        bookTitle="Il custode del faro"
+        bookTitle="Le arnie del mulino"
         noteRepository={repository}
         engine={engine}
         onBack={onBack}
@@ -46,7 +46,7 @@ describe('NotesScreen — opening and list', () => {
       },
     });
     // eyebrow = book title (uppercase only via style), then "Taccuino"
-    expect(getByText('Il custode del faro')).toBeTruthy();
+    expect(getByText('Le arnie del mulino')).toBeTruthy();
     expect(getByText('Taccuino')).toBeTruthy();
     expect(getByText('La più recente')).toBeTruthy();
     expect(getByText('La più vecchia')).toBeTruthy();
@@ -108,20 +108,20 @@ describe('NotesScreen — voice capture', () => {
     // dictation: mic → start, a final result with the voice command "punto"
     await fireEvent.press(getByTestId('note-capture-mic'));
     expect(engine.startCalls).toEqual([{ lang: 'it-IT' }]);
-    await act(async () => engine.emitPartial('e se il faro'));
-    expect(getByTestId('note-capture-partial')).toHaveTextContent('e se il faro');
-    await act(async () => engine.emitFinal('e se il faro fosse la prigione punto'));
-    expect(getByTestId('note-capture-text').props.value).toBe('E se il faro fosse la prigione.');
+    await act(async () => engine.emitPartial('e se il mulino'));
+    expect(getByTestId('note-capture-partial')).toHaveTextContent('e se il mulino');
+    await act(async () => engine.emitFinal('e se il mulino fosse la prigione punto'));
+    expect(getByTestId('note-capture-text').props.value).toBe('E se il mulino fosse la prigione.');
 
     // optional tag + saving
     await fireEvent.press(getByTestId('note-capture-tag-trama'));
     await fireEvent.press(getByTestId('note-capture-save'));
 
     const saved = await repository.getNote({ bookId: BOOK, noteId: 'nota-1' });
-    expect(saved).toMatchObject({ text: 'E se il faro fosse la prigione.', tag: 'trama' });
+    expect(saved).toMatchObject({ text: 'E se il mulino fosse la prigione.', tag: 'trama' });
     // saved: the panel closes and the note appears in the list
     expect(queryByTestId('note-capture-modal')).toBeNull();
-    expect(getByText('E se il faro fosse la prigione.')).toBeTruthy();
+    expect(getByText('E se il mulino fosse la prigione.')).toBeTruthy();
   });
 
   it('"Salva idea" is disabled until there is text', async () => {
@@ -194,7 +194,7 @@ describe('NotesScreen — listener error', () => {
       <ThemeProvider>
         <NotesScreen
           bookId={BOOK}
-          bookTitle="Il custode del faro"
+          bookTitle="Le arnie del mulino"
           noteRepository={failing}
           engine={engine}
           onBack={jest.fn()}

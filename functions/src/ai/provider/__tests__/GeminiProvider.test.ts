@@ -1,5 +1,5 @@
-// GeminiProvider with a fake fetch: request shape, the real recorded outline
-// response (recorded fixture, fictional synopsis), and every failure mode
+// GeminiProvider with a fake fetch: request shape, a hand-written outline
+// response in the Gemini envelope format (fictional synopsis), and every failure mode
 // coming back as a value.
 
 import { readFileSync } from 'node:fs';
@@ -16,8 +16,9 @@ const ENVELOPE = readFileSync(
   'utf8',
 );
 const PROMPT = buildOutlinePrompt({
-  synopsis: 'A lighthouse keeper discovers an ancient pact with the sea.',
-  book: { title: 'The Levant Light', genre: 'novel', language: 'en' },
+  synopsis:
+    'A beekeeper takes over the hives of an old mill and finds an ancient pact with the valley.',
+  book: { title: 'The Mill of Rocca Bassa', genre: 'novel', language: 'en' },
   writtenChapterTitles: [],
 });
 const REQUEST = { ...PROMPT, temperature: 0.7, maxOutputTokens: 4096 };
@@ -61,7 +62,7 @@ describe('GeminiProvider', () => {
     expect(calls[0]?.init.signal).toBeDefined();
   });
 
-  it('the recorded real response yields a valid outline', async () => {
+  it('the hand-written fixture response yields a valid outline', async () => {
     const result = await provider(fakeFetch(200, ENVELOPE).fetchFn).generateJson(REQUEST);
     expect(result.ok).toBe(true);
     if (result.ok) {

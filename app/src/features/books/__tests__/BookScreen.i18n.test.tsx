@@ -18,11 +18,11 @@ describe('BookScreen in English', () => {
   it('shows English labels and number formatting', async () => {
     setLanguage('en');
     const books = new InMemoryBookRepository();
-    books.seed({ id: 'faro', title: 'The Lighthouse', wordCount: 24_310, chapterCount: 9 });
+    books.seed({ id: 'mulino', title: 'The Mill Hives', wordCount: 24_310, chapterCount: 9 });
     const screen = await render(
       <ThemeProvider>
         <BookScreen
-          bookId="faro"
+          bookId="mulino"
           bookRepository={books}
           chapterRepository={new InMemoryChapterRepository()}
           exportService={new InMemoryBookExportService()}

@@ -16,10 +16,10 @@ const MODEL = process.env.GEMINI_SMOKE_MODEL ?? 'gemini-3.6-flash';
 const maybeDescribe = API_KEY === undefined || API_KEY === '' ? describe.skip : describe;
 
 const SINOSSI_FITTIZIA = [
-  'Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso',
-  'su un’isola del Levante. Tra i registri del guardiano trova annotazioni cifrate su navi',
-  'mai arrivate in porto. Indagando con l’aiuto di Ruggero, il barista del molo, scopre che',
-  'l’isola nasconde un patto antico tra i pescatori e qualcosa che vive nella secca.',
+  'Viola, apicoltrice, rileva le arnie abbandonate di un apicoltore scomparso nella valle',
+  'di Rocca Bassa. Nei quaderni del vecchio mulino trova annotazioni su sciami mai tornati',
+  'alle arnie. Indagando con l’aiuto di Ivan, il guardiaparco, scopre che la valle',
+  'nasconde un patto antico tra il paese e qualcosa che vive in una gola chiusa da una frana.',
 ].join(' ');
 
 maybeDescribe('Gemini structured output (real call, fictitious synopsis)', () => {
@@ -32,7 +32,7 @@ maybeDescribe('Gemini structured output (real call, fictitious synopsis)', () =>
     );
     const prompt = buildOutlinePrompt({
       synopsis: SINOSSI_FITTIZIA,
-      book: { title: 'Il faro di Levante', genre: 'romanzo', language: 'it' },
+      book: { title: 'Il mulino di Rocca Bassa', genre: 'romanzo', language: 'it' },
       writtenChapterTitles: ['Il ritorno'],
     });
 

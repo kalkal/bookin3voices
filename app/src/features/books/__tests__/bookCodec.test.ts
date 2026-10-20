@@ -2,7 +2,7 @@ import { decodeBookDoc, newBookDoc } from '../bookCodec';
 
 const validDoc = {
   schemaVersion: 1,
-  title: 'Il custode del faro',
+  title: 'Le arnie del mulino',
   author: 'Jane',
   description: '',
   synopsis: '',
@@ -29,10 +29,10 @@ describe('bookCodec', () => {
   });
 
   it('newBookDoc starts with counters at zero and the Italian defaults', () => {
-    const doc = newBookDoc({ title: 'Racconti del molo' }, 123);
+    const doc = newBookDoc({ title: 'Racconti del mulino' }, 123);
     expect(doc).toMatchObject({
       schemaVersion: 1,
-      title: 'Racconti del molo',
+      title: 'Racconti del mulino',
       author: '',
       genre: 'Romanzo',
       language: 'it',

@@ -56,15 +56,15 @@ describe('LibraryScreen', () => {
   it('shows the daily goal and books with the denormalized counters', async () => {
     const books = new InMemoryBookRepository();
     books.seed({
-      id: 'faro',
-      title: 'Il custode del faro',
+      id: 'mulino',
+      title: 'Le arnie del mulino',
       wordCount: 24_310,
       chapterCount: 9,
       genre: 'Romanzo',
     });
     books.seed({
-      id: 'molo',
-      title: 'Racconti del molo',
+      id: 'roggia',
+      title: 'Racconti del mulino',
       wordCount: 6_120,
       chapterCount: 3,
       genre: 'Raccolta',
@@ -73,9 +73,9 @@ describe('LibraryScreen', () => {
     const screen = await result;
 
     expect(await screen.findByTestId('library-goal')).toHaveTextContent(/512 \/ 800 parole/);
-    expect(screen.getByTestId('library-book-faro')).toHaveTextContent(/9 capitoli/);
-    expect(screen.getByTestId('library-book-faro')).toHaveTextContent(/24\.310 parole/);
-    expect(screen.getByTestId('library-book-molo')).toHaveTextContent(/Raccolta/);
+    expect(screen.getByTestId('library-book-mulino')).toHaveTextContent(/9 capitoli/);
+    expect(screen.getByTestId('library-book-mulino')).toHaveTextContent(/24\.310 parole/);
+    expect(screen.getByTestId('library-book-roggia')).toHaveTextContent(/Raccolta/);
     expect(screen.getByText('2 in corso')).toBeOnTheScreen();
     await screen.unmount();
   });
@@ -95,14 +95,14 @@ describe('LibraryScreen', () => {
     await fireEvent.press(screen.getByTestId('library-fab'));
     await fireEvent.changeText(
       await screen.findByTestId('library-new-book-title'),
-      '  Il custode del faro  ',
+      '  Le arnie del mulino  ',
     );
     await fireEvent.press(screen.getByTestId('library-new-book-create'));
 
     const created = await screen.findByTestId('library-book-libro-1');
-    expect(created).toHaveTextContent(/Il custode del faro/);
+    expect(created).toHaveTextContent(/Le arnie del mulino/);
     expect(onOpenBook).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'Il custode del faro' }),
+      expect.objectContaining({ title: 'Le arnie del mulino' }),
     );
     expect(await books.getBook('libro-1')).toMatchObject({ wordCount: 0, chapterCount: 0 });
     await screen.unmount();
@@ -110,14 +110,14 @@ describe('LibraryScreen', () => {
 
   it('tapping a card opens the book and the gear opens Settings', async () => {
     const books = new InMemoryBookRepository();
-    books.seed({ id: 'faro', title: 'Il custode del faro' });
+    books.seed({ id: 'mulino', title: 'Le arnie del mulino' });
     const onOpenBook = jest.fn();
     const onOpenSettings = jest.fn();
     const { result } = renderLibrary({ books, onOpenBook, onOpenSettings });
     const screen = await result;
 
-    await fireEvent.press(await screen.findByTestId('library-book-faro'));
-    expect(onOpenBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'faro' }));
+    await fireEvent.press(await screen.findByTestId('library-book-mulino'));
+    expect(onOpenBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'mulino' }));
     await fireEvent.press(screen.getByTestId('library-settings'));
     expect(onOpenSettings).toHaveBeenCalled();
     await screen.unmount();

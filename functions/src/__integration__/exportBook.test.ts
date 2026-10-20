@@ -42,9 +42,9 @@ async function seedBook(uid: string, { chapters = true }: SeedOptions = {}): Pro
   const bookRef = db.doc(`users/${uid}/books/${bookId}`);
   await bookRef.set({
     schemaVersion: 1,
-    title: 'Il faro di Levante',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
-    description: 'Nora Vescovi eredita un faro e il segreto che custodiva.',
+    description: 'Viola rileva le arnie di un mulino e il segreto che custodivano.',
     synopsis: '',
     genre: 'romanzo',
     language: 'it',
@@ -58,9 +58,9 @@ async function seedBook(uid: string, { chapters = true }: SeedOptions = {}): Pro
   if (!chapters) return bookId;
 
   const testo1 = [
-    'Il traghetto delle sette e un quarto attraccò con mezz’ora di ritardo.',
-    'Nora scese sulla banchina con una valigia troppo pesante — e la sensazione, netta, di aver sbagliato tutto.',
-    'Diciassette anni senza mettere piede sull’isola: «un’eternità», avrebbe detto lo zio.',
+    'La corriera delle sette e un quarto arrivò in valle con mezz’ora di ritardo.',
+    'Viola scese in piazza con una valigia troppo pesante — e la sensazione, netta, di aver sbagliato tutto.',
+    'Diciassette anni senza mettere piede nella valle: «un’eternità», avrebbe detto Olga.',
   ].join('\n');
   const testo2 = 'Il registro era lì: date, orari & coordinate <in codice>.';
   await bookRef.collection('chapters').doc('cap-1').set({
@@ -100,8 +100,8 @@ async function seedBook(uid: string, { chapters = true }: SeedOptions = {}): Pro
     .set({
       id: 'sug-1',
       kind: 'style',
-      span: { from: 0, to: 12 },
-      original: 'Il traghetto',
+      span: { from: 0, to: 11 },
+      original: 'La corriera',
       proposals: [PROPOSTA_PENDING],
       rationale: 'prova',
       state: 'pending',
@@ -144,7 +144,7 @@ describe('exportBook — EPUB', () => {
     expect(response).toMatchObject({
       exportId: 'req-epub-1',
       format: 'epub',
-      fileName: 'il-faro-di-levante.epub',
+      fileName: 'il-mulino-di-rocca-bassa.epub',
       mimeType: 'application/epub+zip',
       createdAt: NOW,
     });
@@ -160,7 +160,7 @@ describe('exportBook — EPUB', () => {
       format: 'epub',
       storagePath: null,
       createdAt: NOW,
-      fileName: 'il-faro-di-levante.epub',
+      fileName: 'il-mulino-di-rocca-bassa.epub',
       size: epub.length,
     });
   });
@@ -173,7 +173,7 @@ describe('exportBook — EPUB', () => {
         .map((name) => zip.file(name)?.async('string') as Promise<string>),
     );
     const allContent = contents.join('\n');
-    expect(allContent).toContain('Il traghetto delle sette e un quarto');
+    expect(allContent).toContain('La corriera delle sette e un quarto');
     expect(allContent).not.toContain(PROPOSTA_PENDING);
   });
 
@@ -208,7 +208,7 @@ describe('exportBook — DOCX', () => {
   it('generates a DOCX with an openable OOXML structure', async () => {
     const bookId = await seedBook(uid);
     const response = await callExport(uid, { bookId, format: 'docx', requestId: 'req-docx-1' });
-    expect(response.fileName).toBe('il-faro-di-levante.docx');
+    expect(response.fileName).toBe('il-mulino-di-rocca-bassa.docx');
     expect(response.mimeType).toBe(
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
@@ -216,7 +216,7 @@ describe('exportBook — DOCX', () => {
     expect(zip.file('[Content_Types].xml')).not.toBeNull();
     const document = (await zip.file('word/document.xml')?.async('string')) as string;
     expect(document).toContain('Capitolo I — Il ritorno');
-    expect(document).toContain('Il traghetto delle sette e un quarto');
+    expect(document).toContain('La corriera delle sette e un quarto');
     expect(document).not.toContain(PROPOSTA_PENDING);
   });
 });

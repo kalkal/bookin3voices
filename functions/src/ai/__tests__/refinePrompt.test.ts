@@ -13,7 +13,7 @@ import {
 const BASE_INPUT = {
   styleBible: '# Style Bible di prova\nRegola zero: la voce è intoccabile.',
   fewShots: '## Esempio 1\nTesto → suggerimento.',
-  book: { title: 'Il faro', genre: 'thriller', language: 'it', synopsis: '' },
+  book: { title: 'Il mulino', genre: 'thriller', language: 'it', synopsis: '' },
   chapter: { title: 'La tempesta', outline: null },
   text: 'Elena posò lentamente la tazza sul tavolo.',
 };
@@ -32,7 +32,10 @@ describe('buildRefinePrompt', () => {
     expect(
       buildRefinePrompt({
         ...BASE_INPUT,
-        book: { ...BASE_INPUT.book, synopsis: 'Un guardiano scopre che il faro chiama le navi.' },
+        book: {
+          ...BASE_INPUT.book,
+          synopsis: 'La guardiana scopre che il mulino chiama gli sciami.',
+        },
         chapter: {
           title: 'La tempesta',
           outline: {
@@ -49,7 +52,7 @@ describe('buildRefinePrompt', () => {
     expect(prompt.systemInstruction).toContain('Style Bible di prova');
     expect(prompt.systemInstruction).toContain('Esempio 1');
     // the variable material stays in the user text (implicit caching)
-    expect(prompt.systemInstruction).not.toContain('Il faro');
+    expect(prompt.systemInstruction).not.toContain('Il mulino');
     expect(prompt.userText).toContain('Elena posò lentamente');
   });
 

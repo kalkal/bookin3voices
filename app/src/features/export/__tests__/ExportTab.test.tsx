@@ -17,10 +17,10 @@ function setup(options?: {
 }) {
   const books = new InMemoryBookRepository();
   const book = books.seed({
-    id: 'faro',
-    title: 'Il faro di Levante',
+    id: 'mulino',
+    title: 'Il mulino di Rocca Bassa',
     author: 'Jane Doe',
-    description: 'Un faro, un segreto.',
+    description: 'Un mulino, un segreto.',
     language: 'it',
   });
   const exportService = options?.exportService ?? new InMemoryBookExportService();
@@ -46,7 +46,10 @@ describe('ExportTab', () => {
     const { result, books } = setup();
     const screen = await result;
 
-    expect(await screen.findByTestId('export-title')).toHaveProp('value', 'Il faro di Levante');
+    expect(await screen.findByTestId('export-title')).toHaveProp(
+      'value',
+      'Il mulino di Rocca Bassa',
+    );
     expect(screen.getByTestId('export-author')).toHaveProp('value', 'Jane Doe');
 
     await fireEvent.changeText(screen.getByTestId('export-author'), 'J. Doe');
@@ -54,7 +57,7 @@ describe('ExportTab', () => {
     await fireEvent.press(screen.getByTestId('export-save-metadata'));
 
     await waitFor(async () => {
-      const saved = await books.getBook('faro');
+      const saved = await books.getBook('mulino');
       expect(saved).toMatchObject({ author: 'J. Doe', description: 'Nuova descrizione.' });
     });
     expect(await screen.findByTestId('export-metadata-saved')).toBeOnTheScreen();
@@ -87,7 +90,7 @@ describe('ExportTab', () => {
     await fireEvent.press(screen.getByTestId('export-generate'));
 
     await waitFor(() => expect(fileSink.shared).toHaveLength(1));
-    expect(service.requests[0]).toMatchObject({ bookId: 'faro', format: 'docx' });
+    expect(service.requests[0]).toMatchObject({ bookId: 'mulino', format: 'docx' });
     expect(service.requests[0]?.requestId).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
     expect(fileSink.shared[0]?.fileName).toBe('libro.docx');
     expect(await screen.findByTestId('export-status')).toHaveTextContent(/libro\.docx.*generato/);

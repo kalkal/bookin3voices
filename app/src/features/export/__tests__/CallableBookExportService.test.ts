@@ -1,12 +1,12 @@
 import { CallableBookExportService } from '../CallableBookExportService';
 import type { ExportRequest } from '../types';
 
-const REQUEST: ExportRequest = { bookId: 'faro', format: 'epub', requestId: 'req-1' };
+const REQUEST: ExportRequest = { bookId: 'mulino', format: 'epub', requestId: 'req-1' };
 
 const VALID_RESPONSE = {
   exportId: 'req-1',
   format: 'epub',
-  fileName: 'il-faro.epub',
+  fileName: 'il-mulino.epub',
   mimeType: 'application/epub+zip',
   base64: 'ZmludG8=',
   size: 5,

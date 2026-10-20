@@ -2,7 +2,7 @@ import { decodeNoteDoc, toNote, upgradeNoteData } from '../noteCodec';
 
 const validDoc = {
   schemaVersion: 1,
-  text: 'E se il faro fosse la prigione, non il rifugio?',
+  text: 'E se il mulino fosse la prigione, non il rifugio?',
   tag: 'trama',
   createdAt: 1_757_000_000_000,
   updatedAt: 1_757_000_000_500,
