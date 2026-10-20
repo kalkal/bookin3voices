@@ -8,6 +8,7 @@ project under MIT. Regenerate the list before each release.
 | --- | --- | --- |
 | most packages | MIT, Apache-2.0, ISC, BSD-2/3-Clause, 0BSD, BlueOak-1.0.0, Unlicense, Python-2.0 | permissive |
 | `@expo-google-fonts/cormorant-garamond`, `@expo-google-fonts/eb-garamond` | MIT AND OFL-1.1 | fonts bundled in the app; the SIL Open Font License travels with them, fonts must not be sold on their own |
+| UnifrakturCook (Bold) | OFL-1.1 | font of the app icon and of the README header, by j. 'mach' wust. Only its OUTLINES are used, converted to paths in `app/assets/icon-source.svg`, `icon-small-source.svg` and `docs/images/header.png`: no font file ships with the app. The license text is in `licenses/UnifrakturCook-OFL.txt` |
 | `lightningcss` (build tooling) | MPL-2.0 | file-level copyleft, used unmodified, not part of the shipped code |
 | `caniuse-lite` (build tooling) | CC-BY-4.0 | data, attribution to the caniuse project |
 | `node-forge` | BSD-3-Clause OR GPL-2.0 | used under BSD-3-Clause |

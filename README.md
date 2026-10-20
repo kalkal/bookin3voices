@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/header.png" alt="bookin3voice: suspense, mystery, thriller" width="720"></p>
+
 # bookin3voice
 
 Dictate a book out loud, get precise style suggestions from an AI, and export files that are
