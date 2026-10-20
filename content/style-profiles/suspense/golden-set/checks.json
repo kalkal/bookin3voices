@@ -124,5 +124,49 @@
       { "label": "taglio: alzò in alto", "quote": "la alzò in alto" },
       { "label": "filtro: le parve di sentire", "quote": "le parve di sentire" }
     ]
+  },
+  "07-il-rifugio.md": {
+    "expectedRange": [1, 6],
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anacronismo: lavatrice", "quote": "la lavatrice" }]
+  },
+  "08-the-alley.md": {
+    "expectedRange": [1, 6],
+    "language": "en",
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anachronism: zipped up", "quote": "zipped up her" }]
+  },
+  "09-la-bottega.md": {
+    "expectedRange": [1, 6],
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anacronismo: euro", "quote": "cinquanta euro" }]
+  },
+  "10-the-diner.md": {
+    "expectedRange": [1, 6],
+    "language": "en",
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anachronism: microwave", "quote": "microwave" }]
+  },
+  "11-la-terrazza.md": {
+    "expectedRange": [1, 6],
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anacronismo: smartphone", "quote": "smartphone" }]
+  },
+  "12-the-station.md": {
+    "expectedRange": [1, 6],
+    "language": "en",
+    "period": true,
+    "protected": [],
+    "expected": [{ "label": "anachronism: boarding pass", "quote": "boarding pass" }]
+  },
+  "13-la-riunione.md": {
+    "expectedRange": [0, 4],
+    "protected": [],
+    "expected": []
   }
 }

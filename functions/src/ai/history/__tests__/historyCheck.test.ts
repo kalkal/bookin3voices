@@ -384,3 +384,33 @@ describe('history overlaps with a repeated word', () => {
     expect(result.suggestions.some((s) => s.aspect === 'period')).toBe(false);
   });
 });
+
+describe('history overlaps, case', () => {
+  it('drops a tip whose anchor holds the anachronism with a different case', async () => {
+    const text = 'Ohio, 1925. Microwave pie was his favourite. The microwave hummed.';
+    const { provider } = scripted([
+      ok({ period_named: true, quote: 'Ohio, 1925', period_label: 'Ohio, 1925' }),
+      ok({
+        anachronisms: [
+          {
+            trigger_quote: 'microwave',
+            category: 'technology',
+            severity: 'impossible',
+            replacement: 'oven',
+            note_for_author: 'Microwaves came much later.',
+          },
+        ],
+        period_details: [
+          {
+            anchor_quote: 'Microwave pie was his favourite.',
+            category: 'objects',
+            rewrite: 'Microwave pie was his favourite, with coffee.',
+            note_for_author: 'n',
+          },
+        ],
+      }),
+    ]);
+    const result = await runHistoryCheck({ provider, text, language: 'en' });
+    expect(result.suggestions.some((s) => s.aspect === 'period')).toBe(false);
+  });
+});

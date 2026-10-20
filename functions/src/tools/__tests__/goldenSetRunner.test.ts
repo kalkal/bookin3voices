@@ -66,3 +66,41 @@ describe('checkBrano: density on the model output', () => {
     );
   });
 });
+
+describe('checkBrano: history checks', () => {
+  const text = 'Ohio, 1925. She put his pie in the microwave and waited for the bus.';
+  const checks = { expectedRange: [0, 5] as [number, number], protected: [], expected: [] };
+  const sug = (aspect: 'period' | 'anachronism', original: string, rationale: string) => ({
+    original,
+    kind: 'history' as const,
+    aspect,
+    rationale,
+    proposals: ['x y'],
+  });
+
+  it('fails a period passage without an anachronism, or with a rationale not hedged', () => {
+    const report = checkBrano(
+      't.md',
+      text,
+      { ...checks, period: true, language: 'en' },
+      { suggestions: [sug('period', 'waited for the bus', 'Buses were common.')] },
+      'fake',
+    );
+    const messages = report.violations.map((v) => v.message);
+    expect(messages).toContainEqual('history: no "anachronism" suggestion');
+    expect(messages).toContainEqual(expect.stringContaining('not starting with «To check:»'));
+  });
+
+  it('fails any history suggestion on a passage with no period', () => {
+    const report = checkBrano(
+      't.md',
+      text,
+      checks,
+      { suggestions: [sug('anachronism', 'microwave', 'Da verificare: n')] },
+      'fake',
+    );
+    expect(report.violations.map((v) => v.message)).toContainEqual(
+      '1 history suggestion(s) on a passage with no period',
+    );
+  });
+});

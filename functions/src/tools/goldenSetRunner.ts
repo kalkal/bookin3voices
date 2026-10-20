@@ -32,6 +32,7 @@ import { AiProviderError, isRetryableAiError } from '../ai/provider/types';
 import { buildRefinePrompt, REFINE_TEMPERATURE } from '../ai/refinePrompt';
 import { modelOutputSchema, type ModelOutput, type Suggestion } from '../ai/refineTypes';
 import { loadStyleProfileContent } from '../ai/styleProfileContent';
+import { mergeWithHistory, runHistoryCheckWithin } from '../ai/history/historyCheck';
 import { textHash } from '../ai/textHash';
 
 // ---------- checks.json ----------
@@ -56,6 +57,10 @@ interface BranoChecks {
   expectedRange: [number, number];
   protected: ProtectedRegionSpec[];
   expected: ExpectedSpec[];
+  /** Book language for the prompt; default 'it'. */
+  language?: 'it' | 'en';
+  /** Whether the passage names a recognisable period: history suggestions are expected only then. */
+  period?: boolean;
 }
 
 type ChecksFile = Record<string, BranoChecks>;
@@ -246,6 +251,30 @@ export function checkBrano(
     violations.push({ level: 'warn', message: `MUST items not covered: ${missed.join('; ')}` });
   }
 
+  // history: only when the passage names a period; both parts; always a hint to check
+  const history = suggestions.filter((s) => s.kind === 'history');
+  if (checks.period !== true && history.length > 0) {
+    violations.push({
+      level: 'fail',
+      message: `${history.length} history suggestion(s) on a passage with no period`,
+    });
+  }
+  if (checks.period === true) {
+    for (const aspect of ['period', 'anachronism'] as const) {
+      if (!history.some((s) => s.aspect === aspect)) {
+        violations.push({ level: 'fail', message: `history: no "${aspect}" suggestion` });
+      }
+    }
+  }
+  const prefix = checks.language === 'en' ? 'To check:' : 'Da verificare:';
+  const notHedged = history.filter((s) => !s.rationale.trim().startsWith(prefix)).length;
+  if (notHedged > 0) {
+    violations.push({
+      level: 'fail',
+      message: `${notHedged} history rationale(s) not starting with «${prefix}»`,
+    });
+  }
+
   return {
     file,
     words,
@@ -272,7 +301,10 @@ let calls = 0;
 function isBrokenReply(error: unknown): boolean {
   return (
     error instanceof AiProviderError &&
-    (error.detail.kind === 'invalid_json' || error.detail.kind === 'truncated')
+    (error.detail.kind === 'invalid_json' ||
+      error.detail.kind === 'truncated' ||
+      // Nova: "Model produced invalid sequence as part of ToolUse" (refineChapter retries it too)
+      (error.detail.kind === 'bad_request' && error.detail.message.includes('ModelErrorException')))
   );
 }
 
@@ -335,7 +367,7 @@ function renderReport(reports: BranoReport[], startedAt: Date): string {
     lines.push('', '<details><summary>Suggestions</summary>', '');
     for (const s of r.suggestions) {
       lines.push(
-        `- [${s.kind}] «${s.original}» → ${s.proposals.map((p) => `«${p}»`).join(' / ')} — ${s.rationale}`,
+        `- [${s.kind}${s.aspect ? `/${s.aspect}` : ''}] «${s.original}» → ${s.proposals.map((p) => `«${p}»`).join(' / ')} — ${s.rationale}`,
       );
     }
     lines.push('', '</details>');
@@ -406,7 +438,7 @@ async function main(): Promise<void> {
 
   const files = readdirSync(goldenDir)
     .filter((f) => /^\d\d-.*\.md$/.test(f))
-    .filter((f) => (only === undefined ? true : f.includes(only)))
+    .filter((f) => (only === undefined ? true : only.split(',').some((o) => f.includes(o))))
     .sort();
   if (files.length === 0) throw new Error('no passage selected');
 
@@ -428,12 +460,23 @@ async function main(): Promise<void> {
     const prompt = buildRefinePrompt({
       styleBible: profile.styleBible,
       fewShots: profile.fewShots,
-      book: { title: 'Golden set', genre: '', language: 'it', synopsis: '' },
+      book: { title: 'Golden set', genre: '', language: checks.language ?? 'it', synopsis: '' },
       chapter: { title: file.replace(/\.md$/, ''), outline: null },
       text,
     });
     const { output, modelName } = await generateWithRetry(models, prompt);
-    const report = checkBrano(file, text, checks, output, modelName);
+    // the history check runs next to the refinement, as in refineChapter
+    const history = await runHistoryCheckWithin({
+      provider: createProvider(deps, 'primary'),
+      text,
+      language: checks.language ?? 'it',
+    });
+    calls += history.calls;
+    console.log(
+      `  history: period ${history.periodLabel ?? 'none'}, ${history.suggestions.length} kept, ${history.dropped} dropped${history.error ? `, error ${history.error.kind}` : ''}`,
+    );
+    const merged = { suggestions: mergeWithHistory(output.suggestions, history.suggestions, text) };
+    const report = checkBrano(file, text, checks, merged, modelName);
     reports.push(report);
     const fails = report.violations.filter((v) => v.level === 'fail');
     console.log(

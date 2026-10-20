@@ -10,10 +10,10 @@
 //   history without one);
 // - Style Bible density cap, enforced here because the model does not keep it
 //   (Nova golden run, 20/10: 16 suggestions on 345 words): about one every 50
-//   words, at least 3, never more than 30; over the cap the best suggestion of
-//   each 50-word window is kept first (so the end of the text is not starved),
-//   then the rest by priority (grammar and anachronisms, then style and
-//   pacing, period tips last) and in text order;
+//   words, at least 3, never more than 30. Over the cap the errors (grammar
+//   and anachronisms) are kept first, then the best suggestion of each 50-word
+//   window they do not cover (so the end of the text is not starved), then the
+//   rest by priority (style and pacing, period tips last) and in text order;
 // - overlapping spans → the higher priority wins, then the first in text order
 //   (the app does not handle overlapping highlights).
 

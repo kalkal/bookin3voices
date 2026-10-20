@@ -212,7 +212,9 @@ export async function runHistoryCheck(args: {
       // the anachronism inside the sentence wins: one span, the error first (by
       // position, and by text too, since a repeated word has no unique position)
       overlapsAny(rangeOf(text, item.data.anchor_quote.trim()), anachronismRanges) ||
-      anachronismTexts.some((original) => item.data.anchor_quote.includes(original))
+      anachronismTexts.some((original) =>
+        item.data.anchor_quote.toLocaleLowerCase().includes(original.toLocaleLowerCase()),
+      )
     ) {
       dropped += 1;
       continue;

@@ -1,7 +1,7 @@
 # Golden set: test passages for the "Suspense / Horror" profile
 
-Six **fictional** passages (written on purpose, no real text from the book or from
-existing works), in Italian, with **simulated dictation**: long sentences, sparse
+Six **fictional** passages for the Style Bible, plus seven short ones for History (all written on purpose, no real text from the book or from
+existing works), in Italian (08, 10 and 12 in English), with **simulated dictation**: long sentences, sparse
 punctuation, a few openings without a capital letter. Different genres and tones, because
 the profile must hold up across registers without flattening them.
 
@@ -13,6 +13,7 @@ the profile must hold up across registers without flattening them.
 | `04-la-passerella.md` | action | filters, passive, dictation punctuation, "breathless" long sentence NOT to break up |
 | `05-la-partenza-in-salita.md` | everyday life cracking | show vs tell, concreteness without inventing facts |
 | `06-la-cuffia-rossa.md` | everyday uncanny, long passage | density at the cap, refrain ×4, deliberate close repetition, run-on paragraph |
+| `07-il-rifugio.md` … `13-la-riunione.md` | short invented passages for the History check | 07–12 name a period (Napoli 1943, London 1888, Torino 1911, Ohio 1925, Roma 1960, Paris 1900) with one anachronism each; 13 is a present-day trap that uses «Medioevo» figuratively. `checks.json` marks `period` and `language`: History must appear only on period passages, with both a period detail and the anachronism, every rationale starting with «Da verificare:» / «To check:» |
 
 ## How to use
 
