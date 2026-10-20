@@ -59,8 +59,13 @@ import {
   OfflineFirstNoteRepository,
 } from './src/features/notes';
 import type { NoteRepository } from './src/features/notes';
-import { CallableOutlineService, InMemoryOutlineService } from './src/features/outline';
-import type { OutlineService } from './src/features/outline';
+import {
+  CallableOutlineService,
+  InMemoryOutlineDraftRepository,
+  InMemoryOutlineService,
+  LocalOutlineDraftRepository,
+} from './src/features/outline';
+import type { OutlineDraftRepository, OutlineService } from './src/features/outline';
 import {
   ChapterReviewFlow,
   CallableSuggestionsProvider,
@@ -81,6 +86,9 @@ import { ensureSignedIn } from './src/lib/auth';
 import { auth, firestore, functions } from './src/lib/firebase';
 import { toRoman } from './src/lib/roman';
 
+/** The opening screen stays at least this long, so its rays are seen even on a fast phone. */
+export const STARTUP_MIN_MS = 1500;
+
 /** All the screens' dependencies: injectable in tests. */
 export interface AppServices {
   bookRepository: BookRepository;
@@ -96,6 +104,8 @@ export interface AppServices {
   waitForSync?: () => Promise<boolean>;
   backupService: BackupService;
   outlineService: OutlineService;
+  /** The outline preview not yet confirmed, per book. */
+  outlineDrafts: OutlineDraftRepository;
 }
 
 export interface AppProps {
@@ -133,6 +143,7 @@ function defaultServices(uid: string): AppServices {
     waitForSync: () => waitForSyncedWrites(firestore),
     backupService: new CallableBackupService({ functions }),
     outlineService: new CallableOutlineService({ functions }),
+    outlineDrafts: new LocalOutlineDraftRepository(),
   };
 }
 
@@ -180,6 +191,7 @@ function e2eServices(): AppServices {
     exportFileSink: new InMemoryExportFileSink(),
     backupService: new InMemoryBackupService(),
     outlineService: new InMemoryOutlineService(),
+    outlineDrafts: new InMemoryOutlineDraftRepository(),
   };
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -261,6 +273,8 @@ function AppNavigator({ services }: { services: AppServices }) {
             exportFileSink={services.exportFileSink}
             waitForSync={services.waitForSync}
             outlineService={services.outlineService}
+            outlineDrafts={services.outlineDrafts}
+            settingsRepository={services.settingsRepository}
             onBack={pop}
             onOpenChapter={(chapter, position) =>
               push({
@@ -355,6 +369,15 @@ export default function App({ createServices, signIn }: AppProps = {}) {
   const [authError, setAuthError] = useState(false);
   // bumped by the Retry button of the startup screen: opening is tried again
   const [attempt, setAttempt] = useState(0);
+  // the opening screen is part of the experience, not only a loading screen: on a
+  // fast phone it would flash by unseen, so it stays at least STARTUP_MIN_MS on
+  // every start (the rays stand still with reduced motion; the wait stays short)
+  const [minShown, setMinShown] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinShown(true), STARTUP_MIN_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -380,10 +403,11 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
-  if (!fontsReady || services === null) {
+  if (!fontsReady || services === null || !minShown) {
     // the opening screen (black, gold mark, slow rays) until fonts and identity are
-    // ready: no flash of the wrong serif, no Library without data; if opening
-    // fails it shows the error with a Retry button instead of staying stuck
+    // ready, and for at least STARTUP_MIN_MS: no flash of the wrong serif, no
+    // Library without data; if opening fails it shows the error with a Retry
+    // button instead of staying stuck
     return (
       <StartupScreen
         error={authError}

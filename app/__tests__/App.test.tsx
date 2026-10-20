@@ -1,6 +1,6 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
-import App, { type AppServices } from '../App';
+import App, { STARTUP_MIN_MS, type AppServices } from '../App';
 import { InMemoryBookRepository, LocalDailyProgressRepository } from '../src/features/books';
 import { InMemoryChapterRepository } from '../src/features/chapters';
 import {
@@ -10,7 +10,7 @@ import {
 } from '../src/features/export';
 import { InMemoryNoteRepository } from '../src/features/notes';
 import { InMemoryRevisionRepository, FakeSuggestionsProvider } from '../src/features/review';
-import { InMemoryOutlineService } from '../src/features/outline';
+import { InMemoryOutlineDraftRepository, InMemoryOutlineService } from '../src/features/outline';
 import { InMemoryBackupService, LocalSettingsRepository } from '../src/features/settings';
 import { DEFAULT_SETTINGS } from '../src/features/settings/types';
 import { paperPalette } from '../src/theme';
@@ -57,6 +57,7 @@ function testServices(): AppServices & { books: InMemoryBookRepository } {
     exportFileSink: new InMemoryExportFileSink(),
     backupService: new InMemoryBackupService(),
     outlineService: new InMemoryOutlineService(),
+    outlineDrafts: new InMemoryOutlineDraftRepository(),
   };
 }
 
@@ -178,6 +179,40 @@ describe('App', () => {
     );
     await act(async () => {});
     expect(await screen.findByTestId('startup-screen')).toBeOnTheScreen();
+    await screen.unmount();
+  });
+
+  it('the opening screen stays at least 1.5 s, even when everything is ready at once', async () => {
+    const started = Date.now();
+    const screen = await render(
+      <App signIn={async () => 'utente-di-prova'} createServices={() => testServices()} />,
+    );
+    await act(async () => {}); // sign-in and fonts are ready immediately
+    expect(screen.getByTestId('startup-screen')).toBeOnTheScreen();
+    expect(screen.queryByTestId('library-screen')).toBeNull();
+    expect(await screen.findByTestId('library-screen', {}, { timeout: 4000 })).toBeOnTheScreen();
+    // timers may fire a few ms early on a loaded machine
+    expect(Date.now() - started).toBeGreaterThanOrEqual(STARTUP_MIN_MS - 50);
+    await screen.unmount();
+  });
+
+  it('after the 1.5 s the app opens as soon as loading is done, without waiting more', async () => {
+    const SLOW_SIGN_IN_MS = 2000;
+    const started = Date.now();
+    const screen = await render(
+      <App
+        signIn={() =>
+          new Promise<string>((resolve) =>
+            setTimeout(() => resolve('utente-di-prova'), SLOW_SIGN_IN_MS),
+          )
+        }
+        createServices={() => testServices()}
+      />,
+    );
+    expect(await screen.findByTestId('library-screen', {}, { timeout: 4000 })).toBeOnTheScreen();
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(SLOW_SIGN_IN_MS - 50);
+    expect(elapsed).toBeLessThan(SLOW_SIGN_IN_MS + STARTUP_MIN_MS);
     await screen.unmount();
   });
 

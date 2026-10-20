@@ -7,6 +7,7 @@
 import { z } from 'zod';
 
 import type { OutlinePrompt } from './outlinePrompt';
+import { STYLE_IDS } from './styles';
 
 /**
  * A chapter proposed by the outline: title, summary and main beats.
@@ -38,6 +39,8 @@ export const generateOutlineInputSchema = z.object({
   bookId: z.string().min(1),
   synopsis: z.string().trim().min(1).max(20_000),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  /** The book's style as the app sees it; optional for older clients (the book's is used). */
+  styleId: z.enum(STYLE_IDS).optional(),
 });
 
 export type GenerateOutlineInput = z.infer<typeof generateOutlineInputSchema>;
@@ -50,6 +53,8 @@ export const bookForOutlineSchema = z.object({
   title: z.string(),
   genre: z.string(),
   language: z.string(),
+  /** Saved style; null, missing or unknown → the default style. */
+  styleProfileId: z.string().nullable().optional().catch(null),
 });
 
 export type BookForOutline = z.infer<typeof bookForOutlineSchema>;

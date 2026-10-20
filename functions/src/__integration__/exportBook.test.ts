@@ -128,6 +128,25 @@ beforeAll(() => {
   db = getFirestore();
 });
 
+describe('exportBook — EPUB of a book with no author name', () => {
+  it('still passes EPUBCheck, with no invented "anonymous"', async () => {
+    const uid = 'jane-epub-senza-autore';
+    const bookId = await seedBook(uid);
+    await db.doc(`users/${uid}/books/${bookId}`).update({ author: '' });
+    const response = await callExport(uid, { bookId, format: 'epub', requestId: 'req-epub-na' });
+    const epub = Buffer.from(response.base64, 'base64');
+    const zip = await JSZip.loadAsync(epub);
+    const opfFile = Object.keys(zip.files).find((name) => name.endsWith('.opf'));
+    expect(await zip.file(opfFile as string)?.async('string')).not.toContain('anonymous');
+
+    const dir = mkdtempSync(join(tmpdir(), 'bookvoice-export-'));
+    const file = join(dir, response.fileName);
+    writeFileSync(file, epub);
+    const result = runEpubcheck(file);
+    expect(`${result.status}\n${result.output}`).toMatch(/^0\n/);
+  });
+});
+
 describe('exportBook — EPUB', () => {
   const uid = 'jane-epub';
   let bookId: string;
@@ -183,6 +202,16 @@ describe('exportBook — EPUB', () => {
     writeFileSync(file, epub);
     const result = runEpubcheck(file);
     expect(`${result.status}\n${result.output}`).toMatch(/^0\n/);
+  });
+
+  it('the package names the author as creator, publisher and rights holder, never "anonymous"', async () => {
+    const zip = await JSZip.loadAsync(epub);
+    const opfFile = Object.keys(zip.files).find((name) => name.endsWith('.opf'));
+    const opf = (await zip.file(opfFile as string)?.async('string')) as string;
+    expect(opf).toContain('<dc:creator id="creator">Jane Doe</dc:creator>');
+    expect(opf).toContain('<dc:publisher>Jane Doe</dc:publisher>');
+    expect(opf).toMatch(/<dc:rights>Copyright &#x00A9; \d{4} by Jane Doe<\/dc:rights>/);
+    expect(opf).not.toContain('anonymous');
   });
 
   it('is idempotent: same requestId → same export, no duplicate registry entry', async () => {

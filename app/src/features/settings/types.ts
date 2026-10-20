@@ -24,6 +24,9 @@ export const DAILY_GOAL_MIN = 100;
 export const DAILY_GOAL_MAX = 10_000;
 export const DAILY_GOAL_STEP = 100;
 
+/** Longest author name kept (KDP's own field is shorter; this only guards the payload). */
+export const AUTHOR_NAME_MAX = 200;
+
 // external data (disk today, Firestore tomorrow) validated at the boundary with Zod
 export const appSettingsSchema = z.object({
   schemaVersion: z.literal(1),
@@ -47,6 +50,11 @@ export const appSettingsSchema = z.object({
   ornaments: z.boolean().optional(),
   /** Interface language; absent in payloads saved before the setting existed = 'system'. */
   uiLanguage: z.enum(UI_LANGUAGES).optional(),
+  /**
+   * The name the user wants on their books: every new book takes it as its
+   * author, and the Export tab offers it for a book without one. Absent = none.
+   */
+  authorName: z.string().max(AUTHOR_NAME_MAX).optional(),
 });
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;

@@ -1,4 +1,6 @@
 export { CallableOutlineService } from './CallableOutlineService';
+export { InMemoryOutlineDraftRepository, LocalOutlineDraftRepository } from './drafts';
+export type { OutlineDraftRepository } from './drafts';
 export { InMemoryOutlineService } from './inMemory';
 export { applyOutlineMerge, planOutlineMerge } from './merge';
 export type { OutlineMergePlan, OutlineMergeResult } from './merge';

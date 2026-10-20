@@ -9,10 +9,17 @@
  * the rendering.
  */
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { Card, Chip } from '../../components';
+import { ArchesFill, Card, Chip, Screen, useBottomClearance } from '../../components';
 import { getLanguage, t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ExportFileSink } from '../export';
@@ -47,6 +54,7 @@ export function SettingsScreen({
   const controller = useSettingsController(repository);
   const { settings } = controller;
   const backup = useBackupDownload(backupService, backupFileSink, controller.setLastBackupAt);
+  const bottom = useBottomClearance(spacing.xl);
 
   const sectionLabelStyle = {
     color: colors.textMutedStrong,
@@ -70,20 +78,19 @@ export function SettingsScreen({
 
   if (!controller.ready) {
     // no flash of defaults: the screen appears only once the document is read
-    return (
-      <SafeAreaView
-        testID="settings-screen"
-        style={[styles.screen, { backgroundColor: colors.background }]}
-      />
-    );
+    return <Screen testID="settings-screen" />;
   }
 
   return (
-    <SafeAreaView
-      testID="settings-screen"
-      style={[styles.screen, { backgroundColor: colors.background }]}
-    >
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingTop: spacing.md }}>
+    <Screen testID="settings-screen">
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          padding: spacing.xl,
+          paddingTop: spacing.md,
+          paddingBottom: bottom,
+        }}
+      >
         <View style={styles.header}>
           {onBack !== undefined && (
             <Pressable
@@ -146,6 +153,34 @@ export function SettingsScreen({
         </Card>
 
         <Text style={sectionLabelStyle}>{t('settings.writing.section')}</Text>
+        <Card style={{ marginBottom: spacing.md }}>
+          <Text style={rowTitleStyle}>{t('settings.writing.authorName')}</Text>
+          <TextInput
+            testID="settings-author-name"
+            accessibilityLabel={t('settings.writing.authorName')}
+            value={settings.authorName ?? ''}
+            onChangeText={controller.setAuthorName}
+            placeholder={t('settings.writing.authorNamePlaceholder')}
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="words"
+            autoCorrect={false}
+            style={{
+              marginTop: spacing.sm,
+              borderWidth: 1,
+              borderColor: colors.hairline,
+              borderRadius: 3,
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm + 2,
+              fontFamily: fonts.body,
+              fontSize: typeScale.body,
+              color: colors.text,
+              backgroundColor: colors.background,
+            }}
+          />
+          <Text style={[captionStyle, { marginTop: spacing.xs }]}>
+            {t('settings.writing.authorNameNote')}
+          </Text>
+        </Card>
         <Card>
           <Text style={rowTitleStyle}>{t('settings.writing.goal')}</Text>
           <View style={[styles.row, { marginTop: spacing.md }]}>
@@ -284,8 +319,9 @@ export function SettingsScreen({
           ))}
           <Text style={[captionStyle, { marginTop: spacing.md }]}>{t('settings.styles.note')}</Text>
         </Card>
+        <ArchesFill />
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -345,9 +381,6 @@ function StepperButton({ label, onPress, testID }: StepperButtonProps) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

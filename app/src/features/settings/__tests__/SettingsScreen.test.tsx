@@ -2,6 +2,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import type { KeyValueStorage } from '../../chapters';
+import { comesAfter, layoutRoom } from '../../../testing/arches';
 import { ThemeProvider, useTheme } from '../../../theme';
 import { InMemoryExportFileSink } from '../../export';
 import { InMemoryBackupService } from '../backup';
@@ -51,6 +52,20 @@ async function renderScreen(
   );
   return Object.assign(screen, { fileSink });
 }
+
+describe('SettingsScreen — author name', () => {
+  it('"Nome dell\'autore" is saved with the settings and is there again after a restart', async () => {
+    const { storage, data } = memoryStorage();
+    const first = await renderScreen(storage);
+    await fireEvent.changeText(await first.findByTestId('settings-author-name'), 'Jane Doe');
+    await waitFor(() => expect(JSON.parse(data.get(KEY) ?? '{}').authorName).toBe('Jane Doe'));
+    await first.unmount();
+
+    const again = await renderScreen(storage);
+    expect(await again.findByTestId('settings-author-name')).toHaveProp('value', 'Jane Doe');
+    await again.unmount();
+  });
+});
 
 describe('SettingsScreen', () => {
   it('by default the active engine is Amazon Nova, with Gemini as the alternative', async () => {
@@ -202,12 +217,26 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
+  it('with room after the last section the arches stand there, after the content', async () => {
+    const { storage } = memoryStorage();
+    const screen = await renderScreen(storage);
+    await screen.findByTestId('style-profile-thriller');
+    await layoutRoom(screen.getByTestId('arches-room'), 412, 240);
+    expect(
+      screen.getByTestId('cathedral-arches', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(
+      comesAfter(screen.getByTestId('settings-screen'), 'style-profile-thriller', 'arches-room'),
+    ).toBe(true);
+    await screen.unmount();
+  });
+
   it('the cathedral drawing can be switched off in Settings, and it stays off after a restart', async () => {
     const { storage, data } = memoryStorage();
     const prima = await renderScreen(storage);
     expect(await prima.findByTestId('ornaments-probe')).toHaveTextContent('on');
-    // Settings itself has little room for it: no arches behind this screen
-    expect(prima.queryByTestId('cathedral-arches')).toBeNull();
+    // never an overlay behind the settings: the arches only come after them, with room
+    expect(prima.queryByTestId('cathedral-arches', { includeHiddenElements: true })).toBeNull();
 
     // a screen reader hears a switch, with its state
     expect((await prima.findByTestId('ornaments-toggle')).props).toMatchObject({

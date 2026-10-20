@@ -75,7 +75,9 @@ export class DocxExporter implements Exporter {
 
     const document = new Document({
       title: book.title,
-      creator: book.author,
+      creator: book.author.trim(),
+      // the library writes "Un-named" otherwise
+      lastModifiedBy: book.author.trim(),
       description: book.description,
       // Default language of runs: helps spell checking in Word.
       styles: {

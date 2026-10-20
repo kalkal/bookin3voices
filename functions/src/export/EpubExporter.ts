@@ -14,19 +14,61 @@ import type { BookForExport, Exporter } from './types';
 const epubGen: typeof epubGenModule =
   (epubGenModule as unknown as { default?: typeof epubGenModule }).default ?? epubGenModule;
 
-// The library always writes <dc:description>, even when empty, and EPUBCheck
-// rejects an empty element (RSC-005). KDP takes the description from its own
-// form, not from the file, so a blank one is simply left out. Only that line of
-// the library's own package template changes; if a library upgrade changes it,
-// fail loudly here instead of shipping an invalid EPUB.
-const DESCRIPTION_LINE = '<dc:description><%= description %></dc:description>';
-if (!epub3PackageTemplate.includes(DESCRIPTION_LINE)) {
-  throw new Error('epub-gen-memory package template changed: review the description handling');
+// The library's own package template is adjusted in a few lines; if a library
+// upgrade changes any of them, fail loudly here instead of shipping an invalid
+// EPUB or a wrong name.
+//  - It always writes <dc:description>, even when empty, and EPUBCheck rejects
+//    an empty element (RSC-005). KDP takes the description from its own form,
+//    not from the file, so a blank one is simply left out.
+//  - Publisher and rights default to "anonymous" ("Copyright © <year> by
+//    anonymous") whatever the author: they carry the author name instead, with
+//    the year of the export, and with no name at all they are left out (as is
+//    the creator) rather than invented. The Export tab says so to the user.
+function requireLine(template: string, line: string): void {
+  if (!template.includes(line)) {
+    throw new Error(`epub-gen-memory package template changed: review "${line.slice(0, 40)}"`);
+  }
 }
-const PACKAGE_TEMPLATE = epub3PackageTemplate.replace(
-  DESCRIPTION_LINE,
-  `<% if (description) { %>${DESCRIPTION_LINE}<% } %>`,
-);
+
+const DESCRIPTION_LINE = '<dc:description><%= description %></dc:description>';
+const CREATOR_LINES = [
+  '<dc:creator id="creator"><%= author.join(",") %></dc:creator>',
+  '<meta refines="#creator" property="file-as"><%= author.join(",") %></meta>',
+];
+const PUBLISHER_LINES = [
+  '<meta property="dcterms:publisher"><%= publisher %></meta>',
+  '<dc:publisher><%= publisher %></dc:publisher>',
+];
+const RIGHTS_LINES = [
+  '<meta property="dcterms:rights">All rights reserved</meta>',
+  '<dc:rights>Copyright &#x00A9; <%= (new Date()).getFullYear() %> by <%= publisher %></dc:rights>',
+];
+for (const line of [DESCRIPTION_LINE, ...CREATOR_LINES, ...PUBLISHER_LINES, ...RIGHTS_LINES]) {
+  requireLine(epub3PackageTemplate, line);
+}
+
+const onlyIf = (condition: string, line: string) => `<% if (${condition}) { %>${line}<% } %>`;
+
+/** The package template for an export made in `year`. */
+function packageTemplate(year: number): string {
+  let template = epub3PackageTemplate.replace(
+    DESCRIPTION_LINE,
+    onlyIf('description', DESCRIPTION_LINE),
+  );
+  for (const line of CREATOR_LINES) {
+    template = template.replace(line, onlyIf('author.length > 0', line));
+  }
+  for (const line of PUBLISHER_LINES) {
+    template = template.replace(line, onlyIf('publisher', line));
+  }
+  const [rightsMeta, rights] = RIGHTS_LINES as [string, string];
+  template = template.replace(rightsMeta, onlyIf('publisher', rightsMeta));
+  template = template.replace(
+    rights,
+    onlyIf('publisher', rights.replace('<%= (new Date()).getFullYear() %>', String(year))),
+  );
+  return template;
+}
 
 function titlePageHtml(book: BookForExport): string {
   const genre = book.genre.trim();
@@ -67,10 +109,12 @@ export class EpubExporter implements Exporter {
     const result = await epubGen(
       {
         title: book.title,
-        ...(author === '' ? {} : { author }),
+        // the author is also the publisher (self-publishing, KDP); no name, no invented one
+        author: author === '' ? [] : [author],
+        publisher: author,
         lang: exportLanguage(book.language),
         description: book.description.trim(),
-        contentOPF: PACKAGE_TEMPLATE,
+        contentOPF: packageTemplate(generatedAt.getUTCFullYear()),
         tocTitle: exportLabels(book.language).contents,
         prependChapterTitles: true,
         date: generatedAt.toISOString(),

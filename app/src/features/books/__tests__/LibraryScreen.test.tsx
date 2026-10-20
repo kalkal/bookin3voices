@@ -1,4 +1,6 @@
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider } from '../../../theme';
 import { DEFAULT_SETTINGS } from '../../settings';
@@ -7,9 +9,9 @@ import { InMemoryBookRepository } from '../InMemoryBookRepository';
 import { LibraryScreen } from '../LibraryScreen';
 import type { DailyProgressRepository } from '../dailyProgress';
 
-function fakeSettings(dailyGoalWords: number): SettingsRepository {
+function fakeSettings(dailyGoalWords: number, authorName?: string): SettingsRepository {
   return {
-    load: async () => ({ ...DEFAULT_SETTINGS, dailyGoalWords }),
+    load: async () => ({ ...DEFAULT_SETTINGS, dailyGoalWords, authorName }),
     save: async () => {},
   };
 }
@@ -53,6 +55,55 @@ function renderLibrary(overrides?: {
 }
 
 describe('LibraryScreen', () => {
+  it('a new book takes the author name from Settings', async () => {
+    const books = new InMemoryBookRepository();
+    const onOpenBook = jest.fn();
+    const screen = await render(
+      <ThemeProvider>
+        <LibraryScreen
+          bookRepository={books}
+          settingsRepository={fakeSettings(800, 'Jane Doe')}
+          dailyProgressRepository={fakeProgress(0)}
+          onOpenBook={onOpenBook}
+          onOpenSettings={jest.fn()}
+          onOpenProgress={jest.fn()}
+        />
+      </ThemeProvider>,
+    );
+    await screen.findByTestId('library-goal');
+    await fireEvent.press(screen.getByTestId('library-fab'));
+    await fireEvent.changeText(screen.getByTestId('library-new-book-title'), 'Il mulino');
+    await fireEvent.press(screen.getByTestId('library-new-book-create'));
+    await waitFor(() => expect(onOpenBook).toHaveBeenCalled());
+    expect(onOpenBook.mock.calls[0]?.[0]).toMatchObject({ title: 'Il mulino', author: 'Jane Doe' });
+    await screen.unmount();
+  });
+
+  it('the + button stays above the Android navigation bar, with room to spare', async () => {
+    const screen = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 360, height: 780 },
+          insets: { top: 24, left: 0, right: 0, bottom: 48 },
+        }}
+      >
+        <ThemeProvider>
+          <LibraryScreen
+            bookRepository={new InMemoryBookRepository()}
+            settingsRepository={fakeSettings(800)}
+            dailyProgressRepository={fakeProgress(0)}
+            onOpenBook={jest.fn()}
+            onOpenSettings={jest.fn()}
+            onOpenProgress={jest.fn()}
+          />
+        </ThemeProvider>
+      </SafeAreaProvider>,
+    );
+    const fab = StyleSheet.flatten(screen.getByTestId('library-fab').props.style);
+    expect(fab.bottom).toBeGreaterThanOrEqual(48 + 16);
+    await screen.unmount();
+  });
+
   it('shows the daily goal and books with the denormalized counters', async () => {
     const books = new InMemoryBookRepository();
     books.seed({

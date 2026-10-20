@@ -10,9 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNetworkState } from 'expo-network';
 import { useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Chip } from '../../components';
+import { Card, Chip, Screen, useBottomClearance } from '../../components';
 import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
@@ -68,6 +67,7 @@ export function DictationScreen({
   outlineStateStorage,
 }: DictationScreenProps) {
   const { colors, fonts, spacing, typeScale, letterSpacing } = useTheme();
+  const panelBottom = useBottomClearance(spacing.xl);
   // the ONE resolution of the dictation language: recognizer, commands, hints
   // frozen for the session, like the engine and the session it feeds
   const [locale] = useState(() => dictationLocale(lang));
@@ -108,10 +108,7 @@ export function DictationScreen({
   );
 
   return (
-    <SafeAreaView
-      testID="dictation-screen"
-      style={[styles.screen, { backgroundColor: colors.background }]}
-    >
+    <Screen testID="dictation-screen">
       {chapterTitle || onBack !== undefined ? (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {onBack !== undefined ? (
@@ -228,7 +225,7 @@ export function DictationScreen({
             borderTopColor: colors.hairline,
             paddingHorizontal: spacing.xxl,
             paddingTop: spacing.lg,
-            paddingBottom: spacing.xl,
+            paddingBottom: panelBottom,
             gap: spacing.md,
           },
         ]}
@@ -292,7 +289,7 @@ export function DictationScreen({
           {caption}
         </Text>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -411,7 +408,6 @@ function PreflightIssueCard({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: { textAlign: 'center' },
   textArea: { flex: 1 },
   panel: {

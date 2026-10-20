@@ -40,6 +40,8 @@ export const exportStrings: Namespace = {
     'export.field.titlePlaceholder': 'Book title',
     'export.field.author': 'Author',
     'export.field.authorPlaceholder': 'Author name',
+    'export.field.authorMissing':
+      'No author name: the file would have no author, and KDP asks for one. Write it here, or once for all books in Settings → Author name.',
     'export.field.language': 'Language',
     'export.field.languagePlaceholder': 'en',
     'export.field.description': 'Description',
@@ -97,6 +99,8 @@ export const exportStrings: Namespace = {
     'export.field.titlePlaceholder': 'Titolo del libro',
     'export.field.author': 'Autore',
     'export.field.authorPlaceholder': 'Nome dell’autore',
+    'export.field.authorMissing':
+      'Manca il nome dell’autore: il file uscirebbe senza autore, e KDP lo chiede. Scrivilo qui, o una volta per tutti i libri in Impostazioni → Nome dell’autore.',
     'export.field.language': 'Lingua',
     'export.field.languagePlaceholder': 'it',
     'export.field.description': 'Descrizione',

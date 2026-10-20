@@ -81,6 +81,19 @@ describe('generateOutlineInputSchema', () => {
     );
   });
 
+  it('accepts the book style, and still accepts older clients that do not send it', () => {
+    for (const styleId of ['suspense', 'mystery', 'thriller']) {
+      expect(generateOutlineInputSchema.safeParse({ ...valido, styleId }).success).toBe(true);
+    }
+    expect(generateOutlineInputSchema.safeParse(valido).success).toBe(true);
+  });
+
+  it('rejects an unknown style', () => {
+    expect(generateOutlineInputSchema.safeParse({ ...valido, styleId: 'romance' }).success).toBe(
+      false,
+    );
+  });
+
   it('rejects a requestId with characters unsafe for a Firestore id', () => {
     expect(generateOutlineInputSchema.safeParse({ ...valido, requestId: 'a/b' }).success).toBe(
       false,

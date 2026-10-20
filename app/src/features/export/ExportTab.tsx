@@ -8,7 +8,14 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
+import {
+  ArchesFill,
+  Card,
+  Chip,
+  OrnamentDivider,
+  PrimaryButton,
+  useBottomClearance,
+} from '../../components';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
@@ -31,6 +38,8 @@ export interface ExportTabProps {
   fileSink: ExportFileSink;
   /** Resolves true when local writes reached the server, false on timeout. */
   waitForSync?: () => Promise<boolean>;
+  /** The author name from Settings: offered for a book that has none. */
+  defaultAuthor?: string;
 }
 
 type Progress =
@@ -51,13 +60,20 @@ export function ExportTab({
   pendingSuggestions,
   fileSink,
   waitForSync,
+  defaultAuthor,
 }: ExportTabProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
+  const bottom = useBottomClearance(spacing.xl);
 
   // The fields start from the book and stay the user's until they save: remote
   // updates (observeBook) do not overwrite what they are typing.
   const [title, setTitle] = useState(book.title);
-  const [author, setAuthor] = useState(book.author);
+  // a book without an author starts from the name in Settings (still editable),
+  // also when that name arrives after the tab opened: until the user types,
+  // the field shows the book's author or, failing that, the Settings name
+  const [typedAuthor, setAuthor] = useState<string | null>(null);
+  const author =
+    typedAuthor ?? (book.author.trim() === '' ? (defaultAuthor?.trim() ?? '') : book.author);
   const [language, setLanguage] = useState(book.language);
   const [description, setDescription] = useState(book.description);
   const [metadataSaved, setMetadataSaved] = useState(false);
@@ -104,6 +120,12 @@ export function ExportTab({
       message: t('export.progress.generating', { format: FORMAT_LABELS[format] }),
     });
     try {
+      // what is on screen is what gets exported: unsaved metadata (a name
+      // offered from Settings, too) is saved on the book first
+      if (metadataDirty) {
+        await bookRepository.updateBook(book.id, { title, author, language, description });
+        setMetadataSaved(true);
+      }
       // the callable reads from the server: let the local saves reach it first
       const synced = waitForSync ? await waitForSync().catch(() => false) : true;
       const file = await exportService.exportBook({
@@ -154,7 +176,12 @@ export function ExportTab({
   return (
     <ScrollView
       testID="export-tab"
-      contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        padding: spacing.xl,
+        paddingBottom: bottom,
+        gap: spacing.lg,
+      }}
       keyboardShouldPersistTaps="handled"
     >
       <Card style={{ gap: spacing.md }}>
@@ -191,6 +218,19 @@ export function ExportTab({
             placeholderTextColor={colors.textMuted}
             style={fieldStyle}
           />
+          {author.trim() === '' && (
+            <Text
+              testID="export-author-missing"
+              style={{
+                marginTop: spacing.xs,
+                fontFamily: fonts.bodyItalic,
+                fontSize: typeScale.caption,
+                color: colors.textMutedStrong,
+              }}
+            >
+              {t('export.field.authorMissing')}
+            </Text>
+          )}
         </View>
         <View>
           {fieldLabel(t('export.field.language'))}
@@ -341,6 +381,7 @@ export function ExportTab({
           </Text>
         </View>
       )}
+      <ArchesFill />
     </ScrollView>
   );
 }

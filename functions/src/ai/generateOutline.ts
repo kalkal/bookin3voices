@@ -13,7 +13,7 @@ import { logger } from 'firebase-functions';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
-import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION } from './outlinePrompt';
+import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION, outlineStyleOf } from './outlinePrompt';
 import {
   bookForOutlineSchema,
   chapterForOutlineSchema,
@@ -167,7 +167,12 @@ export async function runGenerateOutline(
   await enforceUsageLimit({ db, uid, action: 'generateOutline', now, limits: usageLimits });
 
   const { book, writtenChapterTitles } = await readBookForOutline(db, uid, input.bookId);
-  const prompt = buildOutlinePrompt({ synopsis: input.synopsis, book, writtenChapterTitles });
+  const prompt = buildOutlinePrompt({
+    synopsis: input.synopsis,
+    book,
+    style: outlineStyleOf(input.styleId, book.styleProfileId),
+    writtenChapterTitles,
+  });
   const outline = await generateValidatedOutline(model, prompt);
 
   // Two concurrent calls with the same requestId: the first write wins and the
@@ -207,7 +212,10 @@ export function createGenerateOutlineHandler(
     }
     const parsed = generateOutlineInputSchema.safeParse(request.data);
     if (!parsed.success) {
-      throw new HttpsError('invalid-argument', 'Expected { bookId, synopsis, requestId }.');
+      throw new HttpsError(
+        'invalid-argument',
+        'Expected { bookId, synopsis, requestId, styleId? }.',
+      );
     }
     return runGenerateOutline(deps, uid, parsed.data);
   };

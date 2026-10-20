@@ -12,14 +12,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  ArchesFill,
   Card,
-  CathedralBackdrop,
   OrnamentDivider,
   PrimaryButton,
   RomanNumeral,
+  Screen,
+  useBottomClearance,
 } from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn } from '../../i18n';
@@ -28,7 +29,8 @@ import type { ChapterRepository, ChapterStatus, ChapterSummary } from '../chapte
 import { ExportTab } from '../export';
 import type { BookExportService, ExportFileSink, PendingSuggestionsRepository } from '../export';
 import { SynopsisTab } from '../outline';
-import type { OutlineService } from '../outline';
+import type { OutlineDraftRepository, OutlineService } from '../outline';
+import type { SettingsRepository } from '../settings';
 import { StylePicker } from './StylePicker';
 import type { Book, BookRepository } from './types';
 
@@ -42,6 +44,10 @@ export interface BookScreenProps {
   /** Waits for local writes to reach the server before an export. */
   waitForSync?: () => Promise<boolean>;
   outlineService: OutlineService;
+  /** Keeps the unconfirmed outline preview across tabs; default on the device. */
+  outlineDrafts?: OutlineDraftRepository;
+  /** Read for the author name the Export tab offers to a book without one. */
+  settingsRepository?: SettingsRepository;
   onBack: () => void;
   /** Tap on the row: opens the chapter Editor. `position` is 1-based. */
   onOpenChapter: (chapter: ChapterSummary, position: number) => void;
@@ -64,12 +70,16 @@ export function BookScreen({
   exportFileSink,
   waitForSync,
   outlineService,
+  outlineDrafts,
+  settingsRepository,
   onBack,
   onOpenChapter,
   onDictateChapter,
   onOpenNotes,
 }: BookScreenProps) {
   const { colors, fonts, spacing, radius, typeScale } = useTheme();
+  // the footer already has its own padding: the list only adds the system inset
+  const listBottom = useBottomClearance(0);
 
   const [book, setBook] = useState<Book | null>(null);
   const [chapters, setChapters] = useState<ChapterSummary[] | null>(null);
@@ -77,6 +87,21 @@ export function BookScreen({
   const [reordering, setReordering] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [defaultAuthor, setDefaultAuthor] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (settingsRepository === undefined) return undefined;
+    let cancelled = false;
+    settingsRepository
+      .load()
+      .then((settings) => {
+        if (!cancelled) setDefaultAuthor(settings.authorName);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsRepository]);
 
   useEffect(() => {
     return bookRepository.observeBook(bookId, setBook, () => {});
@@ -250,12 +275,7 @@ export function BookScreen({
   );
 
   return (
-    <SafeAreaView
-      testID="book-screen"
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top', 'bottom']}
-    >
-      {chapters !== null && chapters.length === 0 && <CathedralBackdrop kind="arches" />}
+    <Screen testID="book-screen">
       <View
         style={{
           flexDirection: 'row',
@@ -327,6 +347,7 @@ export function BookScreen({
             bookRepository={bookRepository}
             chapterRepository={chapterRepository}
             outlineService={outlineService}
+            outlineDrafts={outlineDrafts}
           />
         ))}
       {tab === 'export' &&
@@ -339,6 +360,7 @@ export function BookScreen({
             pendingSuggestions={pendingSuggestions}
             fileSink={exportFileSink}
             waitForSync={waitForSync}
+            defaultAuthor={defaultAuthor}
           />
         ))}
 
@@ -357,13 +379,15 @@ export function BookScreen({
           }
           keyExtractor={(chapter) => chapter.id}
           renderItem={renderChapter}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: listBottom }}
+          ListFooterComponentStyle={{ flexGrow: 1 }}
           ListEmptyComponent={
             chapters === null
               ? null
               : placeholder(t('books.noChaptersTitle'), t('books.noChaptersBody'))
           }
           ListFooterComponent={
-            <View style={{ padding: spacing.xl, gap: spacing.md }}>
+            <View style={{ flexGrow: 1, padding: spacing.xl, gap: spacing.md }}>
               <PrimaryButton
                 label={t('books.newChapter')}
                 testID="book-new-chapter"
@@ -388,6 +412,7 @@ export function BookScreen({
                   {t('books.reorderHint')}
                 </Text>
               )}
+              <ArchesFill />
             </View>
           }
         />
@@ -459,7 +484,7 @@ export function BookScreen({
           </Card>
         </View>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 

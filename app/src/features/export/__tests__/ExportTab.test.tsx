@@ -14,12 +14,14 @@ function setup(options?: {
   pending?: number;
   exportService?: BookExportService;
   waitForSync?: () => Promise<boolean>;
+  author?: string;
+  defaultAuthor?: string;
 }) {
   const books = new InMemoryBookRepository();
   const book = books.seed({
     id: 'mulino',
     title: 'Il mulino di Rocca Bassa',
-    author: 'Jane Doe',
+    author: options?.author ?? 'Jane Doe',
     description: 'Un mulino, un segreto.',
     language: 'it',
   });
@@ -35,11 +37,70 @@ function setup(options?: {
         pendingSuggestions={pendingSuggestions}
         fileSink={fileSink}
         waitForSync={options?.waitForSync}
+        defaultAuthor={options?.defaultAuthor}
       />
     </ThemeProvider>,
   );
   return { result, books, exportService, fileSink };
 }
+
+describe('ExportTab — author name', () => {
+  it('a book with no author shows the name from Settings, prefilled and editable', async () => {
+    const screen = await setup({ author: '', defaultAuthor: 'Jane Doe' }).result;
+    expect(await screen.findByTestId('export-author')).toHaveProp('value', 'Jane Doe');
+    expect(screen.queryByTestId('export-author-missing')).toBeNull();
+    await screen.unmount();
+  });
+
+  it('a Settings name that arrives after the tab opened is offered too', async () => {
+    const books = new InMemoryBookRepository();
+    const book = books.seed({ id: 'mulino', title: 'Il mulino', author: '' });
+    const props = {
+      book,
+      bookRepository: books,
+      exportService: new InMemoryBookExportService(),
+      pendingSuggestions: new InMemoryPendingSuggestionsRepository(0),
+      fileSink: new InMemoryExportFileSink(),
+    };
+    const screen = await render(
+      <ThemeProvider>
+        <ExportTab {...props} />
+      </ThemeProvider>,
+    );
+    expect(await screen.findByTestId('export-author')).toHaveProp('value', '');
+    await screen.rerender(
+      <ThemeProvider>
+        <ExportTab {...props} defaultAuthor="Jane Doe" />
+      </ThemeProvider>,
+    );
+    expect(screen.getByTestId('export-author')).toHaveProp('value', 'Jane Doe');
+    await screen.unmount();
+  });
+
+  it("the book's own author wins over the Settings name", async () => {
+    const screen = await setup({ author: 'J. Doe', defaultAuthor: 'Jane Doe' }).result;
+    expect(await screen.findByTestId('export-author')).toHaveProp('value', 'J. Doe');
+    await screen.unmount();
+  });
+
+  it('the export uses the name on screen: a prefilled name is saved on the book first', async () => {
+    const { result, books, exportService } = setup({ author: '', defaultAuthor: 'Jane Doe' });
+    const screen = await result;
+    const spy = jest.spyOn(exportService, 'exportBook');
+    await fireEvent.press(await screen.findByTestId('export-generate'));
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    expect((await books.getBook('mulino'))?.author).toBe('Jane Doe');
+    await screen.unmount();
+  });
+
+  it('with no name anywhere it says so, instead of exporting a nameless book silently', async () => {
+    const screen = await setup({ author: '' }).result;
+    expect(await screen.findByTestId('export-author-missing')).toHaveTextContent(
+      /Nome dell’autore/,
+    );
+    await screen.unmount();
+  });
+});
 
 describe('ExportTab', () => {
   it("shows the book's KDP metadata and saves them after editing", async () => {

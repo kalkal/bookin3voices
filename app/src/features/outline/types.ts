@@ -4,6 +4,8 @@
 
 import { z } from 'zod';
 
+import type { StyleId } from '../books/styles';
+
 /**
  * A card of the proposed outline (corkboard preview): title,
  * summary and beats. It is the shape in which the proposal lives in the UI, editable
@@ -35,6 +37,8 @@ export interface GenerateOutlineRequest {
   bookId: string;
   synopsis: string;
   requestId: string;
+  /** The book's writing style: the outline follows it (Suspense, Mystery, Thriller). */
+  styleId?: StyleId;
 }
 
 /** The service that generates the outline (callable in production, fake in tests/E2E). */

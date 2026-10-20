@@ -13,6 +13,10 @@ export const settings: Namespace = {
     'settings.ai.gemini.flash': 'Quick, inexpensive suggestions',
     'settings.ai.gemini.pro': 'More accurate refinements on difficult passages',
     'settings.writing.section': 'Writing',
+    'settings.writing.authorName': 'Author name',
+    'settings.writing.authorNamePlaceholder': 'The name on your books',
+    'settings.writing.authorNameNote':
+      'New books take it as their author; you can still change it per book in Export.',
     'settings.writing.goal': 'Daily word goal',
     'settings.writing.perDay': 'words per day',
     'settings.look.section': 'Appearance',
@@ -96,6 +100,10 @@ export const settings: Namespace = {
     'settings.ai.gemini.flash': 'Suggerimenti rapidi ed economici',
     'settings.ai.gemini.pro': 'Rifiniture più accurate sui passaggi difficili',
     'settings.writing.section': 'Scrittura',
+    'settings.writing.authorName': 'Nome dell’autore',
+    'settings.writing.authorNamePlaceholder': 'Il nome che vuoi sui tuoi libri',
+    'settings.writing.authorNameNote':
+      'I nuovi libri lo prendono come autore; puoi sempre cambiarlo libro per libro in Esporta.',
     'settings.writing.goal': 'Obiettivo parole giornaliero',
     'settings.writing.perDay': 'parole al giorno',
     'settings.look.section': 'Aspetto',

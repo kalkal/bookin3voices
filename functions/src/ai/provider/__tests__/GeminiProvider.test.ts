@@ -19,6 +19,7 @@ const PROMPT = buildOutlinePrompt({
   synopsis:
     'A beekeeper takes over the hives of an old mill and finds an ancient pact with the valley.',
   book: { title: 'The Mill of Rocca Bassa', genre: 'novel', language: 'en' },
+  style: 'suspense',
   writtenChapterTitles: [],
 });
 const REQUEST = { ...PROMPT, temperature: 0.7, maxOutputTokens: 4096 };

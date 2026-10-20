@@ -4,13 +4,16 @@
 // repositories + InMemoryBookRepository, as for LibraryScreen/NotesScreen.
 
 import { act, fireEvent, render } from '@testing-library/react-native';
-import { Dimensions } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 
+import { comesAfter, layoutRoom } from '../../../testing/arches';
 import { ThemeProvider } from '../../../theme';
 import { DEFAULT_SETTINGS } from '../../settings';
 import type { SettingsRepository } from '../../settings';
 import { InMemoryBookRepository } from '../InMemoryBookRepository';
-import { ProgressScreen } from '../ProgressScreen';
+import { EYE_WATERMARK_OPACITY, ProgressScreen } from '../ProgressScreen';
+import { blend, contrast } from '../../../theme/testing/contrast';
+import { candlelightPalette, paperPalette } from '../../../theme/tokens';
 import { buildHistory, reconcileStreak } from '../dailyProgress';
 import type { DailyProgressRepository } from '../dailyProgress';
 
@@ -138,21 +141,25 @@ describe('ProgressScreen', () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  it('the arches stand behind the screen, below the chart', async () => {
+  it('with room at the bottom the arches stand AFTER the content, never behind it', async () => {
     const { getByTestId } = await renderScreen();
-    expect(getByTestId('cathedral-arches')).toBeOnTheScreen();
+    await layoutRoom(getByTestId('arches-room'), 412, 240);
+    expect(getByTestId('cathedral-arches', { includeHiddenElements: true })).toBeOnTheScreen();
+    expect(comesAfter(getByTestId('progress-screen'), 'progress-week', 'arches-room')).toBe(true);
   });
 
   describe('the eye in the goal ring', () => {
+    // the eye is hidden from screen readers: the queries must look past that
+    const HIDDEN = { includeHiddenElements: true };
     // the jest default font scale is 2 (large); a normal phone is 1
     beforeEach(() => {
       fontScale(1);
     });
     afterEach(() => jest.restoreAllMocks());
 
-    it('with no words written today an eye stands above the 0, which stays readable', async () => {
+    it('with no words written today the eye watches behind the 0, which stays readable', async () => {
       const { getByTestId, getByText } = await renderScreen({ days: {} });
-      expect(getByTestId('goal-eye')).toBeOnTheScreen();
+      expect(getByTestId('goal-eye', HIDDEN)).toBeOnTheScreen();
       expect(getByTestId('progress-ring')).toHaveTextContent(/^0di 500 parole$/);
       expect(getByText(/di 500 parole/)).toBeOnTheScreen();
     });
@@ -160,14 +167,41 @@ describe('ProgressScreen', () => {
     it('with a very large system font the eye steps aside so the numbers fit the ring', async () => {
       fontScale(2);
       const { queryByTestId, getByTestId } = await renderScreen({ days: {} });
-      expect(queryByTestId('goal-eye')).toBeNull();
+      expect(queryByTestId('goal-eye', HIDDEN)).toBeNull();
       expect(getByTestId('progress-ring')).toHaveTextContent(/^0di 500 parole$/);
     });
 
-    it('once words are written the eye gives way to the number', async () => {
-      const { queryByTestId, getByTestId } = await renderScreen();
-      expect(queryByTestId('goal-eye')).toBeNull();
+    it('the eye always stays, a faint watermark behind the number, also with words written', async () => {
+      const { getByTestId } = await renderScreen();
+      const eye = getByTestId('goal-eye', HIDDEN);
+      expect(eye).toBeOnTheScreen();
       expect(getByTestId('progress-ring')).toHaveTextContent(/^512di 500 parole$/);
+      const style = StyleSheet.flatten(eye.props.style);
+      expect(style.position).toBe('absolute');
+      expect(style.opacity).toBe(EYE_WATERMARK_OPACITY);
+      expect(style.pointerEvents).toBe('none');
     });
+
+    it('the eye is decorative: screen readers skip it and read the number', async () => {
+      const { getByTestId, queryByTestId } = await renderScreen({ days: {} });
+      const eye = getByTestId('goal-eye', HIDDEN);
+      expect(queryByTestId('goal-eye')).toBeNull(); // not in the accessibility tree
+      expect(eye.props.accessible).toBe(false);
+      expect(eye.props.accessibilityElementsHidden).toBe(true);
+      expect(eye.props.importantForAccessibility).toBe('no-hide-descendants');
+    });
+  });
+});
+
+// The eye is a PNG in the black-and-gold accent whatever the theme. Worst case for the
+// number: a full gold line of the eye right under a stroke of the digit.
+describe('the word count stays AA over the eye watermark (4.5:1), both themes', () => {
+  const LINE = candlelightPalette.accent;
+  it.each([
+    ['black and gold', candlelightPalette],
+    ['cream', paperPalette],
+  ] as const)('%s: the number keeps 4.5:1 over the eye', (_name, palette) => {
+    const underLine = blend(LINE, palette.background, EYE_WATERMARK_OPACITY);
+    expect(contrast(palette.text, underLine)).toBeGreaterThanOrEqual(4.5);
   });
 });

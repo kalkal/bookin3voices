@@ -17,9 +17,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { OrnamentDivider, PrimaryButton } from '../../components';
+import { OrnamentDivider, PrimaryButton, Screen, useBottomClearance } from '../../components';
 import { SHOW_FREE_TIER_WARNING } from '../../lib/freeTier';
 import { countWords } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
@@ -44,6 +43,7 @@ export function ChapterEditorScreen({
   onBack,
 }: ChapterEditorScreenProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
+  const panelBottom = useBottomClearance(spacing.xl);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -67,10 +67,7 @@ export function ChapterEditorScreen({
       : ' ';
 
   return (
-    <SafeAreaView
-      testID="editor-screen"
-      style={[styles.screen, { backgroundColor: colors.background }]}
-    >
+    <Screen testID="editor-screen">
       <View
         style={[
           styles.header,
@@ -255,7 +252,7 @@ export function ChapterEditorScreen({
             borderTopColor: colors.hairline,
             paddingHorizontal: spacing.xl,
             paddingTop: spacing.lg,
-            paddingBottom: spacing.xl,
+            paddingBottom: panelBottom,
             gap: spacing.md,
           },
         ]}
@@ -292,7 +289,7 @@ export function ChapterEditorScreen({
           />
         </View>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -325,7 +322,6 @@ function RoundButton({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center' },
   headerText: { flex: 1, gap: 2 },
   textArea: { flex: 1 },

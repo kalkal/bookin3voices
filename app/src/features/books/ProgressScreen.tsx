@@ -11,11 +11,18 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, CathedralBackdrop, OrnamentDivider } from '../../components';
+import { ArchesFill, Card, OrnamentDivider, Screen, useBottomClearance } from '../../components';
 import { formatNumber } from '../../lib/text';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -35,8 +42,11 @@ export interface ProgressScreenProps {
   onBack: () => void;
 }
 
-// the eye that watches over the empty goal ring (gold line drawing, decorative)
+// the eye that watches over the goal ring (gold line drawing, decorative): always
+// there, as a faint watermark behind today's number
 const EYE_SOURCE = require('../../../assets/ornaments/eye.png');
+/** Opacity of the eye behind the number. Raising it needs the AA test to still pass. */
+export const EYE_WATERMARK_OPACITY = 0.22;
 /** Above this system font scale the eye is left out of the ring. */
 const EYE_MAX_FONT_SCALE = 1.3;
 
@@ -150,6 +160,7 @@ export function ProgressScreen({
   const { colors, fonts, spacing, radius, typeScale, letterSpacing } = useTheme();
   // with a very large system font the ring has no room for the eye as well as the numbers
   const { fontScale } = useWindowDimensions();
+  const bottom = useBottomClearance(spacing.xl);
 
   const [goal, setGoal] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
@@ -214,12 +225,7 @@ export function ProgressScreen({
   const reached = (words: number) => goal !== null && words >= goal;
 
   return (
-    <SafeAreaView
-      testID="progress-screen"
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top', 'bottom']}
-    >
-      <CathedralBackdrop kind="arches" />
+    <Screen testID="progress-screen">
       <View style={[styles.header, { paddingHorizontal: spacing.lg }]}>
         <Pressable
           testID="progress-back"
@@ -244,7 +250,15 @@ export function ProgressScreen({
       </View>
 
       {view !== null && (
-        <View style={{ paddingHorizontal: spacing.xl, gap: spacing.xl, paddingTop: spacing.md }}>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: spacing.xl,
+            gap: spacing.xl,
+            paddingTop: spacing.md,
+            paddingBottom: bottom,
+          }}
+        >
           {/* Today's goal ring */}
           <View style={{ alignItems: 'center', gap: spacing.sm }} testID="progress-ring">
             <GoalRing
@@ -255,22 +269,27 @@ export function ProgressScreen({
               fillColor={colors.primary}
               holeColor={colors.background}
             >
-              {view.today.words === 0 && fontScale <= EYE_MAX_FONT_SCALE && (
-                <Image
-                  testID="goal-eye"
-                  source={EYE_SOURCE}
-                  style={{ width: 92, height: 58, marginBottom: 2 }}
-                />
-              )}
-              <Text
-                style={{
-                  fontFamily: fonts.display,
-                  fontSize: typeScale.display,
-                  color: colors.text,
-                }}
-              >
-                {formatNumber(view.today.words)}
-              </Text>
+              <View style={styles.numberBox}>
+                {fontScale <= EYE_MAX_FONT_SCALE && (
+                  <Image
+                    testID="goal-eye"
+                    source={EYE_SOURCE}
+                    accessible={false}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no-hide-descendants"
+                    style={[styles.eye, { opacity: EYE_WATERMARK_OPACITY }]}
+                  />
+                )}
+                <Text
+                  style={{
+                    fontFamily: fonts.display,
+                    fontSize: typeScale.display,
+                    color: colors.text,
+                  }}
+                >
+                  {formatNumber(view.today.words)}
+                </Text>
+              </View>
               <Text
                 style={{
                   fontFamily: fonts.body,
@@ -447,13 +466,27 @@ export function ProgressScreen({
           )}
 
           <OrnamentDivider style={{ alignSelf: 'center', width: 160 }} />
-        </View>
+          <ArchesFill />
+        </ScrollView>
       )}
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  // the eye's box: the number sits in its middle, the label below stays off the drawing
+  numberBox: {
+    minWidth: 92,
+    minHeight: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eye: {
+    position: 'absolute',
+    width: 92,
+    height: 58,
+    pointerEvents: 'none',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

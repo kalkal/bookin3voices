@@ -33,6 +33,7 @@ maybeDescribe('Gemini structured output (real call, fictitious synopsis)', () =>
     const prompt = buildOutlinePrompt({
       synopsis: SINOSSI_FITTIZIA,
       book: { title: 'Il mulino di Rocca Bassa', genre: 'romanzo', language: 'it' },
+      style: 'suspense',
       writtenChapterTitles: ['Il ritorno'],
     });
 

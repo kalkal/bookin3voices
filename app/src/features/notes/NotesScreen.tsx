@@ -12,9 +12,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, CathedralBackdrop, Chip, OrnamentDivider, PrimaryButton } from '../../components';
+import {
+  ArchesFill,
+  Card,
+  Chip,
+  OrnamentDivider,
+  PrimaryButton,
+  Screen,
+  useBottomClearance,
+} from '../../components';
 import { ExpoDictationEngine } from '../dictation';
 import type { DictationEngine } from '../dictation';
 import { t, uiLocale } from '../../i18n';
@@ -59,6 +66,9 @@ export function NotesScreen({
   onBack,
 }: NotesScreenProps) {
   const { colors, fonts, spacing, radius, typeScale, letterSpacing } = useTheme();
+  // the button floats above the navigation bar; the list scrolls clear of the button
+  const fabBottom = useBottomClearance(spacing.xl);
+  const listBottom = useBottomClearance(spacing.xxxl * 3);
 
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [error, setError] = useState(false);
@@ -161,12 +171,7 @@ export function NotesScreen({
   );
 
   return (
-    <SafeAreaView
-      testID="notes-screen"
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top', 'bottom']}
-    >
-      {notes !== null && notes.length === 0 && <CathedralBackdrop kind="arches" />}
+    <Screen testID="notes-screen">
       <View style={[styles.header, { gap: spacing.md, paddingHorizontal: spacing.lg }]}>
         <Pressable
           accessibilityRole="button"
@@ -234,9 +239,11 @@ export function NotesScreen({
         renderItem={renderNote}
         contentContainerStyle={{
           padding: spacing.xl,
-          paddingBottom: spacing.xxxl * 3,
+          paddingBottom: listBottom,
           flexGrow: 1,
         }}
+        ListFooterComponent={<ArchesFill />}
+        ListFooterComponentStyle={{ flexGrow: 1 }}
         ListEmptyComponent={
           notes === null ? null : (
             <View testID="notes-empty" style={{ paddingTop: spacing.xxxl, alignItems: 'center' }}>
@@ -283,7 +290,7 @@ export function NotesScreen({
             shadowColor: colors.shadow,
             opacity: pressed ? 0.9 : 1,
             right: spacing.xl,
-            bottom: spacing.xl,
+            bottom: fabBottom,
           },
         ]}
       >
@@ -419,7 +426,7 @@ export function NotesScreen({
           </Card>
         </View>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 

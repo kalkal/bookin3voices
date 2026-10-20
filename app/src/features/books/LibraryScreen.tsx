@@ -8,13 +8,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Card,
   CathedralBackdrop,
   OrnamentDivider,
   PrimaryButton,
+  Screen,
+  useBottomClearance,
   Wordmark,
 } from '../../components';
 import { formatNumber } from '../../lib/text';
@@ -62,10 +63,15 @@ export function LibraryScreen({
   onOpenProgress,
 }: LibraryScreenProps) {
   const { colors, fonts, spacing, radius, typeScale, letterSpacing } = useTheme();
+  // the + floats above the navigation bar; the list scrolls clear of the + itself
+  const fabBottom = useBottomClearance(spacing.xxl + 4);
+  const listBottom = useBottomClearance(110);
 
   const [books, setBooks] = useState<Book[] | null>(null);
   const [listError, setListError] = useState(false);
   const [dailyGoal, setDailyGoal] = useState<number | null>(null);
+  // the name from Settings: every new book takes it as its author
+  const [authorName, setAuthorName] = useState('');
   const [todayWords, setTodayWords] = useState(0);
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -88,6 +94,7 @@ export function LibraryScreen({
       .then((settings) => {
         if (cancelled) return;
         setDailyGoal(settings.dailyGoalWords);
+        setAuthorName(settings.authorName?.trim() ?? '');
         // reconciles the streak when the Library opens (not shown here):
         // keeps the unpruned counter fresh so it does not restart when opening Progress
         dailyProgressRepository.getStreak(settings.dailyGoalWords).catch(() => {});
@@ -112,7 +119,7 @@ export function LibraryScreen({
     setCreating(false);
     setNewTitle('');
     bookRepository
-      .createBook({ title })
+      .createBook(authorName === '' ? { title } : { title, author: authorName })
       .then((book) => onOpenBook(book))
       .catch(() => setListError(true));
   };
@@ -213,11 +220,7 @@ export function LibraryScreen({
   };
 
   return (
-    <SafeAreaView
-      testID="library-screen"
-      style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top', 'bottom']}
-    >
+    <Screen testID="library-screen">
       <CathedralBackdrop kind="rose" />
       <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
         <View style={styles.headerRow}>
@@ -318,7 +321,7 @@ export function LibraryScreen({
         renderItem={renderBook}
         contentContainerStyle={{
           paddingHorizontal: spacing.xl,
-          paddingBottom: 110,
+          paddingBottom: listBottom,
           gap: spacing.lg,
         }}
         ListEmptyComponent={
@@ -356,7 +359,7 @@ export function LibraryScreen({
         style={{
           position: 'absolute',
           right: spacing.xxl,
-          bottom: spacing.xxl + 4,
+          bottom: fabBottom,
           width: 60,
           height: 60,
           borderRadius: 30,
@@ -439,7 +442,7 @@ export function LibraryScreen({
           </Card>
         </View>
       </Modal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 

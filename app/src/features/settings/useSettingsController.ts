@@ -10,7 +10,7 @@ import { resolveLanguage, setLanguage } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ThemeMode } from '../../theme';
 import type { AiProviderId } from './aiProviders';
-import { DAILY_GOAL_MAX, DAILY_GOAL_MIN, DEFAULT_SETTINGS } from './types';
+import { AUTHOR_NAME_MAX, DAILY_GOAL_MAX, DAILY_GOAL_MIN, DEFAULT_SETTINGS } from './types';
 import type {
   AppSettings,
   BackupFrequency,
@@ -47,6 +47,8 @@ export interface SettingsController {
   setLastBackupAt: (at: number) => void;
   /** Saves the interface language and switches the UI to it right away. */
   setUiLanguage: (preference: UiLanguagePreference) => void;
+  /** Saves the author name new books take (kept as typed; trimmed where it is used). */
+  setAuthorName: (name: string) => void;
 }
 
 export function useSettingsController(repository: SettingsRepository): SettingsController {
@@ -125,9 +127,15 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     [update],
   );
 
+  const setAuthorName = useCallback(
+    (name: string) => update({ authorName: name.slice(0, AUTHOR_NAME_MAX) }),
+    [update],
+  );
+
   return {
     ready,
     settings,
+    setAuthorName,
     setAiProvider,
     setThemePreference,
     setOrnaments,

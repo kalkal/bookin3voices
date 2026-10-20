@@ -86,6 +86,48 @@ describe('EpubExporter', () => {
   );
 });
 
+describe('EpubExporter: the author name everywhere, never "anonymous"', () => {
+  async function opfOf(book: BookForExport): Promise<string> {
+    const zip = await JSZip.loadAsync(await new EpubExporter().render(book, GENERATED_AT));
+    const opfFile = Object.keys(zip.files).find((name) => name.endsWith('.opf'));
+    return (await zip.file(opfFile as string)?.async('string')) as string;
+  }
+
+  it('creator, publisher and rights carry the author name, with the year of the export', async () => {
+    const opf = await opfOf(BOOK);
+    expect(opf).toContain('<dc:creator id="creator">Jane Doe</dc:creator>');
+    expect(opf).toContain('<dc:publisher>Jane Doe</dc:publisher>');
+    expect(opf).toContain('<dc:rights>Copyright &#x00A9; 2026 by Jane Doe</dc:rights>');
+    expect(opf).not.toContain('anonymous');
+  });
+
+  it('the name is escaped in the package (a name with & or < stays valid XML)', async () => {
+    const opf = await opfOf({ ...BOOK, author: 'Tom & <Jerry>' });
+    expect(opf).toContain('<dc:publisher>Tom &amp; &lt;Jerry&gt;</dc:publisher>');
+    expect(opf).not.toContain('<Jerry>');
+  });
+
+  it('with no author name at all: no invented "anonymous", and no empty elements', async () => {
+    const opf = await opfOf({ ...BOOK, author: '  ' });
+    expect(opf).not.toContain('anonymous');
+    expect(opf).not.toContain('<dc:creator');
+    expect(opf).not.toContain('<dc:publisher');
+    expect(opf).not.toContain('<dc:rights');
+  });
+});
+
+describe('DocxExporter: the author name', () => {
+  it('title page, creator and last modified by: the author, never "Un-named"', async () => {
+    const zip = await JSZip.loadAsync(await new DocxExporter().render(BOOK, GENERATED_AT));
+    const document = (await zip.file('word/document.xml')?.async('string')) as string;
+    expect(document).toContain('Jane Doe');
+    const core = (await zip.file('docProps/core.xml')?.async('string')) as string;
+    expect(core).toContain('<dc:creator>Jane Doe</dc:creator>');
+    expect(core).toContain('<cp:lastModifiedBy>Jane Doe</cp:lastModifiedBy>');
+    expect(core).not.toContain('Un-named');
+  });
+});
+
 describe('DocxExporter', () => {
   it('generates an openable DOCX: OOXML structure, index and chapters', async () => {
     const buffer = await new DocxExporter().render(BOOK, GENERATED_AT);

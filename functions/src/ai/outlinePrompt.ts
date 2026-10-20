@@ -7,9 +7,15 @@
 // context; the model does NOT propose them again, and the outline continues
 // from where the book has got to. The real additive merge still belongs to the
 // app: the prompt is the first line of defense, not the guarantee.
+//
+// The book's writing style (Suspense / Mystery / Thriller, styles.ts) shapes the
+// structure: the same synopsis gives a different outline for a whodunit and for
+// a thriller.
+
+import { resolveStyleId, STYLES, type StyleId } from './styles';
 
 /** Prompt version: bump on EVERY change to the text or the schema. */
-export const OUTLINE_PROMPT_VERSION = 1;
+export const OUTLINE_PROMPT_VERSION = 2;
 
 export interface OutlinePromptInput {
   synopsis: string;
@@ -18,6 +24,8 @@ export interface OutlinePromptInput {
     genre: string;
     language: string;
   };
+  /** The book's writing style: shapes the structure of the outline. */
+  style: StyleId;
   /** Titles of chapters with text (non-empty rawText), in order: context only. */
   writtenChapterTitles: string[];
 }
@@ -69,12 +77,40 @@ const SYSTEM_INSTRUCTION = [
   'Per ogni capitolo proponi: un titolo evocativo ma sobrio, un riassunto di 2–4 frasi,',
   'e da 3 a 5 beat narrativi (gli snodi concreti della scena, in ordine).',
   'Decidi tu il numero di capitoli in base al respiro della storia.',
+  'Costruisci la scaletta secondo lo stile del libro indicato: ritmo, struttura e',
+  'finali di capitolo devono servire quel genere, non uno generico.',
   'Scrivi tutto nella lingua del libro indicata.',
   'Se ti vengono elencati capitoli già scritti, NON riproporli e non riscriverli:',
   'la tua scaletta copre solo la parte di storia che manca, proseguendo con coerenza',
   'da dove i capitoli esistenti sono arrivati.',
   'Rispondi SOLO con il JSON conforme allo schema richiesto, senza testo attorno.',
 ].join('\n');
+
+/** What each style asks of the STRUCTURE of the book (not of the prose). */
+const STYLE_STRUCTURE: Record<StyleId, string> = {
+  suspense:
+    'la minaccia si sente prima di vederla: crescendo lento che accelera, ogni capitolo chiude su un’inquietudine nuova, la rivelazione arriva tardi.',
+  mystery:
+    'una domanda centrale (chi, come, perché) aperta presto; indizi distribuiti con fair play tra i capitoli, false piste, e un finale che riordina gli indizi già visti.',
+  thriller:
+    'pericolo concreto e una scadenza fin dall’inizio; capitoli brevi e serrati, colpi di scena, finali sospesi che spingono al capitolo dopo.',
+};
+
+/**
+ * The style of an outline: the one the app sends (the user may have just
+ * changed it), else the one saved on the book, else the default.
+ */
+export function outlineStyleOf(requested: StyleId | undefined, bookStyle: unknown): StyleId {
+  return requested ?? resolveStyleId(bookStyle);
+}
+
+function styleBlock(style: StyleId): string {
+  const info = STYLES.find((candidate) => candidate.id === style) ?? STYLES[0];
+  return [
+    `Stile del libro: ${info?.label.it ?? style} — ${info?.summary.it ?? ''}`,
+    `Struttura richiesta dallo stile: ${STYLE_STRUCTURE[style]}`,
+  ].join('\n');
+}
 
 function writtenChaptersBlock(titles: string[]): string {
   if (titles.length === 0) return '';
@@ -93,6 +129,7 @@ export function buildOutlinePrompt(input: OutlinePromptInput): OutlinePrompt {
     `Libro: «${input.book.title}»`,
     `Genere: ${input.book.genre === '' ? 'non indicato' : input.book.genre}`,
     `Lingua del libro: ${input.book.language === '' ? 'it' : input.book.language}`,
+    styleBlock(input.style),
     writtenChaptersBlock(input.writtenChapterTitles),
     'Sinossi:',
     input.synopsis,

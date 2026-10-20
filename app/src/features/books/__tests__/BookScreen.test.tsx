@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import { comesAfter, layoutRoom } from '../../../testing/arches';
 import { ThemeProvider } from '../../../theme';
 import { InMemoryChapterRepository } from '../../chapters';
 import {
@@ -7,7 +8,7 @@ import {
   InMemoryExportFileSink,
   InMemoryPendingSuggestionsRepository,
 } from '../../export';
-import { InMemoryOutlineService } from '../../outline';
+import { InMemoryOutlineDraftRepository, InMemoryOutlineService } from '../../outline';
 import { BookScreen } from '../BookScreen';
 import { InMemoryBookRepository } from '../InMemoryBookRepository';
 
@@ -57,6 +58,7 @@ function renderBook(overrides?: {
         pendingSuggestions={new InMemoryPendingSuggestionsRepository()}
         exportFileSink={new InMemoryExportFileSink()}
         outlineService={new InMemoryOutlineService()}
+        outlineDrafts={new InMemoryOutlineDraftRepository()}
         onBack={onBack}
         onOpenChapter={onOpenChapter}
         onDictateChapter={onDictateChapter}
@@ -68,14 +70,46 @@ function renderBook(overrides?: {
 }
 
 describe('BookScreen', () => {
-  it('the arches stand behind a book with no chapters yet, not behind one with chapters', async () => {
+  it('the outline preview is still there after a look at the chapters', async () => {
+    const screen = await renderBook({ empty: true }).result;
+    await fireEvent.press(await screen.findByTestId('book-tab-synopsis'));
+    await fireEvent.changeText(await screen.findByTestId('synopsis-input'), 'Una trama di prova.');
+    await fireEvent.press(screen.getByTestId('synopsis-generate'));
+    expect(await screen.findByTestId('outline-card-0')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('book-tab-chapters'));
+    expect(screen.queryByTestId('outline-card-0')).toBeNull();
+    await fireEvent.press(screen.getByTestId('book-tab-synopsis'));
+    expect(await screen.findByTestId('outline-card-0')).toBeOnTheScreen();
+    expect(screen.getByTestId('outline-confirm')).toHaveTextContent(/Crea 2 capitoli/);
+    await screen.unmount();
+  });
+
+  it('the arches stand under the chapter list wherever it leaves room, never behind it', async () => {
     const vuoto = await renderBook({ empty: true }).result;
     expect(await vuoto.findByTestId('book-new-chapter')).toBeOnTheScreen();
-    expect(vuoto.getByTestId('cathedral-arches')).toBeOnTheScreen();
+    await layoutRoom(vuoto.getByTestId('arches-room'), 412, 300);
+    expect(
+      vuoto.getByTestId('cathedral-arches', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(comesAfter(vuoto.getByTestId('book-screen'), 'book-new-chapter', 'arches-room')).toBe(
+      true,
+    );
     await vuoto.unmount();
+
+    // with chapters too: the rule is the room left, not the number of chapters
     const pieno = await renderBook().result;
     expect(await pieno.findByText('La piena')).toBeOnTheScreen();
-    expect(pieno.queryByTestId('cathedral-arches')).toBeNull();
+    await layoutRoom(pieno.getByTestId('arches-room'), 412, 200);
+    expect(
+      pieno.getByTestId('cathedral-arches', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(comesAfter(pieno.getByTestId('book-screen'), 'book-chapter-c3', 'arches-room')).toBe(
+      true,
+    );
+    // a long list leaves no room: no arches squeezed under it
+    await layoutRoom(pieno.getByTestId('arches-room'), 412, 20);
+    expect(pieno.queryByTestId('cathedral-arches', { includeHiddenElements: true })).toBeNull();
   });
 
   it('shows header, Roman numerals and color-coded chapter statuses', async () => {

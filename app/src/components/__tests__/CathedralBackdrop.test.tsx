@@ -7,29 +7,17 @@ import { candlelightPalette, paperPalette } from '../../theme/tokens';
 import { CATHEDRAL_OPACITY, CathedralBackdrop } from '../CathedralBackdrop';
 
 describe('CathedralBackdrop', () => {
-  it.each(['rose', 'arches'] as const)('draws the %s behind the screen, faint', async (kind) => {
-    const { getByTestId } = await render(
-      <ThemeProvider>
-        <CathedralBackdrop kind={kind} />
-      </ThemeProvider>,
-    );
-    const drawing = getByTestId(`cathedral-${kind}`);
-    expect(drawing).toHaveStyle({ opacity: CATHEDRAL_OPACITY, position: 'absolute' });
-  });
-
-  it('the rose window hangs at the top of the screen, the arches stand at the bottom', async () => {
+  it('draws the rose window behind the Library, faint, hanging from the top', async () => {
     const { getByTestId } = await render(
       <ThemeProvider>
         <CathedralBackdrop kind="rose" />
-        <CathedralBackdrop kind="arches" />
       </ThemeProvider>,
     );
-    const rose = StyleSheet.flatten(getByTestId('cathedral-rose').props.style);
-    expect(rose.top).toBeDefined();
-    expect(rose.bottom).toBeUndefined();
-    const arches = StyleSheet.flatten(getByTestId('cathedral-arches').props.style);
-    expect(arches.bottom).toBeDefined();
-    expect(arches.top).toBeUndefined();
+    const rose = getByTestId('cathedral-rose');
+    expect(rose).toHaveStyle({ opacity: CATHEDRAL_OPACITY, position: 'absolute' });
+    const style = StyleSheet.flatten(rose.props.style);
+    expect(style.top).toBeDefined();
+    expect(style.bottom).toBeUndefined();
   });
 
   it('is not drawn when the switch in Settings is off', async () => {
@@ -44,10 +32,10 @@ describe('CathedralBackdrop', () => {
   it('never takes a touch from the screen under it', async () => {
     const { getByTestId } = await render(
       <ThemeProvider>
-        <CathedralBackdrop kind="arches" />
+        <CathedralBackdrop kind="rose" />
       </ThemeProvider>,
     );
-    expect(getByTestId('cathedral-arches')).toHaveStyle({ pointerEvents: 'none' });
+    expect(getByTestId('cathedral-rose')).toHaveStyle({ pointerEvents: 'none' });
   });
 });
 

@@ -21,6 +21,7 @@ export const outline: Namespace = {
     'outline.synopsisPlaceholder':
       'The plot of the book in a few lines: the outline starts from here.',
     'outline.saveSynopsis': 'Save synopsis',
+    'outline.thinSynopsis': 'Write a few lines more for a better outline.',
     'outline.synopsisSaved': 'Synopsis saved ✓',
     'outline.outlineTitle': 'Chapter outline',
     'outline.writtenKept_one': 'The chapter already written stays untouched',
@@ -67,6 +68,7 @@ export const outline: Namespace = {
     'outline.synopsisTitle': 'Sinossi',
     'outline.synopsisPlaceholder': 'La trama del libro, in poche righe: da qui nasce la scaletta.',
     'outline.saveSynopsis': 'Salva sinossi',
+    'outline.thinSynopsis': 'Scrivi qualche riga in più per una scaletta migliore.',
     'outline.synopsisSaved': 'Sinossi salvata ✓',
     'outline.outlineTitle': 'Scaletta capitoli',
     'outline.writtenKept_one': 'Il capitolo già scritto resta intoccato',

@@ -19,9 +19,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Chip } from '../../components';
+import { Card, Chip, Screen, useBottomClearance } from '../../components';
 import type { ChipTone } from '../../components';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -38,16 +37,14 @@ export interface ReviewScreenProps {
 
 export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
+  const footerBottom = useBottomClearance(spacing.md);
   const [filter, setFilter] = useState<'all' | SuggestionKind>('all');
 
   const pending = controller.suggestions.filter((s) => s.state === 'pending');
   const visible = filter === 'all' ? pending : pending.filter((s) => s.kind === filter);
 
   return (
-    <SafeAreaView
-      testID="review-screen"
-      style={[styles.screen, { backgroundColor: colors.background }]}
-    >
+    <Screen testID="review-screen">
       <View
         style={[
           styles.header,
@@ -178,7 +175,8 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
           {
             borderTopColor: colors.hairline,
             paddingHorizontal: spacing.xl,
-            paddingVertical: spacing.md,
+            paddingTop: spacing.md,
+            paddingBottom: footerBottom,
             gap: spacing.sm,
           },
         ]}
@@ -202,7 +200,7 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
           {t('review.screen.swipeHint')}
         </Text>
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
@@ -443,7 +441,6 @@ function SuggestionCard({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center' },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerText: { flex: 1, gap: 2 },

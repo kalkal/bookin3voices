@@ -4,7 +4,7 @@
 // geminiOutline.smoke.test.ts. The following is verified:
 //  - happy path: validated outline and users/{uid}/outlines/{requestId} registry entry;
 //  - context: chapters with text enter the prompt as "already written",
-//    empty ones do not;
+//    empty ones do not; the book style (or the one the app sends) shapes it;
 //  - idempotency on requestId: retry → same response, ONE single model
 //    call; same requestId on another book → already-exists;
 //  - retry on non-conforming output (1 extra attempt, then 'unavailable');
@@ -163,6 +163,19 @@ describe('generateOutline (Firestore emulator, fake model)', () => {
       promptVersion: OUTLINE_PROMPT_VERSION,
       createdAt: NOW,
     });
+  });
+
+  it('the book style reaches the prompt; the style sent by the app wins over the saved one', async () => {
+    const uid = 'utente-outline-stile';
+    const bookId = await seedBook(uid);
+    await db.doc(`users/${uid}/books/${bookId}`).update({ styleProfileId: 'mystery' });
+    const model = new FakeOutlineModel();
+
+    await run(model, uid, input(bookId, 'req-stile-1'));
+    expect(model.prompts[0]?.userText).toContain('Stile del libro: Mystery (giallo)');
+
+    await run(model, uid, { ...input(bookId, 'req-stile-2'), styleId: 'thriller' });
+    expect(model.prompts[1]?.userText).toContain('Stile del libro: Thriller');
   });
 
   it('idempotency: retry with the same requestId → same response, ONE model call', async () => {

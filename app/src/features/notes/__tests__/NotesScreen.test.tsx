@@ -3,10 +3,13 @@
 // voice capture (voice commands → text, "Salva idea" → createNote).
 
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { FakeDictationEngine } from '../../dictation';
 import { InMemoryNoteRepository } from '../InMemoryNoteRepository';
 import { NotesScreen } from '../NotesScreen';
+import { comesAfter, layoutRoom } from '../../../testing/arches';
 import { ThemeProvider } from '../../../theme';
 
 const BOOK = 'libro-test';
@@ -37,6 +40,33 @@ async function renderScreen(options?: { seed?: (repo: InMemoryNoteRepository) =>
   return { engine, repository, onBack, ...utils };
 }
 
+describe('NotesScreen — bottom button', () => {
+  it('"Detta un\'idea" stays above the Android navigation bar, with room to spare', async () => {
+    const screen = await render(
+      <SafeAreaProvider
+        initialMetrics={{
+          frame: { x: 0, y: 0, width: 360, height: 780 },
+          insets: { top: 24, left: 0, right: 0, bottom: 48 },
+        }}
+      >
+        <ThemeProvider>
+          <NotesScreen
+            bookId={BOOK}
+            bookTitle="Le arnie del mulino"
+            noteRepository={new InMemoryNoteRepository(tickingClock())}
+            engine={new FakeDictationEngine()}
+            onBack={jest.fn()}
+          />
+        </ThemeProvider>
+      </SafeAreaProvider>,
+    );
+    await act(async () => {});
+    const fab = StyleSheet.flatten(screen.getByTestId('notes-fab').props.style);
+    expect(fab.bottom).toBeGreaterThanOrEqual(48 + 16);
+    await screen.unmount();
+  });
+});
+
 describe('NotesScreen — opening and list', () => {
   it('shows the book eyebrow, "Taccuino" and the notes (most recent first)', async () => {
     const { getByText, getAllByText } = await renderScreen({
@@ -59,14 +89,26 @@ describe('NotesScreen — opening and list', () => {
     expect(getByText('Il taccuino è vuoto')).toBeTruthy();
   });
 
-  it('the arches stand behind the empty notebook, and only while it is empty', async () => {
+  it('the arches stand under the notes wherever there is room, never behind a card', async () => {
     const vuoto = await renderScreen();
-    expect(vuoto.getByTestId('cathedral-arches')).toBeOnTheScreen();
+    await layoutRoom(vuoto.getByTestId('arches-room'), 412, 300);
+    expect(
+      vuoto.getByTestId('cathedral-arches', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(comesAfter(vuoto.getByTestId('notes-screen'), 'notes-empty', 'arches-room')).toBe(true);
     await vuoto.unmount();
     const pieno = await renderScreen({
       seed: (repo) => repo.seed(BOOK, { text: 'Una nota', tag: 'trama' }),
     });
-    expect(pieno.queryByTestId('cathedral-arches')).toBeNull();
+    const note = pieno.getByText('Una nota');
+    await layoutRoom(pieno.getByTestId('arches-room'), 412, 300);
+    expect(
+      pieno.getByTestId('cathedral-arches', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(note).toBeOnTheScreen();
+    expect(comesAfter(pieno.getByTestId('notes-screen'), 'notes-filter-all', 'arches-room')).toBe(
+      true,
+    );
   });
 });
 
