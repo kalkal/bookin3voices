@@ -39,7 +39,16 @@
           "speechRecognitionPermission": "Serve il riconoscimento vocale per trascrivere la dettatura dei capitoli."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 188,
+          "backgroundColor": "#121012",
+          "resizeMode": "contain"
+        }
+      ]
     ]
   }
 }
