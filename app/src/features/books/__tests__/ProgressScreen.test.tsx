@@ -4,6 +4,7 @@
 // repositories + InMemoryBookRepository, as for LibraryScreen/NotesScreen.
 
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 
 import { ThemeProvider } from '../../../theme';
 import { DEFAULT_SETTINGS } from '../../settings';
@@ -64,6 +65,13 @@ async function renderScreen(overrides?: {
     await Promise.resolve();
   });
   return { books, onBack, ...utils };
+}
+
+/** The system font scale the screen reads (the jest default is 2; a normal phone is 1). */
+function fontScale(value: number) {
+  jest
+    .spyOn(Dimensions, 'get')
+    .mockReturnValue({ width: 412, height: 915, scale: 2, fontScale: value });
 }
 
 describe('ProgressScreen', () => {
@@ -136,11 +144,24 @@ describe('ProgressScreen', () => {
   });
 
   describe('the eye in the goal ring', () => {
+    // the jest default font scale is 2 (large); a normal phone is 1
+    beforeEach(() => {
+      fontScale(1);
+    });
+    afterEach(() => jest.restoreAllMocks());
+
     it('with no words written today an eye stands above the 0, which stays readable', async () => {
       const { getByTestId, getByText } = await renderScreen({ days: {} });
       expect(getByTestId('goal-eye')).toBeOnTheScreen();
       expect(getByTestId('progress-ring')).toHaveTextContent(/^0di 500 parole$/);
       expect(getByText(/di 500 parole/)).toBeOnTheScreen();
+    });
+
+    it('with a very large system font the eye steps aside so the numbers fit the ring', async () => {
+      fontScale(2);
+      const { queryByTestId, getByTestId } = await renderScreen({ days: {} });
+      expect(queryByTestId('goal-eye')).toBeNull();
+      expect(getByTestId('progress-ring')).toHaveTextContent(/^0di 500 parole$/);
     });
 
     it('once words are written the eye gives way to the number', async () => {

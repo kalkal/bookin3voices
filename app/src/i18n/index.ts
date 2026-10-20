@@ -16,6 +16,7 @@ import { notes } from './notes';
 import { outline } from './outline';
 import { review } from './review';
 import { settings } from './settings';
+import { startup } from './startup';
 
 export type Lang = 'en' | 'it';
 export type Dictionary = Record<string, string>;
@@ -34,6 +35,7 @@ export const NAMESPACES: Record<string, Namespace> = {
   outline,
   review,
   settings,
+  startup,
 };
 
 function merge(lang: Lang): Dictionary {

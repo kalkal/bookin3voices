@@ -209,6 +209,12 @@ describe('SettingsScreen', () => {
     // Settings itself has little room for it: no arches behind this screen
     expect(prima.queryByTestId('cathedral-arches')).toBeNull();
 
+    // a screen reader hears a switch, with its state
+    expect((await prima.findByTestId('ornaments-toggle')).props).toMatchObject({
+      accessibilityRole: 'switch',
+      accessibilityState: { checked: true },
+    });
+
     await fireEvent.press(await prima.findByTestId('ornaments-toggle'));
     expect(prima.getByTestId('ornaments-probe')).toHaveTextContent('off');
     await waitFor(() =>

@@ -169,4 +169,26 @@ describe('App', () => {
     const library = await screen.findByTestId('library-screen');
     await waitFor(() => expect(library).toHaveStyle({ backgroundColor: paperPalette.background }));
   });
+
+  it('while the app opens, the startup screen is shown, not a blank one', async () => {
+    const screen = await render(
+      <App signIn={() => new Promise<string>(() => {})} createServices={() => testServices()} />,
+    );
+    await act(async () => {});
+    expect(await screen.findByTestId('startup-screen')).toBeOnTheScreen();
+    await screen.unmount();
+  });
+
+  it('if opening fails the Retry button tries again and the Library opens', async () => {
+    const signIn = jest
+      .fn<Promise<string>, []>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue('utente-di-prova');
+    const screen = await render(<App signIn={signIn} createServices={() => testServices()} />);
+    await act(async () => {});
+    await fireEvent.press(await screen.findByTestId('startup-retry'));
+    expect(await screen.findByTestId('library-screen')).toBeOnTheScreen();
+    expect(signIn).toHaveBeenCalledTimes(2);
+    await screen.unmount();
+  });
 });

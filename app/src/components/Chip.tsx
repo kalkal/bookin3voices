@@ -21,6 +21,8 @@ interface ChipProps {
   uppercase?: boolean;
   /** Italic (voice commands). */
   italic?: boolean;
+  /** Used as an on/off switch: a screen reader hears its role and its state. */
+  toggle?: boolean;
   testID?: string;
 }
 
@@ -31,6 +33,7 @@ export function Chip({
   tone,
   uppercase = false,
   italic = false,
+  toggle = false,
   testID,
 }: ChipProps) {
   const { colors, radius, spacing, typeScale, letterSpacing, fonts } = useTheme();
@@ -46,7 +49,10 @@ export function Chip({
 
   return (
     <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityRole={toggle ? 'switch' : onPress ? 'button' : undefined}
+      accessibilityState={toggle ? { checked: selected } : undefined}
+      // react-native-web ignores accessibilityState; the web switch needs aria-checked
+      aria-checked={toggle ? selected : undefined}
       onPress={onPress}
       disabled={onPress === undefined}
       testID={testID}

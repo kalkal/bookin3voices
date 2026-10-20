@@ -12,12 +12,13 @@
  */
 import { StatusBar } from 'expo-status-bar';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { BackHandler, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { resolveLanguage, setLanguage, t } from './src/i18n';
 import { useLanguage } from './src/i18n/useLanguage';
-import { ThemeProvider, candlelightPalette, useAppFonts, useTheme } from './src/theme';
+import { StartupScreen } from './src/features/startup/StartupScreen';
+import { ThemeProvider, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
   BookScreen,
@@ -352,6 +353,8 @@ export default function App({ createServices, signIn }: AppProps = {}) {
   const fontsReady = useAppFonts();
   const [uid, setUid] = useState<string | null>(null);
   const [authError, setAuthError] = useState(false);
+  // bumped by the Retry button of the startup screen: opening is tried again
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -366,9 +369,9 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     return () => {
       cancelled = true;
     };
-    // the sign-in flow is fixed for the lifetime of the app
+    // the sign-in flow is fixed for the lifetime of the app; only a retry reruns it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
 
   const services = useMemo(() => {
     if (uid === null) return null;
@@ -377,46 +380,27 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
 
-  if (!fontsReady || (services === null && !authError)) {
-    // blank screen in the default (black and gold) background until fonts and identity are ready
-    // (no flash of the wrong serif, no Library without data)
-    return <View style={[styles.container, { backgroundColor: candlelightPalette.background }]} />;
+  if (!fontsReady || services === null) {
+    // the opening screen (black, gold mark, slow rays) until fonts and identity are
+    // ready: no flash of the wrong serif, no Library without data; if opening
+    // fails it shows the error with a Retry button instead of staying stuck
+    return (
+      <StartupScreen
+        error={authError}
+        onRetry={() => {
+          setAuthError(false);
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
   }
 
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        {services === null ? (
-          <View
-            testID="auth-error"
-            style={[
-              styles.container,
-              { backgroundColor: candlelightPalette.background, padding: 32 },
-            ]}
-          >
-            <Text style={styles.errorText}>
-              L’app non riesce a preparare l’archivio. Riavviala; se succede in sviluppo, controlla
-              che gli emulatori Firebase siano accesi.
-            </Text>
-          </View>
-        ) : (
-          <AppNavigator services={services} />
-        )}
+        <AppNavigator services={services} />
         <ThemedStatusBar />
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    color: candlelightPalette.text,
-    fontSize: 16,
-    textAlign: 'center',
-  },
-});

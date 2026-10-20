@@ -11,7 +11,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -35,10 +35,12 @@ export interface ProgressScreenProps {
   onBack: () => void;
 }
 
-/** Initial of the weekday (S M T W T F S, in the UI language) from the YYYY-MM-DD key. */
 // the eye that watches over the empty goal ring (gold line drawing, decorative)
 const EYE_SOURCE = require('../../../assets/ornaments/eye.png');
+/** Above this system font scale the eye is left out of the ring. */
+const EYE_MAX_FONT_SCALE = 1.3;
 
+/** Initial of the weekday (S M T W T F S, in the UI language) from the YYYY-MM-DD key. */
 function weekdayInitial(dateKey: string): string {
   const [year, month, day] = dateKey.split('-').map(Number);
   return t('books.weekdayInitials')[new Date(year, month - 1, day).getDay()];
@@ -146,6 +148,8 @@ export function ProgressScreen({
   onBack,
 }: ProgressScreenProps) {
   const { colors, fonts, spacing, radius, typeScale, letterSpacing } = useTheme();
+  // with a very large system font the ring has no room for the eye as well as the numbers
+  const { fontScale } = useWindowDimensions();
 
   const [goal, setGoal] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
@@ -251,7 +255,7 @@ export function ProgressScreen({
               fillColor={colors.primary}
               holeColor={colors.background}
             >
-              {view.today.words === 0 && (
+              {view.today.words === 0 && fontScale <= EYE_MAX_FONT_SCALE && (
                 <Image
                   testID="goal-eye"
                   source={EYE_SOURCE}

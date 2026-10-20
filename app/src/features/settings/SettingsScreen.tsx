@@ -196,6 +196,7 @@ export function SettingsScreen({
             <Chip
               label={t('settings.ornaments.label')}
               testID="ornaments-toggle"
+              toggle
               selected={settings.ornaments ?? true}
               onPress={() => controller.setOrnaments(!(settings.ornaments ?? true))}
             />

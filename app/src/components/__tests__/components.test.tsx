@@ -59,6 +59,29 @@ describe('Chip', () => {
   });
 });
 
+describe('Chip used as a switch', () => {
+  it('tells a screen reader its role and whether it is on', async () => {
+    const { getByTestId, rerender } = await renderWithTheme(
+      <Chip label="Disegno" toggle selected onPress={() => {}} testID="chip" />,
+    );
+    expect(getByTestId('chip').props.accessibilityRole).toBe('switch');
+    expect(getByTestId('chip').props.accessibilityState).toMatchObject({ checked: true });
+    await rerender(
+      <ThemeProvider initialMode="paper">
+        <Chip label="Disegno" toggle selected={false} onPress={() => {}} testID="chip" />
+      </ThemeProvider>,
+    );
+    expect(getByTestId('chip').props.accessibilityState).toMatchObject({ checked: false });
+  });
+
+  it('a plain chip stays a button', async () => {
+    const { getByTestId } = await renderWithTheme(
+      <Chip label="Tutti" onPress={() => {}} testID="chip" />,
+    );
+    expect(getByTestId('chip').props.accessibilityRole).toBe('button');
+  });
+});
+
 describe('Card', () => {
   it('is card paper with a hairline and nearly sharp corners', async () => {
     const { getByTestId } = await renderWithTheme(<Card testID="card" />);
