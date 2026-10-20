@@ -18,15 +18,18 @@
 // mechanical regressions.
 //
 // Usage: npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md]
-// Key: env GEMINI_API_KEY. Fictitious passages ONLY on the free tier.
-// The key is never printed.
+// Provider: AI_PROVIDER (bedrock = Amazon Nova, the default, through the AWS
+// credential chain, e.g. AWS_PROFILE; gemini = env GEMINI_API_KEY), the same
+// factory the callables use. Fictitious passages only. Keys are never printed.
 
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { GeminiRefineModel, isRetryableGeminiError } from '../ai/GeminiRefineModel';
 import { normalizeSuggestions, MAX_SUGGESTIONS } from '../ai/normalizeSuggestions';
-import { buildRefinePrompt } from '../ai/refinePrompt';
+import { createProvider, selectProviderName, type ModelRole } from '../ai/provider/factory';
+import { ProviderModel } from '../ai/provider/ProviderModel';
+import { AiProviderError, isRetryableAiError } from '../ai/provider/types';
+import { buildRefinePrompt, REFINE_TEMPERATURE } from '../ai/refinePrompt';
 import { modelOutputSchema, type ModelOutput, type Suggestion } from '../ai/refineTypes';
 import { loadStyleProfileContent } from '../ai/styleProfileContent';
 import { textHash } from '../ai/textHash';
@@ -260,13 +263,25 @@ function checkBrano(
 
 // ---------- model call with retry and fallback ----------
 
-async function generateWithRetry(
-  models: GeminiRefineModel[],
+/** Model calls made in this run, attempts included (printed at the end: the cost order). */
+let calls = 0;
+
+/** The model answered, but with broken or cut JSON: another attempt can plausibly succeed. */
+function isBrokenReply(error: unknown): boolean {
+  return (
+    error instanceof AiProviderError &&
+    (error.detail.kind === 'invalid_json' || error.detail.kind === 'truncated')
+  );
+}
+
+export async function generateWithRetry(
+  models: ProviderModel[],
   prompt: ReturnType<typeof buildRefinePrompt>,
 ): Promise<{ output: ModelOutput; modelName: string }> {
   let lastError: unknown;
-  const attempts: GeminiRefineModel[] = [models[0] as GeminiRefineModel, ...models];
+  const attempts: ProviderModel[] = [models[0] as ProviderModel, ...models];
   for (const model of attempts) {
+    calls += 1;
     try {
       const raw = await model.generate(prompt);
       return { output: modelOutputSchema.parse(raw), modelName: model.modelName };
@@ -275,11 +290,11 @@ async function generateWithRetry(
       const label = error instanceof Error ? error.message.slice(0, 160) : String(error);
       console.warn(`  attempt failed on ${model.modelName}: ${label}`);
       if (
-        !isRetryableGeminiError(error) &&
+        !isRetryableAiError(error) &&
+        !isBrokenReply(error) &&
         !(error instanceof Error && error.name === 'ZodError')
       ) {
-        // non-retryable errors (e.g. 400): no point insisting on the same input
-        if (error instanceof SyntaxError) continue; // broken JSON: retry
+        // non-retryable errors (e.g. auth, 400): no point insisting on the same input
         throw error;
       }
     }
@@ -335,23 +350,43 @@ function argValue(name: string): string | undefined {
 
 async function main(): Promise<void> {
   const startedAt = new Date();
-  // Defaults ALIGNED with production (functions/.env, ai/models.ts): without
-  // arguments the runner must exercise the model that is ACTUALLY deployed,
-  // otherwise the regression brake would report green on a model other than
-  // the one in service. Same env var names as the config (GEMINI_MODEL_REFINE*).
-  const primaryName = argValue('model') ?? process.env.GEMINI_MODEL_REFINE ?? 'gemini-3.5-flash';
-  const fallbackName =
-    argValue('fallback') ?? process.env.GEMINI_MODEL_REFINE_FALLBACK ?? 'gemini-3.6-flash';
+  // Same provider, model ids and env var names as the callables (AI_PROVIDER,
+  // BEDROCK_MODEL_ID*, GEMINI_MODEL_REFINE*): the script loads functions/.env when
+  // it exists, so without arguments it exercises the configured model; otherwise
+  // the regression brake would report green on a model other than the one in service.
+  // --model / --fallback override the configured model ids of the selected provider.
+  const envFile = path.resolve(__dirname, '..', '..', '.env');
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
+  const env = { ...process.env };
+  const providerName = selectProviderName(env);
+  const primaryArg = argValue('model');
+  const fallbackArg = argValue('fallback');
+  if (providerName === 'bedrock') {
+    if (primaryArg !== undefined) env.BEDROCK_MODEL_ID = primaryArg;
+    if (fallbackArg !== undefined) env.BEDROCK_MODEL_ID_FALLBACK = fallbackArg;
+  }
+  const geminiNames: Record<ModelRole, string> = {
+    primary: primaryArg ?? env.GEMINI_MODEL_REFINE ?? 'gemini-3.5-flash',
+    fallback: fallbackArg ?? env.GEMINI_MODEL_REFINE_FALLBACK ?? 'gemini-3.6-flash',
+    outline: env.GEMINI_MODEL_PRO ?? '',
+  };
   const only = argValue('only');
   const out = argValue('out');
   const dry = process.argv.includes('--dry');
 
-  const apiKey = dry ? 'dry-run' : resolveApiKey();
-  const primary = new GeminiRefineModel({ model: () => primaryName, apiKey: () => apiKey });
+  const deps = {
+    env,
+    gemini: { model: (role: ModelRole) => geminiNames[role], apiKey: resolveApiKey },
+  };
+  const modelFor = (role: ModelRole) =>
+    new ProviderModel(() => createProvider(deps, role), REFINE_TEMPERATURE);
+  const primary = modelFor('primary');
   const models = [primary];
-  if (fallbackName !== '' && fallbackName !== primaryName) {
-    models.push(new GeminiRefineModel({ model: () => fallbackName, apiKey: () => apiKey }));
+  const fallback = modelFor('fallback');
+  if (fallback.modelName !== '' && fallback.modelName !== primary.modelName) {
+    models.push(fallback);
   }
+  console.log(`Provider ${providerName}: ${models.map((m) => m.modelName).join(' → fallback ')}`);
 
   const goldenDir = path.resolve(
     __dirname,
@@ -416,11 +451,15 @@ async function main(): Promise<void> {
     console.log(`\nReport written to ${out}`);
   }
   console.log(`\n${rendered}`);
+  console.log(`\nModel calls: ${calls} (attempts included) for ${reports.length} passage(s).`);
 
   if (reports.some((r) => r.failed)) process.exitCode = 1;
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exitCode = 1;
-});
+// Run only as a script (`npm run golden`), not when a test imports the helpers.
+if (require.main === module) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}

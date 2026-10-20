@@ -21,8 +21,12 @@ the profile must hold up across registers without flattening them.
   rules in `refinePrompt.ts`) and mechanically checks density, the "MUST NOT" zones (from
   `checks.json`, which must stay aligned with the passages: the runner fails loudly if
   they diverge), grammar hierarchy and format; coverage of the "MUST" items is reported
-  as a diagnostic. Key from env `GEMINI_API_KEY`, ONLY fictional passages on the free
-  tier. Options: `-- --model X --fallback Y --only 04 --out report.md --dry`.
+  as a diagnostic. The model comes from the same provider factory as the callables
+  (`AI_PROVIDER`, default `bedrock` = Amazon Nova with the usual AWS credentials, for
+  example `AWS_PROFILE`; `gemini` = key from env `GEMINI_API_KEY`), ONLY fictional
+  passages. It loads `functions/.env` when present (variables already exported win) and
+  prints the number of model calls at the end. Options:
+  `-- --model X --fallback Y --only 04 --out report.md --dry`.
 - For a manual try (e.g. in Google AI Studio): paste the Style Bible and few-shots as the
   system instruction and, as the message, only the "Brano" (passage) section, never the
   "Esito atteso" (expected outcome).
