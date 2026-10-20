@@ -81,8 +81,8 @@ A classic rule of genre writing: adverbs weigh the text down.
 - **When it applies**: the narrator steps between the character and the reader with
   filter verbs: "saw that", "felt that", "noticed that", "realized that", "thought
   that" (when it adds nothing).
-- **What you propose**: direct perception. "Paolo saw that the door was open" → "The
-  door was open". We are already inside the character's eyes: the filter pushes us away.
+- **What you propose**: direct perception. "Ivan saw that the gate was unlocked" → "The
+  gate was unlocked". We are already inside the character's eyes: the filter pushes us away.
 - **Category**: `style`.
 
 ### 5. Show, don't tell
@@ -125,17 +125,17 @@ A classic rule of genre writing: adverbs weigh the text down.
 - **Caution: redundancy ≠ deliberate repetition**: ballast says the same information
   twice *out of distraction* ("nodded his head": with what else?). A word or formula
   that returns *for rhythm* is another thing, even when the two occurrences are very
-  close together, **even in the same sentence**: "the rain made the sound that rain
-  makes on tin roofs", "he answered what he always answered" are refrains in miniature,
+  close together, **even in the same sentence**: "the wind made the noise that wind
+  makes in empty chimneys", "he answered what he always answered" are refrains in miniature,
   not slips. Closeness of occurrences is not a sign of error. If the repetition has a
   shape (the same word in mirrored position, a formula-like cadence, a deliberate echo),
   do not touch it; when in doubt, abstain.
 
 ### 9. Active voice
 
-- **When it applies**: a passive weakens the action and the agent is known ("the letter
-  was opened by his mother").
-- **What you propose**: the active form ("his mother opened the letter"). A passive with
+- **When it applies**: a passive weakens the action and the agent is known ("the parcel
+  was unwrapped by the neighbour").
+- **What you propose**: the active form ("the neighbour unwrapped the parcel"). A passive with
   an unknown agent, or chosen to focus on who undergoes the action, may stay.
 - **Category**: `style`.
 
@@ -157,7 +157,7 @@ punctuation, a few words mistranscribed by speech recognition.
   forms.
 - Clearly rhythmic or deliberate repetitions: anaphora, refrains, formulas that return.
   This holds at **any distance**: a refrain can live across a chapter as well as inside
-  a single sentence ("the rain made the sound that rain makes"). Before proposing a cut
+  a single sentence ("the wind made the noise that wind makes"). Before proposing a cut
   on a repetition, ask yourself whether it has a deliberate shape: if so, or even just
   maybe, leave it alone.
 - The author's images and metaphors: you may point out that an image is confused, but do

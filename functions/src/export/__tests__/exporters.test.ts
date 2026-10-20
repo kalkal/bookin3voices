@@ -119,9 +119,9 @@ describe('exports of an English book carry no Italian fixed texts', () => {
   it('EPUB: "Contents" index and "Chapter I" titles', async () => {
     const zip = await JSZip.loadAsync(await new EpubExporter().render(ENGLISH_BOOK, GENERATED_AT));
     const files = Object.keys(zip.files);
-    const toc = (await zip.file(files.find((n) => n.endsWith('toc.xhtml')) as string)?.async(
-      'string',
-    )) as string;
+    const toc = (await zip
+      .file(files.find((n) => n.endsWith('toc.xhtml')) as string)
+      ?.async('string')) as string;
     expect(toc).toContain('Contents');
     expect(toc).toContain('Chapter I — The stairs');
     expect(toc).not.toMatch(/Indice|Capitolo/);

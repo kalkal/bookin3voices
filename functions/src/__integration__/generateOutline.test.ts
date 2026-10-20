@@ -35,7 +35,7 @@ const OUTLINE_FINTO = {
     },
     {
       title: 'Il patto',
-      summary: 'Tommaso confessa il patto dei pescatori.',
+      summary: 'Ruggero confessa il patto dei pescatori.',
       beats: ['La cantina del bar', 'Il quaderno delle quote', 'La lite sul molo'],
     },
   ],

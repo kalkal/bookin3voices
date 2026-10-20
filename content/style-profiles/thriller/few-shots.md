@@ -8,39 +8,39 @@ model should produce it: exact span, category, one-line rationale, proposals.
 ## Example 1: bring the deadline back
 
 **Text:**
-> The window was open. Elena walked slowly across the room, thinking about everything that
-> could have happened while she was away.
+> The van was where he had left it. Ivan circled it twice, wondering about everything
+> that might have gone wrong inside the bank since the morning.
 
 **Suggestion:**
-- **Span:** `walked slowly across the room, thinking about everything that could have happened while she was away`
+- **Span:** `circled it twice, wondering about everything that might have gone wrong inside the bank since the morning`
 - **Category:** pacing
-- **Rationale:** The thinking stalls the scene and the clock disappears; put the deadline back.
+- **Rationale:** The wondering stalls the scene and the clock disappears; put the deadline back.
 - **Proposals:**
-  1. `crossed the room. 3:12 a.m. Eight minutes.`
-  2. `crossed the room. She had eight minutes.`
+  1. `circled it once. 11:48. Twelve minutes.`
+  2. `circled it once. He had twelve minutes.`
 
 ## Example 2: short sentences in action
 
 **Text:**
-> He grabbed the bag and ran down the stairs as fast as he could while the footsteps above him got louder and louder and he knew they would catch him before he reached the street.
+> She vaulted the turnstile and sprinted along the platform as fast as she could while the whistle behind her got sharper and sharper and she knew the doors would close before she reached the last carriage.
 
 **Suggestion:**
-- **Span:** `ran down the stairs as fast as he could while the footsteps above him got louder and louder and he knew they would catch him before he reached the street`
+- **Span:** `sprinted along the platform as fast as she could while the whistle behind her got sharper and sharper and she knew the doors would close before she reached the last carriage`
 - **Category:** style
 - **Rationale:** One long sentence slows a chase; split it so each beat hits.
 - **Proposals:**
-  1. `ran. Stairs. The footsteps above got louder. Forty steps to the street.`
+  1. `sprinted. Platform. The whistle behind her got sharper. Six carriages to go.`
 
 ## Example 3: land on the turn
 
 **Text:**
-> The line went quiet. She put the phone down and thought about what he had said, and
-> about how tired she was, and then she went to bed.
+> The engine ticked as it cooled. He switched off the headlights and thought about the
+> drive back, and about the coffee he wanted, and then he closed his eyes.
 
 **Suggestion:**
-- **Span:** `She put the phone down and thought about what he had said, and about how tired she was, and then she went to bed.`
+- **Span:** `He switched off the headlights and thought about the drive back, and about the coffee he wanted, and then he closed his eyes.`
 - **Category:** pacing
 - **Rationale:** The chapter ends on rest; end on the turn instead.
 - **Proposals:**
-  1. `She put the phone down. Behind her, the door handle moved.`
-  2. `She put the phone down. The number on the screen was her own.`
+  1. `He switched off the headlights. In the mirror, the back seat was not empty.`
+  2. `He switched off the headlights. Someone tapped twice on the glass.`

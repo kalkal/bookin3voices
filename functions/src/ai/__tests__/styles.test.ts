@@ -78,7 +78,7 @@ describe('examples differ between styles', () => {
   });
 
   it('the three genre-voice examples are distinct', () => {
-    const voices = [/Nora was sure she had shut it/, /not a drop|perfectly dry/, /eight minutes/];
+    const voices = [/Elena had not run it/, /stopped at ten past nine/, /Twelve minutes/];
     const profiles = STYLE_IDS.map((id) => loadStyleProfileContent(id).fewShots);
     voices.forEach((voice, index) => {
       expect(profiles[index]).toMatch(voice);

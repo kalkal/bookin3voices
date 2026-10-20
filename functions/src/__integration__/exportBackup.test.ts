@@ -46,7 +46,7 @@ async function seedLibrary(uid: string): Promise<{ mainBookId: string }> {
     schemaVersion: 1,
     title: 'Il faro di Levante',
     author: 'Jane Doe',
-    description: 'Nora Ferrandi eredita un faro e il segreto che custodiva.',
+    description: 'Nora Vescovi eredita un faro e il segreto che custodiva.',
     synopsis: '',
     genre: 'romanzo',
     language: 'it',

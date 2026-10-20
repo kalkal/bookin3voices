@@ -1,0 +1,128 @@
+{
+  "_readme": "Verifiche MECCANICHE del golden-set runner (functions/src/tools/goldenSetRunner.ts). Le citazioni devono comparire VERBATIM nel «## Brano» del file corrispondente (il runner esplode se vanno fuori sincrono). «…» separa i frammenti di una zona estesa. `protected` = zone NON DEVE (level: fail di default, warn = giudizio umano; allow = categorie ammesse a intersecarle). `expected` = copertura DEVE, solo diagnostica. `expectedRange` = griglia umana della «Densità attesa»; il FAIL scatta oltre il maggiore tra il suo massimo e 1 ogni ~50 parole. Il giudizio di QUALITÀ resta umano: qui si bloccano solo le regressioni meccaniche.",
+  "01-la-macchia-sul-soffitto.md": {
+    "expectedRange": [5, 8],
+    "protected": [
+      { "quote": "termosifone ticchettava come ticchetta il ferro che si scalda", "note": "refrain, 3 occorrenze volute" },
+      { "quote": "aveva la forma di un paese visto dall'alto, con le strade e le piazze e un fiume che non portava da nessuna parte" },
+      { "quote": "Nora scese dalla scala. Lasciò gli asciugamani dov'erano. Andò ad aprire la porta prima che qualcuno bussasse.", "note": "frasi finali già giuste" }
+    ],
+    "expected": [
+      { "label": "avverbio: rilesse distrattamente", "quote": "rilesse distrattamente" },
+      { "label": "avverbio: controllò nervosamente", "quote": "controllò nervosamente" },
+      { "label": "avverbio: si allargava impercettibilmente", "quote": "si allargava impercettibilmente" },
+      { "label": "filtro: notò che la macchia era cambiata", "quote": "notò che la macchia era cambiata" },
+      { "label": "emozione dichiarata: ansia crescente", "quote": "Provava un'ansia crescente che non riusciva a spiegarsi" }
+    ]
+  },
+  "02-il-deposito-all-alba.md": {
+    "expectedRange": [4, 6],
+    "protected": [
+      { "quote": "c'aveva la luna storta, che ci posso fà", "note": "parlato nelle virgolette" },
+      { "quote": "Ma tu dormi in piedi, Bruno, in piedi dormi", "note": "parlato nelle virgolette, ripetizione a specchio di Lidia" },
+      { "quote": "E manco tu", "note": "parlato nelle virgolette" },
+      { "quote": "con il buco della timbratrice un po' storto, come lo fanno solo le macchinette vecchie", "note": "il dettaglio del biglietto" },
+      { "quote": "tre note in salita che suonavano ogni mattina alle cinque e trentacinque per un piazzale vuoto", "note": "il gong della prova audio" },
+      { "quote": "Si esce alle sei e un quarto", "note": "la chiusa" },
+      { "quote": "Come tutti i giorni." }
+    ],
+    "expected": [
+      { "label": "attribuzione: apostrofò", "quote": "lo apostrofò Lidia" },
+      { "label": "attribuzione: indagò", "quote": "indagò lei" },
+      { "label": "attribuzione: ammise sconsolatamente", "quote": "ammise Bruno sconsolatamente" },
+      { "label": "attribuzione: intimò", "quote": "intimò Lidia" },
+      { "label": "attribuzione: balbettò con un filo di voce", "quote": "balbettò Bruno con un filo di voce" }
+    ]
+  },
+  "03-l-accordo-di-santa-croce.md": {
+    "expectedRange": [3, 5],
+    "protected": [
+      { "quote": "Le mani di Ettore", "allow": ["grammar"], "note": "anafora, 3 attacchi voluti" },
+      { "quote": "piano, più piano ancora, piano come si apre una lettera che non è tua" },
+      { "quote": "o forse il freddo smise di sentire me" },
+      { "quote": "come se la chiesa si fosse scrollata di dosso l'inverno" },
+      { "quote": "disse che adesso era giusto. E lo era. Non l'ho più sentito, un accordo così.", "note": "finale" }
+    ],
+    "expected": [
+      { "label": "registro: provvedevamo all'accordatura", "quote": "provvedevamo all'accordatura" },
+      { "label": "taglio: salire su", "quote": "salire su per la scaletta" },
+      { "label": "taglio: con le mie orecchie", "quote": "sentivo con le mie orecchie" },
+      { "label": "taglio: proseguì avanti", "quote": "proseguì avanti" }
+    ]
+  },
+  "04-la-passerella.md": {
+    "expectedRange": [5, 8],
+    "protected": [
+      { "quote": "le assi, le assi vecchie, le assi che aveva inchiodato lui a maggio", "note": "ripetizione ravvicinata voluta" },
+      { "quote": "con un rumore di dente cavato" },
+      { "quote": "previste schiarite su tutta la valle. Alle sue spalle la passerella non c'era più.", "note": "la voce quotidiana dentro il disastro, e la chiusa" },
+      { "quote": "Fabio si infilò il salvagente al braccio…non voleva essere guardata", "level": "warn", "note": "frase-fiume dell'attraversamento: ammessa al più UNA spezzatura conservativa — giudizio umano" }
+    ],
+    "expected": [
+      { "label": "filtro: si accorse che", "quote": "Si accorse che l'acqua aveva già coperto" },
+      { "label": "filtro: gli parve di capire che", "quote": "Gli parve di capire che" },
+      { "label": "avverbio: staccò freneticamente", "quote": "staccò freneticamente" },
+      { "label": "grammar: tratto senza punteggiatura", "quote": "staccò freneticamente il salvagente dal palo…e lui la raccolse bagnata" },
+      { "label": "passivo: fu strappato dalla corrente", "quote": "il palo del corrimano fu strappato dalla corrente" }
+    ]
+  },
+  "05-la-partenza-in-salita.md": {
+    "expectedRange": [4, 7],
+    "protected": [
+      { "quote": "il suo cigolio da porta di stalla" },
+      { "quote": "sopra l'adesivo dei doppi comandi" },
+      { "quote": "Non suonava." },
+      { "quote": "batteva il tempo sul volante di una canzone che da lì non si sentiva" },
+      { "quote": "È il punto in cui la macchina ti dice di sì", "note": "battuta: il contenuto non si tocca" },
+      { "quote": "Il pedale smise di essere molle e il motore cambiò voce", "note": "ripresa voluta della spiegazione di Paolo" },
+      { "quote": "come si saluta qualcuno che si conosce da anni", "note": "la chiusa" }
+    ],
+    "expected": [
+      { "label": "dichiarato+avverbio: terribilmente in imbarazzo", "quote": "Greta si sentiva terribilmente in imbarazzo" },
+      { "label": "astratto+dichiarato: un senso di disagio", "quote": "Un senso di disagio riempiva l'abitacolo e Greta provò il desiderio di scendere e lasciare la macchina lì in mezzo alla strada" },
+      { "label": "avverbio in attribuzione: disse pazientemente", "quote": "disse Paolo pazientemente" }
+    ]
+  },
+  "06-la-cuffia-rossa.md": {
+    "expectedRange": [14, 22],
+    "protected": [
+      { "quote": "L'orologio delle tribune segnava le sette meno dieci.", "note": "refrain ×4, la spina dorsale" },
+      { "quote": "Il fischio lungo", "note": "anafora ×3" },
+      { "quote": "prese l'asta di salvataggio dalla rastrelliera…ad aspettare che qualcuno la afferrasse.", "allow": ["grammar", "style"], "note": "paragrafo-fiume: ammessi solo maiuscola (grammar) e ritocco puntuale — MAI smontarlo (pacing)" },
+      { "quote": "La cuffia rossa andava e tornava, andava e tornava.", "note": "ripetizione ravvicinata voluta" },
+      { "quote": "Nuotava come nuota chi non deve arrivare da nessuna parte", "note": "ripetizione voluta" },
+      { "quote": "Io in acqua dopo le sette non ci entro manco morta, te lo dico seriamente", "note": "parlato nelle virgolette, avverbio incluso" },
+      { "quote": "ncora una e poi esco", "note": "formula di Irene, ×2 (in battuta e nel finale)" },
+      { "quote": "due dita alla fronte", "note": "formula del saluto, torna nella battuta di Viola" },
+      { "quote": "Due dita alla fronte." },
+      { "quote": "come anatre verso il pane" },
+      { "quote": "tiepida come l'acqua di una vasca da bagno lasciata ad aspettare qualcuno" },
+      { "quote": "il verde stanco delle bottiglie dimenticate su un davanzale" },
+      { "quote": "più lunga e più lenta" },
+      { "quote": "le righe nere erano dritte e immobili come lo sono sempre" },
+      { "quote": "Silvia chiuse il cancello. Appese le chiavi al chiodo. Le cicale cominciarono tutte insieme, come se avessero aspettato il fischio.", "note": "il finale" }
+    ],
+    "expected": [
+      { "label": "avverbio: fischiò energicamente", "quote": "fischiò energicamente" },
+      { "label": "filtro: vide che la signora Irene", "quote": "Silvia vide che la signora Irene era ancora in acqua" },
+      { "label": "attribuzione: obiettò", "quote": "obiettò Viola" },
+      { "label": "attribuzione+avverbio: replicò seccamente", "quote": "replicò seccamente" },
+      { "label": "registro: provvide alla chiusura", "quote": "provvide alla chiusura degli ombrelloni" },
+      { "label": "registro: si portò in prossimità", "quote": "si portò in prossimità della corsia quattro" },
+      { "label": "dichiarato: era molto preoccupata", "quote": "Era molto preoccupata" },
+      { "label": "passivo: era già stato chiuso da Viola", "quote": "era già stato chiuso da Viola" },
+      { "label": "filtro: notò che", "quote": "notò che non c'era più niente" },
+      { "label": "avverbio: si avvicinò cautamente", "quote": "Si avvicinò cautamente" },
+      { "label": "filtro: sentì che l'acqua", "quote": "Sentì che l'acqua lì era più calda" },
+      { "label": "taglio: risalì su", "quote": "risalì su" },
+      { "label": "taglio: ripeté di nuovo", "quote": "ripeté di nuovo" },
+      { "label": "dichiarato: ebbe paura", "quote": "Silvia ebbe paura" },
+      { "label": "filtro: si rese conto che", "quote": "si rese conto che stava trattenendo il fiato" },
+      { "label": "grammar: maiuscola del paragrafo-fiume", "quote": "prese l'asta di salvataggio dalla rastrelliera" },
+      { "label": "taglio: per un breve momento", "quote": "per un breve momento" },
+      { "label": "attribuzione+avverbio: insistette ansiosamente", "quote": "insistette ansiosamente" },
+      { "label": "taglio: alzò in alto", "quote": "la alzò in alto" },
+      { "label": "filtro: le parve di sentire", "quote": "le parve di sentire" }
+    ]
+  }
+}

@@ -5,7 +5,7 @@
 import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION } from '../outlinePrompt';
 
 const SINOSSI_FITTIZIA = [
-  'Nora Ferrandi, cartografa in fuga da un divorzio, eredita dallo zio un faro',
+  'Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro',
   'dismesso su un’isola del Levante e scopre nei registri del guardiano',
   'annotazioni cifrate su navi mai arrivate in porto.',
 ].join(' ');

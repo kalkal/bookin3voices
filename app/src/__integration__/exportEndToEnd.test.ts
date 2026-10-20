@@ -75,7 +75,7 @@ describe('export end-to-end (app → functions emulator → EPUBCheck)', () => {
       language: 'it',
     });
     await books.updateBook(book.id, {
-      description: 'Nora Ferrandi eredita un faro e il segreto che custodiva.',
+      description: 'Nora Vescovi eredita un faro e il segreto che custodiva.',
     });
     const capitolo1 = await chapters.createChapter(book.id, { title: 'Il ritorno' });
     await chapters.saveRawText(

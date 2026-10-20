@@ -16,9 +16,9 @@ const MODEL = process.env.GEMINI_SMOKE_MODEL ?? 'gemini-3.6-flash';
 const maybeDescribe = API_KEY === undefined || API_KEY === '' ? describe.skip : describe;
 
 const SINOSSI_FITTIZIA = [
-  'Nora Ferrandi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso',
+  'Nora Vescovi, cartografa in fuga da un divorzio, eredita dallo zio un faro dismesso',
   'su un’isola del Levante. Tra i registri del guardiano trova annotazioni cifrate su navi',
-  'mai arrivate in porto. Indagando con l’aiuto di Tommaso, il barista del molo, scopre che',
+  'mai arrivate in porto. Indagando con l’aiuto di Ruggero, il barista del molo, scopre che',
   'l’isola nasconde un patto antico tra i pescatori e qualcosa che vive nella secca.',
 ].join(' ');
 

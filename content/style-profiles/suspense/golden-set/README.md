@@ -7,12 +7,12 @@ the profile must hold up across registers without flattening them.
 
 | File | Tone | What it mainly tests |
 |---|---|---|
-| `01-la-caldaia.md` | domestic tension | adverbs, filter verbs, stated emotion, refrain NOT to touch |
-| `02-la-cucina-di-mamma.md` | dialogue | tags → "said", colloquial speech NOT to correct |
-| `03-il-pozzo.md` | memoir, rich voice | targeted −10%, anaphora NOT to touch, low density |
-| `04-il-parcheggio.md` | action | filters, passive, dictation punctuation, "breathless" long sentence NOT to break up |
-| `05-la-cassa-tre.md` | everyday life cracking | show vs tell, concreteness without inventing facts |
-| `06-le-magnolie.md` | everyday uncanny, long passage | density at the cap, refrain ×4, deliberate close repetition, run-on paragraph |
+| `01-la-macchia-sul-soffitto.md` | domestic tension (daytime) | adverbs, filter verbs, stated emotion, refrain NOT to touch |
+| `02-il-deposito-all-alba.md` | dialogue between colleagues | tags → "said", colloquial speech NOT to correct |
+| `03-l-accordo-di-santa-croce.md` | memoir, rich voice | targeted −10%, anaphora NOT to touch, low density |
+| `04-la-passerella.md` | action | filters, passive, dictation punctuation, "breathless" long sentence NOT to break up |
+| `05-la-partenza-in-salita.md` | everyday life cracking | show vs tell, concreteness without inventing facts |
+| `06-la-cuffia-rossa.md` | everyday uncanny, long passage | density at the cap, refrain ×4, deliberate close repetition, run-on paragraph |
 
 ## How to use
 
