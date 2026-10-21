@@ -10,7 +10,6 @@
  * fake sign-in, scripted dictation engine and a stack that starts directly on
  * Dictation ("Capitolo I", as the flow expects).
  */
-import { StatusBar } from 'expo-status-bar';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { BackHandler, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,7 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { resolveLanguage, setLanguage, t } from './src/i18n';
 import { useLanguage } from './src/i18n/useLanguage';
 import { StartupScreen } from './src/features/startup/StartupScreen';
-import { ThemeProvider, useAppFonts, useTheme } from './src/theme';
+import { ThemedSystemBars, ThemeProvider, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
   BookScreen,
@@ -218,11 +217,6 @@ type Route =
 const INITIAL_STACK: Route[] = isE2E
   ? [{ name: 'library' }, { name: 'dictation', chapter: E2E_CHAPTER, title: 'Capitolo I' }]
   : [{ name: 'library' }];
-
-function ThemedStatusBar() {
-  const { mode } = useTheme();
-  return <StatusBar style={mode === 'paper' ? 'dark' : 'light'} />;
-}
 
 function AppNavigator({ services }: { services: AppServices }) {
   const [stack, setStack] = useState<Route[]>(INITIAL_STACK);
@@ -435,7 +429,7 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     <SafeAreaProvider>
       <ThemeProvider>
         <AppNavigator services={services} />
-        <ThemedStatusBar />
+        <ThemedSystemBars />
       </ThemeProvider>
     </SafeAreaProvider>
   );
