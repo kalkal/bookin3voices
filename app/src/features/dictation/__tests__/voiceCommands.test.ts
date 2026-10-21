@@ -147,3 +147,32 @@ describe('voiceCommandHints — what the screen shows', () => {
     ]);
   });
 });
+
+describe('TranscriptComposer with a recognizer that formats its own text (Galaxy A53, 21 Oct)', () => {
+  it('a spoken «virgola» stays a command even with the punctuation the recognizer glued to it', () => {
+    const composer = new TranscriptComposer('', 'it');
+    composer.append('Siamo nel Medioevo virgola.');
+    expect(composer.value).toBe('Siamo nel Medioevo,');
+  });
+
+  it('after a comma the next piece does not start with the capital the recognizer gave it', () => {
+    const composer = new TranscriptComposer('', 'it');
+    composer.append('Siamo nel Medioevo virgola');
+    composer.append('Un gatto dorme sul cuscino punto');
+    expect(composer.value).toBe('Siamo nel Medioevo, un gatto dorme sul cuscino.');
+  });
+
+  it('after a full stop the next piece still starts with a capital', () => {
+    const composer = new TranscriptComposer('', 'it');
+    composer.append('Siamo nel Medioevo punto');
+    composer.append('un gatto dorme');
+    expect(composer.value).toBe('Siamo nel Medioevo. Un gatto dorme');
+  });
+
+  it('works the same in English («comma.»)', () => {
+    const composer = new TranscriptComposer('', 'en');
+    composer.append('The cat sleeps comma.');
+    composer.append('Then it wakes up');
+    expect(composer.value).toBe('The cat sleeps, then it wakes up');
+  });
+});

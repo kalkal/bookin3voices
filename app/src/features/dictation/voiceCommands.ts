@@ -84,6 +84,12 @@ export function voiceCommandHints(language: CommandLanguage): string[] {
 
 const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
 
+// punctuation a recognizer may glue to a spoken command word («virgola.»)
+const GLUED_PUNCTUATION = /^[.,;:!?…«»"']+|[.,;:!?…«»"']+$/g;
+
+/** «Un» but not «UE» or «iPhone»: the capital a recognizer puts on every piece. */
+const isTitleCase = (word: string) => /^\p{Lu}\p{Ll}*$/u.test(word.replace(GLUED_PUNCTUATION, ''));
+
 /**
  * Accumulates final transcripts, applying voice commands, spacing
  * (no space before punctuation) and capitalization at sentence start.
@@ -109,6 +115,12 @@ export class TranscriptComposer {
   /** Appends a raw final transcript; returns the updated text. */
   append(finalTranscript: string): string {
     const tokens = finalTranscript.trim().split(/\s+/).filter(Boolean);
+    // a recognizer that formats its text starts every piece with a capital, even
+    // after a comma: the capital belongs only after a full stop (or ? !)
+    const first = tokens[0];
+    if (first !== undefined && !this.capitalizeNext && isTitleCase(first)) {
+      tokens[0] = first.charAt(0).toLocaleLowerCase(LOCALE[this.language]) + first.slice(1);
+    }
     let i = 0;
     while (i < tokens.length) {
       const match = this.matchCommand(tokens, i);
@@ -142,7 +154,10 @@ export class TranscriptComposer {
     for (const { tokens: phraseTokens, command } of VOICE_COMMANDS[this.language]) {
       if (from + phraseTokens.length > tokens.length) continue;
       const matches = phraseTokens.every(
-        (t, k) => tokens[from + k].toLocaleLowerCase(LOCALE[this.language]) === t,
+        (t, k) =>
+          (tokens[from + k] as string)
+            .replace(GLUED_PUNCTUATION, '')
+            .toLocaleLowerCase(LOCALE[this.language]) === t,
       );
       if (matches) return { command, length: phraseTokens.length };
     }
@@ -169,6 +184,7 @@ export class TranscriptComposer {
       ? word.charAt(0).toLocaleUpperCase(LOCALE[this.language]) + word.slice(1)
       : word;
     this.text += separator + cased;
-    this.capitalizeNext = false;
+    // a full stop (or ? !) the recognizer wrote into the word ends the sentence too
+    this.capitalizeNext = /[.!?]["»']?$/.test(word);
   }
 }

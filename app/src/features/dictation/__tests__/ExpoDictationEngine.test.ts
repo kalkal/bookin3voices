@@ -52,7 +52,7 @@ describe('ExpoDictationEngine — adapter over expo-speech-recognition', () => {
       interimResults: true,
       continuous: true,
       requiresOnDeviceRecognition: false,
-      addsPunctuation: true,
+      addsPunctuation: false,
     });
   });
 

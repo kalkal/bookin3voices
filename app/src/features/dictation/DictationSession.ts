@@ -1,11 +1,13 @@
 // Dictation session controller: binds any DictationEngine to the pure state
 // machine (sessionMachine) and concentrates the dictation robustness policies:
-//  - automatic restart of the engine session at seams (end while listening);
+//  - automatic restart of the engine session at seams (end while listening),
+//    after a short wait (RESTART_DELAY_MS) so Android's recognizer has closed;
 //  - DEDUP of the double `end` event (risk of a double restart);
 //  - automatic pause + flush on a real audio interruption (call, other app)
 //    or after ~2 minutes without speech; resuming is explicit only;
-//  - transient recognizer errors (busy, network) restart the engine with a
-//    bounded backoff instead of pausing; only when they never recover the
+//  - transient recognizer errors (busy, network, «Server disconnected») restart
+//    the engine with a bounded backoff instead of pausing, also when they come
+//    before the engine confirmed its start; only when they never recover the
 //    session pauses, saying why;
 //  - flush on pause/stop/error and on request (background): dictated text
 //    never lives only in RAM;
@@ -59,7 +61,12 @@ const RESTART_WINDOW_MS = 10_000;
 
 // transient errors (busy, network): one wait per attempt, then pause. Speech
 // in between proves the engine works again and resets the count.
-const TRANSIENT_BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 15_000] as const;
+const TRANSIENT_BACKOFF_MS = [500, 1_000, 2_000, 2_000, 2_000] as const;
+
+// after the recognizer ends a session (it does at every pause on Android, even
+// with continuous: true) wait before starting again: an immediate restart while
+// the previous connection is still closing gets «Server disconnected» (code 11)
+export const RESTART_DELAY_MS = 500;
 
 // no speech at all for this long while listening: pause (battery, privacy)
 export const SILENCE_PAUSE_MS = 120_000;
@@ -77,8 +84,11 @@ export class DictationSession {
   private transientAttempts = 0;
   private pendingBackoffMs?: number;
   private backoffTimer?: ReturnType<typeof setTimeout>;
+  private restartTimer?: ReturnType<typeof setTimeout>;
   private silenceTimer?: ReturnType<typeof setTimeout>;
   private isReconnecting = false;
+  /** The latest interim result not yet confirmed by a final (kept if the session dies). */
+  private pendingPartial = '';
 
   constructor(options: DictationSessionOptions) {
     this.options = options;
@@ -179,6 +189,9 @@ export class DictationSession {
           this.engine.stop().catch(() => {
             // a failing stop must not block pause/close
           });
+        } else {
+          // a start may still be preparing: it must not go ahead after this
+          this.engine.cancelPendingStart?.();
         }
         break;
       case 'flush':
@@ -198,6 +211,7 @@ export class DictationSession {
       // after a transient error: wait before restarting, outside the storm guard
       const delayMs = this.pendingBackoffMs;
       this.pendingBackoffMs = undefined;
+      if (this.backoffTimer !== undefined) clearTimeout(this.backoffTimer);
       this.backoffTimer = setTimeout(() => {
         this.backoffTimer = undefined;
         if (this.currentState !== 'listening') return;
@@ -219,9 +233,24 @@ export class DictationSession {
       });
       return;
     }
-    this.restarts += 1;
-    this.options.onEvent?.({ type: 'engine-restarted', count: this.restarts });
-    this.startEngine();
+    this.restartTimer = setTimeout(() => {
+      this.restartTimer = undefined;
+      if (this.currentState !== 'listening') return;
+      this.restarts += 1;
+      this.options.onEvent?.({ type: 'engine-restarted', count: this.restarts });
+      this.startEngine();
+    }, RESTART_DELAY_MS);
+  }
+
+  /**
+   * Retry after a transient error that came while the engine was NOT running
+   * (it failed before confirming the start): no end will restart it, and the
+   * one that may follow is taken for a duplicate, so the retry starts from here.
+   */
+  private scheduleRetry(): void {
+    if (this.restartTimer !== undefined) clearTimeout(this.restartTimer);
+    this.restartTimer = undefined;
+    this.restartEngine();
   }
 
   private handleEngineStart(): void {
@@ -248,6 +277,7 @@ export class DictationSession {
 
   private handlePartial(raw: string): void {
     if (this.currentState !== 'listening') return;
+    this.pendingPartial = raw;
     this.heardSpeech();
     this.options.onPartial?.(raw);
   }
@@ -269,8 +299,10 @@ export class DictationSession {
   private clearTimers(): void {
     if (this.silenceTimer !== undefined) clearTimeout(this.silenceTimer);
     if (this.backoffTimer !== undefined) clearTimeout(this.backoffTimer);
+    if (this.restartTimer !== undefined) clearTimeout(this.restartTimer);
     this.silenceTimer = undefined;
     this.backoffTimer = undefined;
+    this.restartTimer = undefined;
     this.pendingBackoffMs = undefined;
     this.setReconnecting(false);
   }
@@ -285,6 +317,7 @@ export class DictationSession {
     // finals are accepted in paused/committing too: the engine may
     // finalize the last block AFTER the stop, and it must never be lost
     if (this.currentState === 'idle' || this.currentState === 'error') return;
+    this.pendingPartial = '';
     if (!raw.trim()) return;
     if (this.currentState === 'listening') this.heardSpeech();
     const text =
@@ -300,6 +333,13 @@ export class DictationSession {
 
   private handleEngineError(error: DictationError): void {
     this.options.onEvent?.({ type: 'engine-error', error });
+    // the recognizer may die before turning what it heard into a final (Galaxy
+    // A53: code 5 after a long interim): keep those words instead of losing them
+    if (this.pendingPartial.trim() !== '') {
+      const heard = this.pendingPartial;
+      this.pendingPartial = '';
+      this.handleFinal(heard);
+    }
     if (!error.recoverable) {
       this.fail(error);
       return;
@@ -324,8 +364,21 @@ export class DictationSession {
         attempt: this.transientAttempts,
         delayMs,
       });
+      // failed before confirming the start: retry from here (an end won't come,
+      // or will be ignored as a duplicate); a running engine retries on its end
+      if (!this.engineActive) this.scheduleRetry();
+      return;
     }
-    // 'no-speech' and similar: benign, onEnd follows → automatic restart
+    // 'no-speech', 'client' and similar: benign. The recognizer session is over,
+    // but its `end` does not always follow (Galaxy A53: code 5 with no end), so
+    // the error itself counts as the end; a late `end` is then ignored as a
+    // duplicate. If a restart is already planned, nothing more to do.
+    if (this.engineActive) {
+      this.engineActive = false;
+      this.dispatch('ENGINE_ENDED');
+    } else if (this.restartTimer === undefined && this.backoffTimer === undefined) {
+      this.restartEngine();
+    }
   }
 
   private fail(error: DictationError): void {

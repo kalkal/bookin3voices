@@ -109,12 +109,12 @@ describe('Dictation on a flaky recognizer (Galaxy A53)', () => {
   it('network: no pause, restarts with growing waits', async () => {
     const { recognizer, session } = await setup();
     recognizer.fail('network');
-    await advance(1000);
+    await advance(500);
     expect(recognizer.starts).toBe(2);
     recognizer.fail('network');
-    await advance(1000);
+    await advance(500);
     expect(recognizer.starts).toBe(2); // second wait is longer
-    await advance(1000);
+    await advance(500);
     expect(recognizer.starts).toBe(3);
     expect(session.state).toBe('listening');
   });

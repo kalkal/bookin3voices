@@ -56,4 +56,9 @@ export interface DictationEngine {
   setEvents(events: DictationEngineEvents): void;
   /** Releases resources (native subscriptions). */
   dispose(): void;
+  /**
+   * Gives up a start that is still being prepared (permission or locale query):
+   * the recognizer must not start after a pause or a close that came meanwhile.
+   */
+  cancelPendingStart?(): void;
 }

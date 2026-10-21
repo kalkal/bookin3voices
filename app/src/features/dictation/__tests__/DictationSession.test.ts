@@ -1,4 +1,8 @@
-import { DictationSession, type DictationSessionEvent } from '../DictationSession';
+import {
+  DictationSession,
+  RESTART_DELAY_MS,
+  type DictationSessionEvent,
+} from '../DictationSession';
 import { FakeDictationEngine } from '../engines/FakeDictationEngine';
 import type { SessionState } from '../sessionMachine';
 
@@ -81,6 +85,8 @@ describe('DictationSession — restarts at seams and double-end dedup', () => {
     const { engine, session, events } = setup();
     session.start();
     engine.emitSingleEnd(); // engine seam
+    expect(engine.startCalls).toHaveLength(1); // a short wait before restarting
+    jest.advanceTimersByTime(RESTART_DELAY_MS);
     expect(session.state).toBe('listening');
     expect(engine.startCalls).toHaveLength(2);
     expect(session.restartCount).toBe(1);
@@ -104,6 +110,7 @@ describe('DictationSession — restarts at seams and double-end dedup', () => {
     engine.emitStart(); // confirmation of the initial start
     engine.duplicateEnd = true;
     engine.emitEnd(); // emits TWO back-to-back ends
+    jest.advanceTimersByTime(RESTART_DELAY_MS);
     expect(engine.startCalls).toHaveLength(2); // initial + ONE restart, not two
     expect(session.restartCount).toBe(1);
     expect(events).toContainEqual({ type: 'duplicate-end-ignored' });
@@ -114,7 +121,10 @@ describe('DictationSession — restarts at seams and double-end dedup', () => {
   it('restart storm → fatal error instead of an infinite loop', () => {
     const { engine, session, events, onFlush } = setup();
     session.start();
-    for (let i = 0; i < 6; i += 1) engine.emitSingleEnd();
+    for (let i = 0; i < 6; i += 1) {
+      engine.emitSingleEnd();
+      jest.advanceTimersByTime(RESTART_DELAY_MS);
+    }
     expect(session.state).toBe('error');
     expect(events).toContainEqual({ type: 'restart-storm' });
     expect(onFlush).toHaveBeenCalled(); // the text is flushed even on error
@@ -206,6 +216,7 @@ describe('DictationSession — audio interruption', () => {
     engine.emitError({ code: 'no-speech', recoverable: true });
     expect(session.state).toBe('listening');
     engine.emitSingleEnd();
+    jest.advanceTimersByTime(RESTART_DELAY_MS);
     expect(engine.startCalls).toHaveLength(2);
   });
 });

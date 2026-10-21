@@ -2,7 +2,7 @@
 // in-memory repository: dictate→pause→resume→flush flow, voice commands,
 // debounce toward the repository, background, double `end`, pre-flight.
 
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 
@@ -151,7 +151,7 @@ describe('DictationScreen — full flow dictate → pause → resume', () => {
     await act(async () => engine.emitFinal('testo prima del giunto'));
     engine.duplicateEnd = true;
     await act(async () => engine.emitEnd()); // seam with a duplicate: a single restart
-    expect(engine.startCalls).toHaveLength(2);
+    await waitFor(() => expect(engine.startCalls).toHaveLength(2)); // after the short restart wait
     await act(async () => engine.emitStart()); // the restart is confirmed
     await act(async () => engine.emitFinal('e dopo'));
     expect(getByTestId('dictation-live-text')).toHaveTextContent('Testo prima del giunto e dopo');
