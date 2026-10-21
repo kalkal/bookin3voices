@@ -16,7 +16,14 @@ describe('TranscriptComposer — voice commands (the engine gives no punctuation
   it('maps «a capo» and «nuovo paragrafo»', () => {
     const c = new TranscriptComposer();
     c.append('primo rigo a capo secondo rigo nuovo paragrafo altro paragrafo');
-    expect(c.value).toBe('Primo rigo\nSecondo rigo\n\nAltro paragrafo');
+    expect(c.value).toBe('Primo rigo.\nSecondo rigo.\n\nAltro paragrafo');
+  });
+
+  it('a line break ends the sentence once (owner, 21 Oct)', () => {
+    const c = new TranscriptComposer();
+    c.append('Paolo virgola nuovo paragrafo davvero punto interrogativo a capo lista due punti');
+    c.append('a capo uno punto e virgola a capo due');
+    expect(c.value).toBe('Paolo.\n\nDavvero?\nLista:\nUno.\nDue');
   });
 
   it('prefers the longest phrase: «punto e virgola» is not «punto» + words', () => {
@@ -46,7 +53,7 @@ describe('TranscriptComposer — voice commands (the engine gives no punctuation
   it('discards «a capo» at text start and collapses repeated «a capo»', () => {
     const c = new TranscriptComposer();
     c.append('a capo ciao a capo a capo a capo mondo');
-    expect(c.value).toBe('Ciao\nMondo');
+    expect(c.value).toBe('Ciao.\nMondo');
   });
 
   it('keeps sentence context across successive finals', () => {
@@ -109,7 +116,7 @@ describe('TranscriptComposer — English voice commands', () => {
   it('maps «new line» and «new paragraph»', () => {
     const c = english();
     c.append('first line new line second line new paragraph another paragraph');
-    expect(c.value).toBe('First line\nSecond line\n\nAnother paragraph');
+    expect(c.value).toBe('First line.\nSecond line.\n\nAnother paragraph');
   });
 
   it('maps «question mark» and «exclamation mark» as sentence ends', () => {

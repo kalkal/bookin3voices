@@ -165,8 +165,14 @@ export class TranscriptComposer {
       if (command.endsSentence) this.capitalizeNext = true;
     } else {
       if (this.text === '') return;
+      // a line break ends the sentence: a full stop where none was dictated (a
+      // comma or semicolon becomes one; : … ? ! and closing quotes stay)
+      const closed = this.text
+        .replace(/\s+$/, '')
+        .replace(/[,;]$/, '.')
+        .replace(/[\p{L}\p{N}]$/u, '$&.');
       // repeated line breaks never accumulate more than one blank line
-      this.text = (this.text.replace(/\s+$/, '') + command.text).replace(/\n{3,}$/, '\n\n');
+      this.text = (closed + command.text).replace(/\n{3,}$/, '\n\n');
       this.capitalizeNext = true;
     }
   }
