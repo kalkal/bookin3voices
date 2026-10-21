@@ -8,6 +8,8 @@
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { z } from 'zod';
 
+import { callableErrorCode } from '../../lib/callableErrors';
+import { isTestLogActive, logTestEvent } from '../testLog';
 import {
   refineResultSchema,
   type RefineRequest,
@@ -28,6 +30,14 @@ export type CallableSuggestionsProviderDeps = (
 
 const servedModelSchema = z.object({ model: z.string().min(1) });
 
+/** Server diagnostics kept only for the dev test log. */
+const diagnosticsSchema = z.object({
+  model: z.string().optional(),
+  promptVersion: z.number().optional(),
+  discarded: z.number().optional(),
+  debugTrace: z.unknown().optional(),
+});
+
 export class CallableSuggestionsProvider implements SuggestionsProvider {
   private readonly call: CallRefine;
   private readonly onServedModel?: (model: string) => void;
@@ -43,10 +53,50 @@ export class CallableSuggestionsProvider implements SuggestionsProvider {
   }
 
   async refine(request: RefineRequest): Promise<RefineResult> {
-    const result = await this.call(request);
+    // dev builds with the test log ask the server for its debug trace
+    const logging = isTestLogActive();
+    const { bookId, chapterId, requestId, text } = request;
+    const startedAt = Date.now();
+    if (logging) {
+      logTestEvent('refine.request', {
+        bookId,
+        chapterId,
+        requestId,
+        words: text.match(/\S+/g)?.length ?? 0,
+        chars: text.length,
+      });
+    }
+    let result: { data: unknown };
+    try {
+      result = await this.call(logging ? { ...request, debug: true } : request);
+    } catch (error) {
+      logTestEvent('refine.error', {
+        requestId,
+        code: callableErrorCode(error),
+        durationMs: Date.now() - startedAt,
+      });
+      throw error;
+    }
     const parsed = refineResultSchema.parse(result.data);
     const served = servedModelSchema.safeParse(result.data);
     if (served.success) this.onServedModel?.(served.data.model);
+    if (logging) {
+      const diagnostics = diagnosticsSchema.safeParse(result.data);
+      logTestEvent('refine.result', {
+        requestId,
+        chapterId,
+        durationMs: Date.now() - startedAt,
+        ...(diagnostics.success ? diagnostics.data : {}),
+        suggestions: parsed.suggestions.map((s) => ({
+          id: s.id,
+          kind: s.kind,
+          ...(s.aspect !== undefined ? { aspect: s.aspect } : {}),
+          original: s.original,
+          proposals: s.proposals,
+          rationale: s.rationale,
+        })),
+      });
+    }
     return parsed;
   }
 }

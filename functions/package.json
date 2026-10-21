@@ -10,6 +10,7 @@
     "build": "node scripts/copy-style-profiles.mjs && tsc -p tsconfig.build.json",
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "golden": "npm run build && node lib/tools/goldenSetRunner.js",
+    "check:test-log": "tsc -p tsconfig.build.json && node lib/tools/checkTestLog.js",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:integration": "jest -c jest.integration.config.js --runInBand",

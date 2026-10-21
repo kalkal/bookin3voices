@@ -111,6 +111,8 @@ export interface RefineRequest {
   textHash: string;
   /** Idempotency on the Functions side: a retry does not generate duplicate suggestions. */
   requestId: string;
+  /** Dev builds with the test log: ask for the server's debug trace. */
+  debug?: boolean;
 }
 
 /** Refinement response, validated at the boundary with Zod. */

@@ -112,3 +112,29 @@ describe('ExpoDictationEngine — adapter over expo-speech-recognition', () => {
     for (const remove of removals) expect(remove).toHaveBeenCalled();
   });
 });
+
+describe('ExpoDictationEngine — recognizer reported to the dev test log', () => {
+  it('says server when the language is not installed on the device', async () => {
+    const { engine } = setup();
+    await engine.start({ lang: 'it-IT' });
+    expect(engine.recognizer).toBe('server');
+  });
+
+  it('says on-device when the start went on-device, server again after its fallback', async () => {
+    const { engine, nativeModule, handlers } = setup();
+    Object.assign(nativeModule, {
+      supportsOnDeviceRecognition: () => true,
+      getSupportedLocales: jest
+        .fn()
+        .mockResolvedValue({ locales: ['it-IT'], installedLocales: ['it-IT'] }),
+    });
+    await engine.start({ lang: 'it-IT' });
+    expect(nativeModule.start).toHaveBeenCalledWith(
+      expect.objectContaining({ requiresOnDeviceRecognition: true }),
+    );
+    expect(engine.recognizer).toBe('on-device');
+
+    handlers.error({ error: 'language-not-supported', message: 'not supported' });
+    expect(engine.recognizer).toBe('server');
+  });
+});

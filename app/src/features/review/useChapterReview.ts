@@ -11,6 +11,7 @@ import type { ChapterRef, ChapterTextRepository } from '../chapters';
 import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
 import { makeRequestId } from '../../lib/requestId';
 import { DebouncedSaver } from '../dictation/autosave';
+import { logTestEvent } from '../testLog';
 import { ReviewSession } from './ReviewSession';
 import type { RevisionRepository } from './revisions';
 import { textHash } from './textHash';
@@ -151,7 +152,18 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     async (suggestionId: string, proposalIndex = 0) => {
       const session = sessionRef.current;
       if (!session) return;
+      const target = session.suggestions.find((s) => s.id === suggestionId);
       const outcome = session.accept(suggestionId, proposalIndex);
+      logTestEvent('suggestion.accept', {
+        chapterId: chapter.chapterId,
+        suggestionId,
+        kind: target?.kind,
+        proposalIndex,
+        before: target?.original,
+        after: target?.proposals[proposalIndex],
+        ok: outcome.ok,
+        ...(outcome.ok ? {} : { reason: outcome.reason }),
+      });
       syncFromSession();
       if (outcome.ok) {
         await persistText();
@@ -165,7 +177,17 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     async (suggestionId: string) => {
       const session = sessionRef.current;
       if (!session) return;
+      const target = session.suggestions.find((s) => s.id === suggestionId);
       const outcome = session.reject(suggestionId);
+      logTestEvent('suggestion.reject', {
+        chapterId: chapter.chapterId,
+        suggestionId,
+        kind: target?.kind,
+        original: target?.original,
+        proposal: target?.proposals[0],
+        rationale: target?.rationale,
+        ok: outcome.ok,
+      });
       syncFromSession();
       if (outcome.ok) {
         await revisionRepository.append(chapter, outcome.revision).catch(() => {});
@@ -179,6 +201,13 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
       const session = sessionRef.current;
       if (!session) return;
       const outcome = session.acceptAll(kind);
+      logTestEvent('suggestion.acceptAll', {
+        chapterId: chapter.chapterId,
+        kind,
+        accepted: outcome.accepted,
+        staled: outcome.staled,
+        changes: outcome.revisions.map((r) => ({ before: r.before, after: r.after })),
+      });
       syncFromSession();
       if (outcome.accepted > 0) {
         await persistText();
@@ -194,6 +223,13 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     const session = sessionRef.current;
     if (!session) return;
     const outcome = session.undo();
+    logTestEvent('suggestion.undo', {
+      chapterId: chapter.chapterId,
+      ok: outcome.ok,
+      ...(outcome.ok
+        ? { patches: outcome.patches.map((p) => ({ before: p.before, after: p.after })) }
+        : { reason: outcome.reason }),
+    });
     syncFromSession();
     if (outcome.ok) {
       await persistText();

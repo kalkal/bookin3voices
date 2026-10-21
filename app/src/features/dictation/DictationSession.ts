@@ -75,7 +75,7 @@ export class DictationSession {
   private readonly engine: DictationEngine;
   private readonly options: DictationSessionOptions;
   private readonly composer: TranscriptComposer;
-  private readonly locale: string;
+  readonly locale: string;
   private currentState: SessionState = 'idle';
   private engineActive = false;
   private restartTimestamps: number[] = [];

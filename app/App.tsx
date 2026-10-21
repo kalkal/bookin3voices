@@ -36,6 +36,8 @@ import {
 } from './src/features/chapters';
 import type { ChapterRef, ChapterRepository, KeyValueStorage } from './src/features/chapters';
 import { DictationRoute } from './src/features/dictation';
+import type { TestLogStore } from './src/features/testLog';
+import { startDeviceTestLog } from './src/features/testLog/startDeviceTestLog';
 import {
   CallableBookExportService,
   waitForSyncedWrites,
@@ -108,6 +110,8 @@ export interface AppServices {
   outlineService: OutlineService;
   /** The outline preview not yet confirmed, per book. */
   outlineDrafts: OutlineDraftRepository;
+  /** Dev builds only: the test log on the device (Settings › «Scarica registro»). */
+  testLog?: TestLogStore;
 }
 
 export interface AppProps {
@@ -153,6 +157,8 @@ function defaultServices(uid: string): AppServices {
     backupService: new CallableBackupService({ functions }),
     outlineService: new CallableOutlineService({ functions }),
     outlineDrafts: new LocalOutlineDraftRepository(),
+    // dev builds only (__DEV__ or EXPO_PUBLIC_TEST_LOG=1): null in store builds
+    testLog: startDeviceTestLog() ?? undefined,
   };
 }
 
@@ -351,6 +357,7 @@ function AppNavigator({ services }: { services: AppServices }) {
             backupService={services.backupService}
             backupFileSink={services.exportFileSink}
             servedModel={services.servedModel}
+            testLog={services.testLog}
             onBack={pop}
           />
         );

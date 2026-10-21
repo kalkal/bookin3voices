@@ -19,8 +19,21 @@
 
 import type { ModelOutput, Suggestion } from './refineTypes';
 
+/** Why a model suggestion did not survive normalization (stable codes). */
+export type DropReason =
+  'original-not-found' | 'original-ambiguous' | 'no-proposals' | 'overlap' | 'density-cap';
+
+export interface DroppedSuggestion {
+  kind: Suggestion['kind'];
+  original: string;
+  proposals: string[];
+  reason: DropReason;
+}
+
 export interface NormalizedSuggestions {
   suggestions: Suggestion[];
+  /** Each discarded suggestion with its reason (diagnostics, the dev trace). */
+  droppedItems: DroppedSuggestion[];
   /** How many model suggestions were discarded (diagnostics), density cut included. */
   discarded: number;
   /** How many valid suggestions the density cap removed (part of `discarded`). */
@@ -54,7 +67,12 @@ export function normalizeSuggestions(
   requestId: string,
 ): NormalizedSuggestions {
   const located: Located[] = [];
-  let discarded = 0;
+  const droppedItems: DroppedSuggestion[] = [];
+  const drop = (
+    sug: { kind: Suggestion['kind']; original: string; proposals: string[] },
+    reason: DropReason,
+  ) =>
+    droppedItems.push({ kind: sug.kind, original: sug.original, proposals: sug.proposals, reason });
 
   for (const rawSuggestion of output.suggestions) {
     // models often add stray leading/trailing whitespace when copying a span:
@@ -67,7 +85,8 @@ export function normalizeSuggestions(
       occurrences = occurrencesOf(text, trimmed);
     }
     if (occurrences.length !== 1) {
-      discarded += 1; // absent or ambiguous: never guess the span
+      // absent or ambiguous: never guess the span
+      drop(rawSuggestion, occurrences.length === 0 ? 'original-not-found' : 'original-ambiguous');
       continue;
     }
     const from = occurrences[0] as number;
@@ -77,7 +96,7 @@ export function normalizeSuggestions(
       .filter((proposal) => proposal !== '' && proposal !== raw.original);
     if (raw.kind === 'grammar') proposals = proposals.slice(0, 1);
     if (proposals.length === 0) {
-      discarded += 1;
+      drop(raw, 'no-proposals');
       continue;
     }
 
@@ -100,7 +119,7 @@ export function normalizeSuggestions(
   const nonOverlapping: typeof located = [];
   for (const sug of byPriority) {
     if (nonOverlapping.some((kept) => overlaps(kept.span, sug.span))) {
-      discarded += 1;
+      drop(sug, 'overlap');
       continue;
     }
     nonOverlapping.push(sug);
@@ -108,7 +127,8 @@ export function normalizeSuggestions(
 
   const kept = applyDensityCap(nonOverlapping, text);
   const densityCut = nonOverlapping.length - kept.length;
-  discarded += densityCut;
+  const keptSet = new Set(kept);
+  for (const sug of nonOverlapping) if (!keptSet.has(sug)) drop(sug, 'density-cap');
 
   return {
     suggestions: kept
@@ -117,7 +137,8 @@ export function normalizeSuggestions(
         ...sug,
         id: `${requestId}-${index + 1}`,
       })),
-    discarded,
+    droppedItems,
+    discarded: droppedItems.length,
     densityCut,
   };
 }

@@ -42,6 +42,8 @@ export interface DictationStartOptions {
 }
 
 export interface DictationEngine {
+  /** Where speech is recognized, for the dev test log (absent = unknown). */
+  readonly recognizer?: 'on-device' | 'server';
   /** Starts a recognition session (continuous + interim results). */
   start(options: DictationStartOptions): Promise<void>;
   /** Stops listening, letting the last results finalize; onEnd follows. */

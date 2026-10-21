@@ -29,7 +29,12 @@ import {
   PrimaryButton,
   useBottomClearance,
 } from '../../components';
-import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
+import {
+  callableErrorCode,
+  callableErrorMessage,
+  logCallableFailure,
+} from '../../lib/callableErrors';
+import { logTestEvent, stopwatch } from '../testLog';
 import { makeRequestId } from '../../lib/requestId';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -160,16 +165,40 @@ export function SynopsisTab({
   const generate = async () => {
     setProgress({ phase: 'working', message: t('outline.generating') });
     const requestId = makeRequestId('out');
+    const styleId = resolveStyleId(book.styleProfileId);
+    const elapsed = stopwatch();
+    logTestEvent('outline.request', {
+      bookId: book.id,
+      requestId,
+      styleId,
+      synopsisChars: synopsis.trim().length,
+      synopsis: synopsis.trim(),
+    });
     try {
       const proposal = await outlineService.generateOutline({
         bookId: book.id,
         synopsis: synopsis.trim(),
         requestId,
-        styleId: resolveStyleId(book.styleProfileId),
+        styleId,
+      });
+      logTestEvent('outline.result', {
+        bookId: book.id,
+        requestId,
+        durationMs: elapsed(),
+        model: proposal.model,
+        promptVersion: proposal.promptVersion,
+        chapters: proposal.chapters.length,
+        titles: proposal.chapters.map((c) => c.title),
       });
       setCards(proposal.chapters);
       setProgress({ phase: 'idle' });
     } catch (error) {
+      logTestEvent('outline.error', {
+        bookId: book.id,
+        requestId,
+        code: callableErrorCode(error),
+        durationMs: elapsed(),
+      });
       logCallableFailure('outline', requestId, error);
       setProgress({
         phase: 'error',
@@ -185,10 +214,23 @@ export function SynopsisTab({
     try {
       const plan = planOutlineMerge(chapters, cards);
       const result = await applyOutlineMerge(chapterRepository, book.id, plan);
+      logTestEvent('outline.confirm', {
+        bookId: book.id,
+        cards: cards.length,
+        ok: true,
+        ...result,
+      });
       setCards(null);
       setProgress({ phase: 'done', message: mergeMessage(result) });
     } catch (error) {
       console.warn('outline-merge-failed', { bookId: book.id, error: toErrorName(error) });
+      logTestEvent('outline.confirm', {
+        bookId: book.id,
+        cards: cards.length,
+        ok: false,
+        error: toErrorName(error),
+      });
+      logTestEvent('ui.error', { action: 'outline-merge', message: t('outline.mergeFailed') });
       setProgress({
         phase: 'error',
         message: t('outline.mergeFailed'),

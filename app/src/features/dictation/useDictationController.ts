@@ -15,6 +15,7 @@ import { AppState } from 'react-native';
 
 import type { ChapterRef, ChapterTextRepository } from '../chapters';
 import { appendText, countWords } from '../../lib/text';
+import { logTestEvent } from '../testLog';
 import { DebouncedSaver, type SaveStatus } from './autosave';
 import { DictationSession, type AutoPauseReason } from './DictationSession';
 import type { DictationEngine, DictationError } from './types';
@@ -90,6 +91,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
   const baseTextRef = useRef('');
   const initialWordsRef = useRef(0);
   const holder = useRef<{ session?: DictationSession; saver?: DebouncedSaver }>({}).current;
+  const lastStateRef = useRef<string>('idle');
   // after unmount the closing flush MUST still run (saving),
   // but no more setState: the screen is gone
   const unmountedRef = useRef(false);
@@ -124,6 +126,16 @@ export function useDictationController(options: DictationControllerOptions): Dic
           setPartial('');
         },
         onStateChange: (state) => {
+          logTestEvent('dictation.state', {
+            bookId: chapter.bookId,
+            chapterId: chapter.chapterId,
+            from: lastStateRef.current,
+            to: state,
+            lang: holder.session?.locale,
+            recognizer: engine.recognizer ?? 'unknown',
+            ...(state === 'error' ? { code: holder.session?.error?.code } : {}),
+          });
+          lastStateRef.current = state;
           if (unmountedRef.current) return;
           setSessionState(state);
           if (state !== 'listening') setPartial('');
@@ -131,6 +143,18 @@ export function useDictationController(options: DictationControllerOptions): Dic
           if (state === 'error') setDictationError(holder.session?.error);
         },
         onEvent: (event) => {
+          const { type, ...details } = event;
+          logTestEvent('dictation.event', {
+            chapterId: chapter.chapterId,
+            event: type,
+            ...(event.type === 'engine-error'
+              ? {
+                  code: event.error.code,
+                  nativeCode: event.error.nativeCode,
+                  recoverable: event.error.recoverable,
+                }
+              : details),
+          });
           if (event.type === 'engine-error') {
             // diagnostics: the codes only, never the message (it may echo speech)
             const { code, nativeCode, recoverable } = event.error;

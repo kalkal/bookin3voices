@@ -1,4 +1,4 @@
-export { base64ToUint8Array } from './base64';
+export { base64ToUint8Array, utf8ToBase64 } from './base64';
 export { CallableBookExportService } from './CallableBookExportService';
 export { ExportTab } from './ExportTab';
 export type { ExportTabProps } from './ExportTab';

@@ -113,6 +113,11 @@ export class ExpoDictationEngine implements DictationEngine {
     this.events = events;
   }
 
+  /** The recognizer of the running start (dev test log): on-device or the server one. */
+  get recognizer(): 'on-device' | 'server' {
+    return this.onDeviceLang !== undefined ? 'on-device' : 'server';
+  }
+
   async start(options: DictationStartOptions): Promise<void> {
     this.generation += 1;
     const generation = this.generation;

@@ -4,6 +4,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
+import { debugTraceEnabled } from './ai/debugTrace';
 import { createGenerateOutlineHandler } from './ai/generateOutline';
 import { createProvider, selectProviderName, type ModelRole } from './ai/provider/factory';
 import { ProviderModel } from './ai/provider/ProviderModel';
@@ -100,6 +101,8 @@ export const refineChapter = onCall(
       bedrock: () => createProvider(providerDeps, 'primary', 'bedrock'),
       gemini: () => createProvider(providerDeps, 'primary', 'gemini'),
     },
+    // dev-only debug trace for the app's test log: off unless DEBUG_TRACE=1 or emulator
+    debugTrace: debugTraceEnabled(process.env),
   }),
 );
 

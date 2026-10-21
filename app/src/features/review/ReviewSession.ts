@@ -47,7 +47,7 @@ export interface AcceptAllOutcome {
 }
 
 export type UndoOutcome =
-  | { ok: true; text: string; removedRevisionIds: string[] }
+  | { ok: true; text: string; removedRevisionIds: string[]; patches: TextPatch[] }
   | { ok: false; reason: 'nothing-to-undo' | PatchFailure };
 
 export interface ManualEditOutcome {
@@ -282,7 +282,12 @@ export class ReviewSession {
     this.currentText = text;
     this.items = entry.suggestionsBefore;
     this.revalidatePending();
-    return { ok: true, text: this.currentText, removedRevisionIds: entry.revisionIds };
+    return {
+      ok: true,
+      text: this.currentText,
+      removedRevisionIds: entry.revisionIds,
+      patches: entry.inverses,
+    };
   }
 
   /**

@@ -420,6 +420,40 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
     });
   });
 
+  it('debug trace: only when the deployment allows it AND the app asks; never stored', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid, true);
+    const asked = { ...input(bookId, chapterId, 'req-dbg-1'), debug: true };
+
+    const off = await run(makeDeps(new FakeRefineModel()), uid, asked);
+    expect(off.debugTrace).toBeUndefined();
+
+    const enabled = { ...makeDeps(new FakeRefineModel()), debugTrace: true };
+    const notAsked = await run(enabled, uid, input(bookId, chapterId, 'req-dbg-2'));
+    expect(notAsked.debugTrace).toBeUndefined();
+
+    const traced = await run(enabled, uid, { ...asked, requestId: 'req-dbg-3' });
+    expect(traced.debugTrace?.promptVersion).toBe(traced.promptVersion);
+    expect(traced.debugTrace?.model).toBe('fake-flash');
+    expect(traced.debugTrace?.context).toMatchObject({
+      style: 'suspense',
+      language: 'it',
+      genre: 'romanzo',
+      outlineBeats: 2,
+      textChars: TESTO.length,
+      textHash: textHash(TESTO),
+    });
+    expect(traced.debugTrace?.raw).toHaveLength(3);
+    expect(traced.debugTrace?.normalized).toHaveLength(3);
+    expect(traced.debugTrace?.dropped).toEqual([]);
+
+    // the registry keeps no trace: an idempotent retry answers without it
+    const registry = await db.doc(`users/${uid}/refines/req-dbg-3`).get();
+    expect(registry.get('debugTrace')).toBeUndefined();
+    const retry = await run(enabled, uid, { ...asked, requestId: 'req-dbg-3' });
+    expect(retry.debugTrace).toBeUndefined();
+  });
+
   it('clear errors: no auth, malformed input, missing chapter', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);

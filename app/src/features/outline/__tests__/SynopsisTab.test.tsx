@@ -5,7 +5,9 @@ import { fireEvent, render, waitFor, within } from '@testing-library/react-nativ
 
 import { FirebaseError } from 'firebase/app';
 
+import { captureTestLog } from '../../../testing/testLog';
 import { ThemeProvider } from '../../../theme';
+import { uninstallTestLog } from '../../testLog';
 import { InMemoryBookRepository } from '../../books';
 import { InMemoryChapterRepository } from '../../chapters';
 import { InMemoryOutlineDraftRepository, LocalOutlineDraftRepository } from '../drafts';
@@ -370,5 +372,37 @@ describe('LocalOutlineDraftRepository', () => {
     expect(await repo.load('mulino')).toBeNull();
     for (const key of data.keys()) data.set(key, JSON.stringify({ schemaVersion: 1, cards: [{}] }));
     expect(await repo.load('mulino')).toBeNull();
+  });
+});
+
+describe('SynopsisTab and the dev test log', () => {
+  afterEach(() => uninstallTestLog());
+
+  it('records the outline request, its result and «Crea N capitoli»', async () => {
+    const log = captureTestLog();
+    const { result } = setup();
+    const screen = await result;
+
+    await fireEvent.press(await screen.findByTestId('synopsis-generate'));
+    await fireEvent.press(await screen.findByTestId('outline-confirm'));
+    await waitFor(() => expect(log.events('outline.confirm')).toHaveLength(1));
+
+    expect(log.events('outline.request')[0]).toMatchObject({
+      bookId: 'mulino',
+      synopsisChars: 'Le arnie di un mulino e un patto antico.'.length,
+      styleId: 'suspense',
+    });
+    expect(log.events('outline.result')[0]).toMatchObject({
+      bookId: 'mulino',
+      chapters: 2,
+      titles: ['La gola chiusa', 'Il patto'],
+    });
+    expect(log.events('outline.confirm')[0]).toMatchObject({
+      bookId: 'mulino',
+      cards: 2,
+      created: 2,
+      ok: true,
+    });
+    await screen.unmount();
   });
 });

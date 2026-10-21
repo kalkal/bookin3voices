@@ -22,6 +22,7 @@ import { ArchesFill, Card, Chip, Screen, useBottomClearance } from '../../compon
 import { getLanguage, t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ExportFileSink } from '../export';
+import type { TestLogStore } from '../testLog';
 import { DEFAULT_STYLE_ID, STYLES } from '../books/styles';
 import { aiModelLabel, DEFAULT_AI_MODEL_ID, type ServedModelSource } from './aiModel';
 import { backupStatus } from './backup';
@@ -30,6 +31,7 @@ import { DAILY_GOAL_STEP, UI_LANGUAGES } from './types';
 import type { BackupFrequency, SettingsRepository, ThemePreference } from './types';
 import { useBackupDownload } from './useBackupDownload';
 import { useSettingsController } from './useSettingsController';
+import { useTestLogDownload } from './useTestLogDownload';
 
 export interface SettingsScreenProps {
   repository: SettingsRepository;
@@ -40,6 +42,8 @@ export interface SettingsScreenProps {
   onBack?: () => void;
   /** Model the server answered with last time; absent = the server's default. */
   servedModel?: ServedModelSource;
+  /** Dev builds only: the running test log, offered as «Scarica registro». */
+  testLog?: TestLogStore;
 }
 
 const THEME_VALUES: readonly ThemePreference[] = ['paper', 'candlelight', 'auto'];
@@ -51,11 +55,13 @@ export function SettingsScreen({
   backupFileSink,
   onBack,
   servedModel,
+  testLog,
 }: SettingsScreenProps) {
   const { colors, fonts, spacing, typeScale, letterSpacing } = useTheme();
   const controller = useSettingsController(repository);
   const { settings } = controller;
   const backup = useBackupDownload(backupService, backupFileSink, controller.setLastBackupAt);
+  const logDownload = useTestLogDownload(testLog, backupFileSink);
   const [lastModel, setLastModel] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -304,6 +310,30 @@ export function SettingsScreen({
             </View>
           )}
         </Card>
+
+        {testLog !== undefined && (
+          <>
+            <Text style={sectionLabelStyle}>{t('settings.testLog.section')}</Text>
+            <Card>
+              <Pressable
+                accessibilityRole="button"
+                testID="test-log-download"
+                onPress={logDownload.download}
+                style={styles.row}
+              >
+                <Text style={rowTitleStyle}>{t('settings.testLog.download')}</Text>
+                <Text style={captionStyle}>
+                  {t('settings.testLog.where', { location: testLog.location })}
+                </Text>
+              </Pressable>
+              {logDownload.message !== '' && (
+                <Text testID="test-log-progress" style={[captionStyle, { marginTop: spacing.sm }]}>
+                  {logDownload.message}
+                </Text>
+              )}
+            </Card>
+          </>
+        )}
 
         <Text style={sectionLabelStyle}>{t('settings.styles.section')}</Text>
         <Card>

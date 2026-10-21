@@ -14,6 +14,8 @@
 
 import { z } from 'zod';
 
+import type { RefineDebugTrace } from './debugTrace';
+
 export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing', 'history'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
 
@@ -125,6 +127,8 @@ export const refineChapterInputSchema = z.object({
   textHash: z.string().min(1),
   /** Idempotency: same requestId ⇒ same response, no duplicates. */
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  /** Dev builds ask for a debug trace; honoured only where the deployment allows it. */
+  debug: z.boolean().optional(),
 });
 
 export type RefineChapterInput = z.infer<typeof refineChapterInputSchema>;
@@ -139,6 +143,8 @@ export interface RefineChapterResponse {
   /** Model suggestions discarded by the server (non-matching or ambiguous
    *  original, or empty proposals): diagnostics only, the app may ignore it. */
   discarded: number;
+  /** Dev-only trace (see debugTrace.ts): absent unless enabled and asked for. */
+  debugTrace?: RefineDebugTrace;
 }
 
 /** Idempotency registry document users/{uid}/refines/{requestId}. */

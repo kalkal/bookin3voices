@@ -30,3 +30,20 @@ export function base64ToUint8Array(base64: string): Uint8Array {
   }
   return bytes;
 }
+
+/** UTF-8 text → base64 (for the file sink), without btoa or Buffer. */
+export function utf8ToBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i] as number;
+    const b = bytes[i + 1];
+    const c = bytes[i + 2];
+    const bits = (a << 16) | ((b ?? 0) << 8) | (c ?? 0);
+    out += ALPHABET[(bits >> 18) & 63];
+    out += ALPHABET[(bits >> 12) & 63];
+    out += b === undefined ? '=' : ALPHABET[(bits >> 6) & 63];
+    out += c === undefined ? '=' : ALPHABET[bits & 63];
+  }
+  return out;
+}

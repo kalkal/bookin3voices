@@ -24,6 +24,7 @@ import { logger } from 'firebase-functions';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
+import { buildRefineDebugTrace } from './debugTrace';
 import { mergeWithHistory, runHistoryCheckWithin } from './history/historyCheck';
 import { isRetryableAiError, type AiProvider } from './provider/types';
 import { normalizeSuggestions } from './normalizeSuggestions';
@@ -69,6 +70,11 @@ export interface RefineChapterDeps {
    * the refinement). Absent = no history suggestions.
    */
   history?: Record<AiProviderId, () => AiProvider>;
+  /**
+   * The deployment may return dev debug traces (debugTraceEnabled: DEBUG_TRACE=1
+   * or the emulator). Off by default; the trace is never logged or stored.
+   */
+  debugTrace?: boolean;
 }
 
 /**
@@ -289,6 +295,7 @@ export async function runRefineChapter(
     suggestions: mergeWithHistory(output.suggestions, history?.suggestions ?? [], input.text),
   };
   const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId);
+  const traceRequested = deps.debugTrace === true && input.debug === true;
   const { suggestions } = normalized;
   const discarded = normalized.discarded + dropped + (history?.dropped ?? 0);
   if (normalized.densityCut > 0) {
@@ -348,7 +355,24 @@ export async function runRefineChapter(
     return fresh;
   });
 
-  return toResponse(input.requestId, doc);
+  const response = toResponse(input.requestId, doc);
+  if (!traceRequested) return response;
+  return {
+    ...response,
+    debugTrace: buildRefineDebugTrace({
+      promptVersion: doc.promptVersion,
+      model: doc.model,
+      book,
+      chapter,
+      text: input.text,
+      textHash: input.textHash,
+      raw: output.suggestions,
+      parseDropped: dropped,
+      history,
+      merged: merged.suggestions,
+      normalized,
+    }),
+  };
 }
 
 /** Callable handler: auth + input validation, then runRefineChapter. */

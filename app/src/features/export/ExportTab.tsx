@@ -20,7 +20,12 @@ import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
 import { preflightNote } from './kdpMessages';
-import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
+import {
+  callableErrorCode,
+  callableErrorMessage,
+  logCallableFailure,
+} from '../../lib/callableErrors';
+import { logTestEvent } from '../testLog';
 import { makeRequestId } from './requestId';
 import {
   EXPORT_FORMATS,
@@ -123,6 +128,18 @@ export function ExportTab({
       console.warn('export-share-failed', {
         code: error instanceof Error ? error.name : typeof error,
       });
+      logTestEvent('export.error', {
+        bookId: book.id,
+        stage: 'share',
+        code: error instanceof Error ? error.name : typeof error,
+      });
+      logTestEvent('ui.error', {
+        action: 'export-share',
+        message:
+          error instanceof Error && error.message.trim() !== ''
+            ? error.message
+            : t('export.share.failed'),
+      });
       setProgress({
         phase: 'error',
         // the sink throws localized text (export.share.unavailable)
@@ -160,8 +177,24 @@ export function ExportTab({
       // the callable reads from the server: let the local saves reach it first
       const synced = waitForSync ? await waitForSync().catch(() => false) : true;
       const file = await exportService.exportBook({ bookId: book.id, format, requestId });
+      logTestEvent('export.result', {
+        bookId: book.id,
+        requestId,
+        format,
+        fileName: file.fileName,
+        size: file.size,
+        synced,
+        preflight: file.preflight,
+      });
       await share(file, synced);
     } catch (error) {
+      logTestEvent('export.error', {
+        bookId: book.id,
+        requestId,
+        format,
+        stage: 'export',
+        code: callableErrorCode(error),
+      });
       logCallableFailure('export', requestId, error);
       setProgress({
         phase: 'error',
