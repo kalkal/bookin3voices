@@ -1,6 +1,6 @@
 {
   "name": "functions",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "private": true,
   "engines": {
     "node": "20"

@@ -1,5 +1,7 @@
 <p align="center"><img src="docs/images/header.png" alt="bookin3voice: suspense, mystery, thriller" width="720"></p>
 
+<p align="center"><a href="https://github.com/kalkal"><img src="docs/brand/kalkal-mark.svg" alt="kalkal" height="56"></a></p>
+
 # bookin3voice
 
 Dictate a book out loud, get precise style suggestions from an AI, and export files that are
@@ -7,7 +9,7 @@ ready for Amazon KDP (EPUB and DOCX).
 
 bookin3voice is a mobile app (React Native / Expo) backed by Firebase. Suggestions and chapter
 outlines come from **Amazon Nova on Amazon Bedrock** by default; Google Gemini is available as
-an alternative provider. Licensed under the [MIT License](LICENSE).
+an alternative provider. Licensed under the [GNU AGPL v3.0 only](LICENSE), Copyright 2026 kalkal.
 
 ## Why it matters
 
@@ -222,4 +224,4 @@ unless credentials are present.
 
 ## License
 
-[MIT](LICENSE). Third-party dependencies keep their own licenses (see `THIRD_PARTY_LICENSES.md`).
+[GNU AGPL v3.0 only](LICENSE), Copyright 2026 kalkal. Third-party code, fonts and data keep their own licenses (see [NOTICE](NOTICE) and `THIRD_PARTY_LICENSES.md`).

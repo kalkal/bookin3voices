@@ -1,6 +1,6 @@
 {
   "name": "rules-tests",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "private": true,
   "description": "Firestore security rules tests with @firebase/rules-unit-testing on the Emulator Suite",
   "engines": {

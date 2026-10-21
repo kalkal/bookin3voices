@@ -2,7 +2,7 @@
 
 Checked in October 2026 with `license-checker-rseidelsohn --production --summary` in `app/` and
 `functions/`. Every runtime dependency is under a license compatible with distributing this
-project under MIT. Regenerate the list before each release.
+project under AGPL-3.0-only. Regenerate the list before each release.
 
 | Package | License | Note |
 | --- | --- | --- |
