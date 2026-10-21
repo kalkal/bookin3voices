@@ -110,6 +110,8 @@ export function ExportTab({
   };
 
   const working = progress.phase === 'working';
+  // like Save: a blank title is never written on the book, so nothing is exported from it
+  const titleMissing = title.trim() === '';
 
   // sharing is the phone's job, not the server's: its own message, and Retry
   // shares the same file again instead of exporting a new one
@@ -151,7 +153,7 @@ export function ExportTab({
     try {
       // what is on screen is what gets exported: unsaved metadata (a name
       // offered from Settings, too) is saved on the book first
-      if (metadataDirty) {
+      if (metadataDirty && !titleMissing) {
         await bookRepository.updateBook(book.id, { title, author, language, description });
         setMetadataSaved(true);
       }
@@ -287,7 +289,7 @@ export function ExportTab({
         <PrimaryButton
           label={t('export.metadata.save')}
           testID="export-save-metadata"
-          disabled={!metadataDirty || title.trim() === ''}
+          disabled={!metadataDirty || titleMissing}
           onPress={saveMetadata}
         />
         {metadataSaved && (
@@ -367,7 +369,7 @@ export function ExportTab({
             : t('export.generate.idle', { format: FORMAT_LABELS[format] })
         }
         testID="export-generate"
-        disabled={working}
+        disabled={working || titleMissing}
         onPress={() => {
           void generate();
         }}

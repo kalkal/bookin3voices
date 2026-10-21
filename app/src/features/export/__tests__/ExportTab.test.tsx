@@ -46,6 +46,20 @@ function setup(options?: {
   return { result, books, exportService, fileSink };
 }
 
+describe('ExportTab — empty title', () => {
+  it('with the title field emptied, Generate is off: no blank title saved, no export', async () => {
+    const { result, books, exportService } = setup();
+    const screen = await result;
+    const spy = jest.spyOn(exportService, 'exportBook');
+    await fireEvent.changeText(await screen.findByTestId('export-title'), '   ');
+    expect(screen.getByTestId('export-generate')).toBeDisabled();
+    await fireEvent.press(screen.getByTestId('export-generate'));
+    expect(spy).not.toHaveBeenCalled();
+    expect((await books.getBook('mulino'))?.title).toBe('Il mulino di Rocca Bassa');
+    await screen.unmount();
+  });
+});
+
 describe('ExportTab — author name', () => {
   it('a book with no author shows the name from Settings, prefilled and editable', async () => {
     const screen = await setup({ author: '', defaultAuthor: 'Jane Doe' }).result;
