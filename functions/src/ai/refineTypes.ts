@@ -127,6 +127,11 @@ export const refineChapterInputSchema = z.object({
   textHash: z.string().min(1),
   /** Idempotency: same requestId ⇒ same response, no duplicates. */
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  /** Keys of the (original, proposal) pairs the user rejected (rejections.ts): never proposed again. */
+  rejected: z
+    .array(z.string().regex(/^v1-[0-9a-f]{16}$/))
+    .max(500)
+    .optional(),
   /** Dev builds ask for a debug trace; honoured only where the deployment allows it. */
   debug: z.boolean().optional(),
 });

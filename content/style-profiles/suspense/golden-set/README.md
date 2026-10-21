@@ -28,6 +28,26 @@ the profile must hold up across registers without flattening them.
   passages. It loads `functions/.env` when present (variables already exported win) and
   prints the number of model calls at the end. Options:
   `-- --model X --fallback Y --only 04 --out report.md --dry`.
+- **Offline run (no model call, safe for CI)**: `npm run golden:offline` in `functions/`
+  (and the `goldenSetOffline` jest test) replays the hand-written answers in `recorded/`
+  through the same provider factory with a fake Bedrock client, then runs the same checks.
+  It covers the code side (normalization, proposal guard, density), not the prompt or the
+  model: those still need the live run above. Each recording may list `mustDrop`
+  originals, proposals that would delete or replace text, which must not survive.
+- **Proposal guard** (`functions/src/ai/proposalGuard.ts`): a proposal must change its
+  original, never replace it. Grammar is a small edit: at most max(1, 20%) of the
+  original's words may be lost, and at most as many new words may appear; words that
+  are still in the proposal do not count as lost (a doubled phrase from dictation can be
+  fixed), and spoken punctuation left in the text («punto e virgola» → «;») is free.
+  For every kind but history (the label is the model's choice), content words (4+
+  letters) may not be dropped: at most half of them, rounded down (min 1). New words do
+  not buy back lost ones, except one word swapped in a short clause (up to 4 content
+  words, proposal 60%+ of its length, e.g. «ammise Bruno sconsolatamente» → «disse
+  Bruno»). A rewrite that shows instead of telling keeps its anchor words. A short original (under 3 content words) may gain at most one
+  new content word and two words overall. Style and pacing also keep at least one
+  content word of the original, and 30% of them when the original has 12+ words.
+  History hints are not judged. Tune the
+  thresholds only with a golden run (live and offline).
 - For a manual try (e.g. in Google AI Studio): paste the Style Bible and few-shots as the
   system instruction and, as the message, only the "Brano" (passage) section, never the
   "Esito atteso" (expected outcome).

@@ -17,11 +17,17 @@
 // The final quality judgment stays human: the runner only blocks
 // mechanical regressions.
 //
-// Usage: npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md]
+// Usage: npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md] [--offline]
+// --offline (npm run golden:offline, and the goldenSetOffline jest test): replays the
+// hand-written answers in golden-set/recorded/ through the same factory with a fake
+// Bedrock client. No network and no real model call: it checks the code side
+// (normalization, proposal guard, density) on every passage that has a recording;
+// the prompt and the model still need the live run.
 // Provider: AI_PROVIDER (bedrock = Amazon Nova, the default, through the AWS
 // credential chain, e.g. AWS_PROFILE; gemini = env GEMINI_API_KEY), the same
 // factory the callables use. Fictitious passages only. Keys are never printed.
 
+import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import * as path from 'node:path';
 
@@ -184,7 +190,7 @@ export function checkBrano(
   if (discarded > 0) {
     violations.push({
       level: 'warn',
-      message: `${discarded} suggestion(s) discarded (original missing/ambiguous or empty proposals)`,
+      message: `${discarded} suggestion(s) discarded (original missing/ambiguous, empty proposals, or proposals that would delete or replace text)`,
     });
   }
 
@@ -375,6 +381,112 @@ function renderReport(reports: BranoReport[], startedAt: Date): string {
   return lines.join('\n');
 }
 
+// ---------- offline replay ----------
+
+const GOLDEN_DIR = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'content',
+  'style-profiles',
+  'suspense',
+  'golden-set',
+);
+const RECORDED_DIR = path.join(GOLDEN_DIR, 'recorded');
+
+interface Recording {
+  /** The model answer, exactly as the tool_use input Nova would return. */
+  output: unknown;
+  /** Originals whose proposals delete or replace text: they must not survive. */
+  mustDrop?: string[];
+}
+
+/** Passages with a recorded answer (file names of the .md passages). */
+export function listRecordings(): string[] {
+  if (!existsSync(RECORDED_DIR)) return [];
+  return readdirSync(RECORDED_DIR)
+    .filter((f) => /^\d\d-.*\.json$/.test(f))
+    .map((f) => f.replace(/\.json$/, '.md'))
+    .sort();
+}
+
+/**
+ * One passage through the provider factory with a fake Bedrock client that
+ * answers with the recording (a Converse tool_use reply). History is not
+ * replayed: it takes several calls and has its own tests.
+ */
+export async function runOfflinePassage(
+  file: string,
+): Promise<{ report: BranoReport; mustDrop: string[]; sent: number }> {
+  const checksFile = JSON.parse(
+    readFileSync(path.join(GOLDEN_DIR, 'checks.json'), 'utf8'),
+  ) as ChecksFile;
+  const checks = checksFile[file];
+  if (checks === undefined) throw new Error(`${file}: entry missing from checks.json`);
+  const recording = JSON.parse(
+    readFileSync(path.join(RECORDED_DIR, file.replace(/\.md$/, '.json')), 'utf8'),
+  ) as Recording;
+  const text = extractBrano(readFileSync(path.join(GOLDEN_DIR, file), 'utf8'), file);
+
+  let sent = 0;
+  const client = {
+    send: async () => {
+      sent += 1;
+      return {
+        stopReason: 'tool_use',
+        output: {
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                toolUse: { toolUseId: 'recorded', name: 'return_result', input: recording.output },
+              },
+            ],
+          },
+        },
+      };
+    },
+  } as unknown as BedrockRuntimeClient;
+  const deps = {
+    env: { AI_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'recorded-nova' },
+    gemini: { model: () => '', apiKey: () => '' },
+    createBedrockClient: () => client,
+  };
+  const model = new ProviderModel(() => createProvider(deps, 'primary'), REFINE_TEMPERATURE);
+  const profile = loadStyleProfileContent('suspense');
+  const prompt = buildRefinePrompt({
+    styleBible: profile.styleBible,
+    fewShots: profile.fewShots,
+    book: { title: 'Golden set', genre: '', language: checks.language ?? 'it', synopsis: '' },
+    chapter: { title: file.replace(/\.md$/, ''), outline: null },
+    text,
+  });
+  const output = modelOutputSchema.parse(await model.generate(prompt));
+  const report = checkBrano(file, text, checks, output, model.modelName);
+  return { report, mustDrop: recording.mustDrop ?? [], sent };
+}
+
+async function runOffline(only: string | undefined): Promise<void> {
+  const files = listRecordings().filter((f) =>
+    only === undefined ? true : only.split(',').some((o) => f.includes(o)),
+  );
+  if (files.length === 0) throw new Error('no recorded passage selected');
+  let failed = false;
+  for (const file of files) {
+    const { report, mustDrop } = await runOfflinePassage(file);
+    const survivors = mustDrop.filter((o) => report.suggestions.some((s) => s.original === o));
+    console.log(
+      `▶ ${file}: ${report.count}/${report.rawCount} kept, ${report.discarded} discarded, MUST ${report.coverage.covered.length}/${report.coverage.covered.length + report.coverage.missed.length}`,
+    );
+    for (const v of report.violations) console.log(`  ${v.level.toUpperCase()}: ${v.message}`);
+    for (const o of survivors) console.log(`  FAIL: unsafe proposal kept («${o.slice(0, 50)}»)`);
+    if (report.failed || survivors.length > 0) failed = true;
+  }
+  console.log(`\nOffline: ${files.length} recorded passage(s), 0 model calls.`);
+  if (failed) process.exitCode = 1;
+}
+
 // ---------- main ----------
 
 function argValue(name: string): string | undefined {
@@ -383,6 +495,10 @@ function argValue(name: string): string | undefined {
 }
 
 async function main(): Promise<void> {
+  if (process.argv.includes('--offline')) {
+    await runOffline(argValue('only'));
+    return;
+  }
   const startedAt = new Date();
   // Same provider, model ids and env var names as the callables (AI_PROVIDER,
   // BEDROCK_MODEL_ID*, GEMINI_MODEL_REFINE*): the script loads functions/.env when
@@ -422,16 +538,7 @@ async function main(): Promise<void> {
   }
   console.log(`Provider ${providerName}: ${models.map((m) => m.modelName).join(' → fallback ')}`);
 
-  const goldenDir = path.resolve(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'content',
-    'style-profiles',
-    'suspense',
-    'golden-set',
-  );
+  const goldenDir = GOLDEN_DIR;
   const checksPath = path.join(goldenDir, 'checks.json');
   const checksFile = JSON.parse(readFileSync(checksPath, 'utf8')) as ChecksFile;
   const profile = loadStyleProfileContent('suspense');

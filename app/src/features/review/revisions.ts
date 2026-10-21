@@ -19,6 +19,8 @@ const revisionRecordSchema = z.object({
   after: z.string(),
   decision: z.enum(['accepted', 'rejected']),
   at: z.number(),
+  // additive: revisions saved before it have none
+  alternatives: z.array(z.string()).optional(),
 });
 
 const storedRevisionsSchema = z.object({

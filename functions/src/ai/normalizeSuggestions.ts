@@ -4,6 +4,11 @@
 //   DISCARDED (never a blind application);
 // - empty proposals, or ones identical to the original → removed; with no
 //   proposals left → discarded;
+// - proposals that replace their original instead of changing it → removed
+//   (proposalGuard: grammar is a small edit, style/pacing keep part of the
+//   original); with no proposals left → discarded;
+// - proposals the user already rejected on the same original (rejections.ts)
+//   → removed, so a new refinement never proposes them again;
 // - grammar with several proposals → keep the first (the most conservative by
 //   prompt design), per the proposal hierarchy;
 // - `aspect` is kept on history only (parseModelOutput already dropped a
@@ -17,11 +22,29 @@
 // - overlapping spans → the higher priority wins, then the first in text order
 //   (the app does not handle overlapping highlights).
 
+import { checkProposal, type ProposalDropReason } from './proposalGuard';
+import { rejectionKey } from './rejections';
 import type { ModelOutput, Suggestion } from './refineTypes';
 
 /** Why a model suggestion did not survive normalization (stable codes). */
 export type DropReason =
-  'original-not-found' | 'original-ambiguous' | 'no-proposals' | 'overlap' | 'density-cap';
+  | 'original-not-found'
+  | 'original-ambiguous'
+  | 'no-proposals'
+  /** every proposal would have deleted or replaced text (proposalGuard) */
+  | 'unsafe-proposals'
+  /** every proposal was already rejected by the user on this original */
+  | 'already-rejected'
+  | 'overlap'
+  | 'density-cap';
+
+/** A single proposal removed before the suggestion was kept or dropped. */
+export interface DroppedProposal {
+  kind: Suggestion['kind'];
+  original: string;
+  proposal: string;
+  reason: ProposalDropReason | 'already-rejected';
+}
 
 export interface DroppedSuggestion {
   kind: Suggestion['kind'];
@@ -34,10 +57,21 @@ export interface NormalizedSuggestions {
   suggestions: Suggestion[];
   /** Each discarded suggestion with its reason (diagnostics, the dev trace). */
   droppedItems: DroppedSuggestion[];
+  /** Each proposal removed by the guard or as already rejected, with its reason (dev trace). */
+  droppedProposals: DroppedProposal[];
   /** How many model suggestions were discarded (diagnostics), density cut included. */
   discarded: number;
   /** How many valid suggestions the density cap removed (part of `discarded`). */
   densityCut: number;
+  /** How many proposals the proposal guard removed (they would have deleted or replaced text). */
+  unsafe: number;
+  /** How many proposals were dropped because the user had already rejected them. */
+  alreadyRejected: number;
+}
+
+export interface NormalizeOptions {
+  /** rejectionKey of every (original, proposal) pair the user rejected. */
+  rejected?: ReadonlySet<string>;
 }
 
 export const MAX_SUGGESTIONS = 30;
@@ -65,9 +99,11 @@ export function normalizeSuggestions(
   text: string,
   hash: string,
   requestId: string,
+  options: NormalizeOptions = {},
 ): NormalizedSuggestions {
   const located: Located[] = [];
   const droppedItems: DroppedSuggestion[] = [];
+  const droppedProposals: DroppedProposal[] = [];
   const drop = (
     sug: { kind: Suggestion['kind']; original: string; proposals: string[] },
     reason: DropReason,
@@ -94,9 +130,41 @@ export function normalizeSuggestions(
     let proposals = raw.proposals
       .map((proposal) => proposal.trim())
       .filter((proposal) => proposal !== '' && proposal !== raw.original);
+    const before = droppedProposals.length;
+    proposals = proposals.filter((proposal) => {
+      const verdict = checkProposal(raw.kind, raw.original, proposal);
+      if (!verdict.ok) {
+        droppedProposals.push({
+          kind: raw.kind,
+          original: raw.original,
+          proposal,
+          reason: verdict.reason,
+        });
+        return false;
+      }
+      if (options.rejected?.has(rejectionKey(raw.original, proposal))) {
+        droppedProposals.push({
+          kind: raw.kind,
+          original: raw.original,
+          proposal,
+          reason: 'already-rejected',
+        });
+        return false;
+      }
+      return true;
+    });
     if (raw.kind === 'grammar') proposals = proposals.slice(0, 1);
     if (proposals.length === 0) {
-      drop(raw, 'no-proposals');
+      // say why: the guard or a past rejection emptied it, or the model sent nothing usable
+      const mine = droppedProposals.slice(before);
+      drop(
+        raw,
+        mine.some((d) => d.reason !== 'already-rejected')
+          ? 'unsafe-proposals'
+          : mine.length > 0
+            ? 'already-rejected'
+            : 'no-proposals',
+      );
       continue;
     }
 
@@ -138,8 +206,11 @@ export function normalizeSuggestions(
         id: `${requestId}-${index + 1}`,
       })),
     droppedItems,
+    droppedProposals,
     discarded: droppedItems.length,
     densityCut,
+    unsafe: droppedProposals.filter((d) => d.reason !== 'already-rejected').length,
+    alreadyRejected: droppedProposals.filter((d) => d.reason === 'already-rejected').length,
   };
 }
 

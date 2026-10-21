@@ -1,0 +1,58 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run.",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "style",
+        "original": "lo apostrofò Lidia",
+        "proposals": [
+          "disse Lidia"
+        ],
+        "rationale": "attribuzione: «disse» non si sente"
+      },
+      {
+        "kind": "style",
+        "original": "indagò lei",
+        "proposals": [
+          "chiese lei"
+        ],
+        "rationale": "attribuzione"
+      },
+      {
+        "kind": "style",
+        "original": "ammise Bruno sconsolatamente",
+        "proposals": [
+          "disse Bruno"
+        ],
+        "rationale": "attribuzione e avverbio"
+      },
+      {
+        "kind": "style",
+        "original": "intimò Lidia",
+        "proposals": [
+          "disse Lidia"
+        ],
+        "rationale": "attribuzione"
+      },
+      {
+        "kind": "style",
+        "original": "balbettò Bruno con un filo di voce",
+        "proposals": [
+          "disse Bruno con un filo di voce"
+        ],
+        "rationale": "attribuzione"
+      },
+      {
+        "kind": "style",
+        "original": "Andarono in officina insieme senza dirselo.",
+        "proposals": [
+          "Il deposito era deserto."
+        ],
+        "rationale": "ritmo"
+      }
+    ]
+  },
+  "mustDrop": [
+    "Andarono in officina insieme senza dirselo."
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run.",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "style",
+        "original": "Si accorse che l'acqua aveva già coperto il primo gradino",
+        "proposals": [
+          "L'acqua aveva già coperto il primo gradino"
+        ],
+        "rationale": "verbo filtro"
+      },
+      {
+        "kind": "pacing",
+        "original": "Fabio chiamò due volte e la voce non arrivava nemmeno a metà.",
+        "proposals": [
+          "Fabio chiamò due volte. La voce non arrivava nemmeno a metà."
+        ],
+        "rationale": "ritmo"
+      },
+      {
+        "kind": "grammar",
+        "original": "staccò freneticamente il salvagente dal palo la corda era annodata male le dita non trovavano il capo del nodo la torcia gli scivolò di mano e rotolò nell'erba ancora accesa e lui la raccolse bagnata.",
+        "proposals": [
+          "Staccò freneticamente il salvagente dal palo. La corda era annodata male, le dita non trovavano il capo del nodo, la torcia gli scivolò di mano e rotolò nell'erba ancora accesa e lui la raccolse bagnata."
+        ],
+        "rationale": "punteggiatura di dettatura"
+      },
+      {
+        "kind": "style",
+        "original": "Gli parve di capire che la passerella reggeva ancora",
+        "proposals": [
+          "La passerella reggeva ancora"
+        ],
+        "rationale": "verbo filtro"
+      },
+      {
+        "kind": "style",
+        "original": "il palo del corrimano fu strappato dalla corrente",
+        "proposals": [
+          "la corrente strappò il palo del corrimano"
+        ],
+        "rationale": "passivo"
+      },
+      {
+        "kind": "pacing",
+        "original": "Fabio si infilò il salvagente al braccio e afferrò il cavo del corrimano e salì sulla passerella",
+        "proposals": [
+          "Era una notte buia e tempestosa."
+        ],
+        "rationale": "ritmo"
+      },
+      {
+        "kind": "grammar",
+        "original": "Il camper era aperto. Dentro non c'era nessuno,",
+        "proposals": [
+          "Il camper era aperto."
+        ],
+        "rationale": "ripetizione"
+      }
+    ]
+  },
+  "mustDrop": [
+    "Fabio si infilò il salvagente al braccio e afferrò il cavo del corrimano e salì sulla passerella",
+    "Il camper era aperto. Dentro non c'era nessuno,"
+  ]
+}

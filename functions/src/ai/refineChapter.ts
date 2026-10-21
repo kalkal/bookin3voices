@@ -294,10 +294,26 @@ export async function runRefineChapter(
   const merged = {
     suggestions: mergeWithHistory(output.suggestions, history?.suggestions ?? [], input.text),
   };
-  const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId);
+  const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId, {
+    rejected: new Set(input.rejected ?? []),
+  });
+  if (normalized.alreadyRejected > 0) {
+    logger.info('refineChapter: already rejected proposals dropped', {
+      requestId: input.requestId,
+      alreadyRejected: normalized.alreadyRejected,
+    });
+  }
   const traceRequested = deps.debugTrace === true && input.debug === true;
   const { suggestions } = normalized;
   const discarded = normalized.discarded + dropped + (history?.dropped ?? 0);
+  if (normalized.unsafe > 0) {
+    // proposals that would have deleted or replaced text: counts only, never the text
+    logger.warn('refineChapter: unsafe proposals dropped', {
+      requestId: input.requestId,
+      unsafe: normalized.unsafe,
+      kept: suggestions.length,
+    });
+  }
   if (normalized.densityCut > 0) {
     logger.info('refineChapter: density cap applied', {
       requestId: input.requestId,

@@ -107,6 +107,25 @@ export function ReviewScreen({
         ))}
       </View>
 
+      {controller.acceptNotice !== '' ? (
+        // above the list: a message at the bottom of the cards would go unseen
+        <Text
+          testID="review-accept-notice"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          style={{
+            color: colors.accentText,
+            fontFamily: fonts.body,
+            fontSize: typeScale.caption,
+            textAlign: 'center',
+            paddingHorizontal: spacing.xl,
+            paddingBottom: spacing.md,
+          }}
+        >
+          {controller.acceptNotice}
+        </Text>
+      ) : null}
+
       {filter === 'history' && visible.length > 0 ? (
         <Text
           style={{

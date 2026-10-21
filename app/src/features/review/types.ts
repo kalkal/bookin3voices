@@ -111,6 +111,8 @@ export interface RefineRequest {
   textHash: string;
   /** Idempotency on the Functions side: a retry does not generate duplicate suggestions. */
   requestId: string;
+  /** Keys of the rejected (original, proposal) pairs (rejections.ts): never proposed again. */
+  rejected?: string[];
   /** Dev builds with the test log: ask for the server's debug trace. */
   debug?: boolean;
 }

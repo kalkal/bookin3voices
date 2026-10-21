@@ -4,7 +4,9 @@
 // (b) on acceptance, the remaining pending spans are re-mapped
 //     (multiple patches are applied from the highest offset to the lowest);
 // (c) a manual edit touching a pending span invalidates it (stale);
-// (d) every patch verifies `original` before applying: a clean rejection.
+// (d) every patch verifies `original` before applying: a clean rejection;
+// (e) a proposal that would delete or replace text instead of changing it
+//     (proposalGuard, same rule as the server) is never applied.
 //
 // The class is PURE DOMAIN: no I/O. Decisions produce RevisionRecords
 // that the caller (useChapterReview) persists to `revisions`; undo
@@ -14,6 +16,7 @@
 // second thoughts during review, not time travel).
 
 import { applyPatch, diffAsPatch, invertPatch, remapSpan } from './patches';
+import { checkProposal } from './proposalGuard';
 import type { PatchFailure, TextPatch } from './patches';
 import { textHash } from './textHash';
 import type { RefineResult, Span, Suggestion, SuggestionKind } from './types';
@@ -26,10 +29,12 @@ export interface RevisionRecord {
   after: string;
   decision: 'accepted' | 'rejected';
   at: number;
+  /** Rejected suggestions: the other proposals, rejected together with `after`. */
+  alternatives?: string[];
 }
 
 export type AcceptFailure =
-  PatchFailure | 'unknown-suggestion' | 'not-pending' | 'invalid-proposal';
+  PatchFailure | 'unknown-suggestion' | 'not-pending' | 'invalid-proposal' | 'unsafe-proposal';
 
 export type AcceptOutcome =
   { ok: true; text: string; revision: RevisionRecord } | { ok: false; reason: AcceptFailure };
@@ -42,6 +47,8 @@ export interface AcceptAllOutcome {
   accepted: number;
   /** Pendings of the category that became stale because the patch did not match. */
   staled: number;
+  /** Pendings skipped because their proposal would delete or replace text. */
+  unsafe: number;
   text: string;
   revisions: RevisionRecord[];
 }
@@ -136,6 +143,10 @@ export class ReviewSession {
     if (suggestion.state !== 'pending') return { ok: false, reason: 'not-pending' };
     const proposal = suggestion.proposals[proposalIndex];
     if (proposal === undefined) return { ok: false, reason: 'invalid-proposal' };
+    if (!checkProposal(suggestion.kind, suggestion.original, proposal).ok) {
+      this.markStale(suggestionId);
+      return { ok: false, reason: 'unsafe-proposal' };
+    }
 
     const snapshot = this.items;
     const patch: TextPatch = {
@@ -192,6 +203,7 @@ export class ReviewSession {
       after: suggestion.proposals[0] ?? suggestion.original,
       decision: 'rejected',
       at: this.now(),
+      ...(suggestion.proposals.length > 1 ? { alternatives: suggestion.proposals.slice(1) } : {}),
     };
     this.undoStack.push({ inverses: [], suggestionsBefore: snapshot, revisionIds: [revision.id] });
     return { ok: true, revision };
@@ -205,22 +217,28 @@ export class ReviewSession {
   acceptAll(kind: SuggestionKind): AcceptAllOutcome {
     // history hints are unchecked facts: each one is accepted on its own, never in bulk
     if (kind === 'history') {
-      return { accepted: 0, staled: 0, text: this.currentText, revisions: [] };
+      return { accepted: 0, staled: 0, unsafe: 0, text: this.currentText, revisions: [] };
     }
     const targets = [...this.pendingOf(kind)].sort((a, b) => b.span.from - a.span.from);
     if (targets.length === 0) {
-      return { accepted: 0, staled: 0, text: this.currentText, revisions: [] };
+      return { accepted: 0, staled: 0, unsafe: 0, text: this.currentText, revisions: [] };
     }
 
     const snapshot = this.items;
     const inverses: TextPatch[] = [];
     const revisions: RevisionRecord[] = [];
     let staled = 0;
+    let unsafe = 0;
 
     for (const target of targets) {
       // re-read the suggestion: earlier patches may have re-mapped it
       const current = this.items.find((s) => s.id === target.id);
       if (!current || current.state !== 'pending') continue;
+      if (!checkProposal(current.kind, current.original, current.proposals[0]).ok) {
+        this.markStale(current.id);
+        unsafe += 1;
+        continue;
+      }
       const patch: TextPatch = {
         span: current.span,
         before: current.original,
@@ -258,7 +276,7 @@ export class ReviewSession {
         revisionIds: revisions.map((r) => r.id),
       });
     }
-    return { accepted: revisions.length, staled, text: this.currentText, revisions };
+    return { accepted: revisions.length, staled, unsafe, text: this.currentText, revisions };
   }
 
   /**

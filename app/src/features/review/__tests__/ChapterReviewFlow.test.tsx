@@ -8,7 +8,8 @@ import { InMemoryRevisionRepository } from '../revisions';
 import { textHash } from '../textHash';
 import { FirebaseError } from 'firebase/app';
 
-import type { RefineResult, SuggestionsProvider } from '../types';
+import { rejectionKey } from '../rejections';
+import type { RefineRequest, RefineResult, SuggestionsProvider } from '../types';
 
 const CHAPTER = { bookId: 'libro', chapterId: 'cap-1' };
 
@@ -126,6 +127,116 @@ describe('ChapterReviewFlow — AI unreachable', () => {
     await fireEvent.press(screen.getByTestId('editor-refine-retry'));
     expect(await screen.findByTestId('editor-suggestions-chip')).toBeOnTheScreen();
     expect(screen.queryByTestId('editor-refine-error')).toBeNull();
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — accept never deletes text silently', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('an unsafe proposal is not applied: plain message, text intact, log without text', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const original = 'aprì la finestra e mentre guardava la macchia sentì che qualcosa non andava.';
+    const provider: SuggestionsProvider = {
+      refine: async (request) => {
+        const from = request.text.indexOf(original);
+        return {
+          textHash: request.textHash,
+          suggestions: [
+            {
+              id: `${request.requestId}-1`,
+              kind: 'grammar',
+              span: { from, to: from + original.length },
+              original,
+              proposals: ['Aprì la finestra.'],
+              rationale: 'ripetizione',
+              state: 'pending',
+              textHash: request.textHash,
+            },
+            {
+              id: `${request.requestId}-2`,
+              kind: 'grammar',
+              span: {
+                from: request.text.indexOf('un altra'),
+                to: request.text.indexOf('un altra') + 'un altra'.length,
+              },
+              original: 'un altra',
+              proposals: ["un'altra"],
+              rationale: 'elisione',
+              state: 'pending',
+              textHash: request.textHash,
+            },
+          ],
+        };
+      },
+    };
+    const { screen, chapterRepository } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
+    const accept = await screen.findByTestId(/^review-accept-ref-.*-1$/);
+    await fireEvent.press(accept);
+
+    expect(await screen.findByTestId('review-accept-notice')).toHaveTextContent(
+      'Questo suggerimento cancellerebbe parte del testo: non l’ho applicato. Il testo è intatto.',
+    );
+    expect(await chapterRepository.loadRawText(CHAPTER)).toBe(BRANO);
+    expect(warn).toHaveBeenCalledWith(
+      'accept-skipped',
+      expect.objectContaining({ reason: 'unsafe-proposal' }),
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toMatch(/la finestra/);
+
+    // the next decision clears the notice: it spoke about the previous one
+    await fireEvent.press(await screen.findByTestId(/^review-reject-ref-.*-2$/));
+    await waitFor(() => expect(screen.queryByTestId('review-accept-notice')).toBeNull());
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — rejections unreadable', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('refines anyway, and logs rejections-unavailable with the requestId (no silent [])', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { screen, revisionRepository } = await setup();
+    jest.spyOn(revisionRepository, 'list').mockRejectedValue(new Error('disk'));
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-suggestions-chip')).toBeOnTheScreen();
+    expect(warn).toHaveBeenCalledWith(
+      'rejections-unavailable',
+      expect.objectContaining({ requestId: expect.stringMatching(/^ref-/) }),
+    );
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — rejected suggestions are not proposed again', () => {
+  it('a new refinement sends the rejected pairs (as keys, never text) to the provider', async () => {
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    const provider: SuggestionsProvider = {
+      refine: (request) => {
+        requests.push(request);
+        return fake.refine(request);
+      },
+    };
+    const { screen } = await setup(BRANO, provider);
+    const preview = await previewSuggestions();
+    const elision = preview.suggestions.find((s) => s.original === 'un altra');
+    if (!elision) throw new Error('elision suggestion missing');
+
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
+    await fireEvent.press(await screen.findByTestId(`review-reject-${elision.id}`));
+    await fireEvent.press(await screen.findByTestId('review-back'));
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests[0]?.rejected ?? []).toEqual([]);
+    expect(requests[1]?.rejected).toEqual([rejectionKey('un altra', "un'altra")]);
     await screen.unmount();
   });
 });

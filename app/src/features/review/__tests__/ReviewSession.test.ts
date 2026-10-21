@@ -249,3 +249,83 @@ describe('a new batch clears the history (stated assumption)', () => {
     expect(session.canUndo).toBe(false);
   });
 });
+
+describe('accept never deletes or replaces text silently (phone test, 21 Oct)', () => {
+  const PHONE_TEXT =
+    "L'uomo osservò L'uomo osserva Allora sto cercando di dettare. Era tardi punto e virgola nessuno rispose.";
+  const at = (fragment: string) => {
+    const from = PHONE_TEXT.indexOf(fragment);
+    return { from, to: from + fragment.length };
+  };
+  const phoneSug = (
+    id: string,
+    kind: SuggestionKind,
+    original: string,
+    proposal: string,
+  ): Suggestion => ({
+    id,
+    kind,
+    span: at(original),
+    original,
+    proposals: [proposal],
+    rationale: 'prova',
+    state: 'pending',
+    textHash: textHash(PHONE_TEXT),
+  });
+  const session = (suggestions: Suggestion[]) => {
+    const s = new ReviewSession({ initialText: PHONE_TEXT, now: () => 1 });
+    s.ingest({ textHash: textHash(PHONE_TEXT), suggestions });
+    return s;
+  };
+
+  it('a grammar «fix» that deletes half the sentence is refused, the text is intact', () => {
+    const s = session([
+      phoneSug(
+        'g1',
+        'grammar',
+        "L'uomo osservò L'uomo osserva Allora sto cercando di dettare.",
+        "L'uomo osservò.",
+      ),
+    ]);
+    expect(s.accept('g1')).toEqual({ ok: false, reason: 'unsafe-proposal' });
+    expect(s.text).toBe(PHONE_TEXT);
+    expect(s.suggestions[0]?.state).toBe('stale');
+  });
+
+  it('a proposal unrelated to its original is refused', () => {
+    const s = session([phoneSug('g2', 'grammar', 'punto e virgola', ". L'uomo osservò.")]);
+    expect(s.accept('g2')).toEqual({ ok: false, reason: 'unsafe-proposal' });
+    expect(s.text).toBe(PHONE_TEXT);
+  });
+
+  it('a real fix is still applied', () => {
+    const s = session([phoneSug('g3', 'grammar', 'punto e virgola', ';')]);
+    expect(s.accept('g3')).toMatchObject({ ok: true });
+    expect(s.text).toContain('Era tardi ; nessuno');
+  });
+
+  it('accept all skips the unsafe ones and says how many', () => {
+    const s = session([
+      phoneSug(
+        'g1',
+        'grammar',
+        "L'uomo osservò L'uomo osserva Allora sto cercando di dettare.",
+        "L'uomo osservò.",
+      ),
+      phoneSug('g3', 'grammar', 'punto e virgola', ';'),
+    ]);
+    const outcome = s.acceptAll('grammar');
+    expect(outcome).toMatchObject({ accepted: 1, unsafe: 1 });
+    expect(s.text).toContain("L'uomo osserva Allora sto cercando di dettare.");
+  });
+
+  it('a misplaced suggestion (span no longer on its original) is never applied', () => {
+    const misplaced = {
+      ...phoneSug('g4', 'grammar', 'punto e virgola', ';'),
+      span: at('Era tardi'),
+    };
+    const s = session([misplaced]);
+    expect(s.accept('g4')).toMatchObject({ ok: false });
+    expect(s.text).toBe(PHONE_TEXT);
+  });
+});

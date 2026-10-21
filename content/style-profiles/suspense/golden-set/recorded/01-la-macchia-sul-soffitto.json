@@ -1,0 +1,66 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run. mustDrop: proposals that delete or replace text (phone test, 21 Oct).",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "grammar",
+        "original": "alle dieci si fece un tè",
+        "proposals": [
+          "Alle dieci si fece un tè"
+        ],
+        "rationale": "maiuscola a inizio frase"
+      },
+      {
+        "kind": "style",
+        "original": "rilesse distrattamente il messaggio",
+        "proposals": [
+          "rilesse il messaggio"
+        ],
+        "rationale": "avverbio superfluo"
+      },
+      {
+        "kind": "style",
+        "original": "Alle dieci e mezza notò che la macchia era cambiata",
+        "proposals": [
+          "Alle dieci e mezza la macchia era cambiata"
+        ],
+        "rationale": "verbo filtro"
+      },
+      {
+        "kind": "style",
+        "original": "Nora controllò nervosamente l'orologio del forno",
+        "proposals": [
+          "Nora controllò l'orologio del forno"
+        ],
+        "rationale": "avverbio: il gesto ripetuto basta"
+      },
+      {
+        "kind": "style",
+        "original": "Provava un'ansia crescente che non riusciva a spiegarsi.",
+        "proposals": [
+          "Un'ansia crescente le stringeva lo stomaco, senza che sapesse spiegarsi perché."
+        ],
+        "rationale": "emozione dichiarata"
+      },
+      {
+        "kind": "style",
+        "original": "si allargava impercettibilmente sotto i suoi occhi",
+        "proposals": [
+          "si allargava sotto i suoi occhi"
+        ],
+        "rationale": "avverbio"
+      },
+      {
+        "kind": "grammar",
+        "original": "Toccò l'intonaco con un dito. Era tiepido.",
+        "proposals": [
+          "Toccò l'intonaco."
+        ],
+        "rationale": "ripetizione"
+      }
+    ]
+  },
+  "mustDrop": [
+    "Toccò l'intonaco con un dito. Era tiepido."
+  ]
+}

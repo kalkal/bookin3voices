@@ -10,11 +10,13 @@ import { AppState } from 'react-native';
 import type { ChapterRef, ChapterTextRepository } from '../chapters';
 import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
 import { makeRequestId } from '../../lib/requestId';
+import { t, tn } from '../../i18n';
 import { DebouncedSaver } from '../dictation/autosave';
 import { logTestEvent } from '../testLog';
-import { ReviewSession } from './ReviewSession';
+import { ReviewSession, type AcceptFailure } from './ReviewSession';
 import type { RevisionRepository } from './revisions';
 import { textHash } from './textHash';
+import { rejectedKeys } from './rejections';
 import { refineResultSchema } from './types';
 import type { Suggestion, SuggestionKind, SuggestionsProvider } from './types';
 
@@ -46,6 +48,8 @@ export interface ChapterReviewController {
   /** The last batch was born stale: the text changed during refinement. */
   refineBornStale: boolean;
   saveStatus: ReviewSaveStatus;
+  /** Plain message when an Accept was not applied (text left intact); '' otherwise. */
+  acceptNotice: string;
   refine(): Promise<void>;
   accept(suggestionId: string, proposalIndex?: number): Promise<void>;
   reject(suggestionId: string): Promise<void>;
@@ -56,6 +60,19 @@ export interface ChapterReviewController {
   editDraft(text: string): void;
   /** Saves the pending hand-typed text right now (leaving the editor, refining). */
   flushDraft(): void;
+}
+
+/** Plain message for an Accept that was not applied; '' when it was not about the text. */
+export function acceptNoticeFor(reason: AcceptFailure): string {
+  switch (reason) {
+    case 'unsafe-proposal':
+      return t('review.accept.unsafe');
+    case 'original-mismatch':
+    case 'span-out-of-range':
+      return t('review.accept.mismatch');
+    default:
+      return '';
+  }
 }
 
 // same generator as the other callables (idempotency, Firestore id charset)
@@ -74,6 +91,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const [refineErrorMessage, setRefineErrorMessage] = useState('');
   const [refineBornStale, setRefineBornStale] = useState(false);
   const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>('saved');
+  const [acceptNotice, setAcceptNotice] = useState('');
 
   // initial chapter load (like Dictation); the state already starts at
   // 'loading', so the effect must not reset anything synchronously
@@ -123,15 +141,24 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     if (!session || session.text === '') return;
     setRefining(true);
     setRefineErrorMessage('');
+    setAcceptNotice('');
     setRefineBornStale(false);
     const requestId = newRequestId();
     try {
+      // what the user already rejected is never proposed again (filtered by the server)
+      const revisions = await revisionRepository.list(chapter).catch(() => {
+        // refine anyway, but not silently: rejected pairs may come back this once
+        console.warn('rejections-unavailable', { requestId });
+        return [];
+      });
+      const rejected = rejectedKeys(revisions);
       const raw = await provider.refine({
         bookId: chapter.bookId,
         chapterId: chapter.chapterId,
         text: session.text,
         textHash: textHash(session.text),
         requestId,
+        rejected,
       });
       // provider output validated at the boundary, even when the
       // provider is the fake: the contract is the same as the refineChapter callable's
@@ -146,7 +173,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     } finally {
       setRefining(false);
     }
-  }, [chapter, newRequestId, provider, syncFromSession]);
+  }, [chapter, newRequestId, provider, revisionRepository, syncFromSession]);
 
   const accept = useCallback(
     async (suggestionId: string, proposalIndex = 0) => {
@@ -165,6 +192,13 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         ...(outcome.ok ? {} : { reason: outcome.reason }),
       });
       syncFromSession();
+      if (!outcome.ok) {
+        // never silent, never the text: the id carries the refinement's requestId
+        console.warn('accept-skipped', { suggestionId, reason: outcome.reason });
+        setAcceptNotice(acceptNoticeFor(outcome.reason));
+        return;
+      }
+      setAcceptNotice('');
       if (outcome.ok) {
         await persistText();
         await revisionRepository.append(chapter, outcome.revision).catch(() => {});
@@ -189,6 +223,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         ok: outcome.ok,
       });
       syncFromSession();
+      setAcceptNotice('');
       if (outcome.ok) {
         await revisionRepository.append(chapter, outcome.revision).catch(() => {});
       }
@@ -209,6 +244,15 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         changes: outcome.revisions.map((r) => ({ before: r.before, after: r.after })),
       });
       syncFromSession();
+      const skipped = outcome.unsafe + outcome.staled;
+      if (skipped > 0) {
+        console.warn('accept-all-skipped', {
+          kind,
+          unsafe: outcome.unsafe,
+          staled: outcome.staled,
+        });
+      }
+      setAcceptNotice(skipped > 0 ? tn('review.accept.skipped', skipped) : '');
       if (outcome.accepted > 0) {
         await persistText();
         for (const revision of outcome.revisions) {
@@ -231,6 +275,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         : { reason: outcome.reason }),
     });
     syncFromSession();
+    setAcceptNotice('');
     if (outcome.ok) {
       await persistText();
       for (const revisionId of outcome.removedRevisionIds) {
@@ -294,6 +339,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     refineErrorMessage,
     refineBornStale,
     saveStatus,
+    acceptNotice,
     refine,
     accept,
     reject,

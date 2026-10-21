@@ -1,0 +1,18 @@
+{
+  "note": "Hand-written answer for the offline golden run: a present-day passage, nothing to fix.",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "grammar",
+        "original": "restò un momento al buio",
+        "proposals": [
+          ". Il direttore restò."
+        ],
+        "rationale": "punteggiatura"
+      }
+    ]
+  },
+  "mustDrop": [
+    "restò un momento al buio"
+  ]
+}

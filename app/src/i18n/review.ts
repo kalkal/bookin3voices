@@ -2,6 +2,14 @@ import type { Namespace } from './index';
 
 export const review: Namespace = {
   en: {
+    'review.accept.unsafe':
+      'This suggestion would delete part of the text: I didn’t apply it. Your text is intact.',
+    'review.accept.mismatch':
+      'This suggestion no longer matches the text: I set it aside. Your text is intact.',
+    'review.accept.skipped_one':
+      '{count} suggestion not applied: it would have deleted or changed the wrong text. Your text is intact.',
+    'review.accept.skipped_other':
+      '{count} suggestions not applied: they would have deleted or changed the wrong text. Your text is intact.',
     'review.kind.style': 'Style',
     'review.kind.grammar': 'Grammar',
     'review.kind.pacing': 'Pacing',
@@ -44,6 +52,14 @@ export const review: Namespace = {
     'review.history.oneByOne': 'History hints are accepted one at a time.',
   },
   it: {
+    'review.accept.unsafe':
+      'Questo suggerimento cancellerebbe parte del testo: non l’ho applicato. Il testo è intatto.',
+    'review.accept.mismatch':
+      'Questo suggerimento non corrisponde più al testo: l’ho messo da parte. Il testo è intatto.',
+    'review.accept.skipped_one':
+      '{count} suggerimento non applicato: avrebbe cancellato o cambiato il testo sbagliato. Il testo è intatto.',
+    'review.accept.skipped_other':
+      '{count} suggerimenti non applicati: avrebbero cancellato o cambiato il testo sbagliato. Il testo è intatto.',
     'review.kind.style': 'Stile',
     'review.kind.grammar': 'Grammatica',
     'review.kind.pacing': 'Ritmo',

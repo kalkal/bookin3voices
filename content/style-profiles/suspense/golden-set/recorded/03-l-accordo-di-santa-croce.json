@@ -1,0 +1,50 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run.",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "style",
+        "original": "provvedevamo all'accordatura di una canna dopo l'altra",
+        "proposals": [
+          "accordavamo una canna dopo l'altra"
+        ],
+        "rationale": "registro burocratico"
+      },
+      {
+        "kind": "style",
+        "original": "mi fece salire su per la scaletta",
+        "proposals": [
+          "mi fece salire per la scaletta"
+        ],
+        "rationale": "pleonasmo"
+      },
+      {
+        "kind": "style",
+        "original": "Io sentivo con le mie orecchie ogni canna",
+        "proposals": [
+          "Io sentivo ogni canna"
+        ],
+        "rationale": "pleonasmo"
+      },
+      {
+        "kind": "style",
+        "original": "lui proseguì avanti fino all'ultima fila",
+        "proposals": [
+          "lui proseguì fino all'ultima fila"
+        ],
+        "rationale": "pleonasmo"
+      },
+      {
+        "kind": "grammar",
+        "original": "Le mani di Ettore erano spaccate dal freddo sulle nocche.",
+        "proposals": [
+          "Le mani di Ettore."
+        ],
+        "rationale": "ripetizione"
+      }
+    ]
+  },
+  "mustDrop": [
+    "Le mani di Ettore erano spaccate dal freddo sulle nocche."
+  ]
+}

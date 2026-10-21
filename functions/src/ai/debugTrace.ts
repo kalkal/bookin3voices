@@ -68,6 +68,8 @@ export interface RefineDebugTrace {
   /** What the app receives. */
   normalized: TraceSuggestion[];
   dropped: (TraceSuggestion & { reason: TraceDropReason })[];
+  /** Single proposals removed by the proposal guard or as already rejected, with the reason. */
+  droppedProposals: NormalizedSuggestions['droppedProposals'];
 }
 
 const toTrace = (sug: {
@@ -158,5 +160,6 @@ export function buildRefineDebugTrace(args: {
         reason: d.reason,
       })),
     ],
+    droppedProposals: normalized.droppedProposals,
   };
 }

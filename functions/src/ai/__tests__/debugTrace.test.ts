@@ -4,6 +4,7 @@
 import { buildRefineDebugTrace, debugTraceEnabled, TRACE_SNIPPET_CHARS } from '../debugTrace';
 import { normalizeSuggestions } from '../normalizeSuggestions';
 import type { ModelOutput } from '../refineTypes';
+import { rejectionKey } from '../rejections';
 import { textHash } from '../textHash';
 
 const TEXT = 'Elena posò lentamente la tazza. Poi uscì fuori e chiuse la porta. Fine della scena.';
@@ -154,5 +155,59 @@ describe('debugTraceEnabled', () => {
     expect(debugTraceEnabled({ DEBUG_TRACE: 'true' })).toBe(false);
     expect(debugTraceEnabled({ DEBUG_TRACE: '1' })).toBe(true);
     expect(debugTraceEnabled({ FUNCTIONS_EMULATOR: 'true' })).toBe(true);
+  });
+});
+
+describe('debug trace: the proposal guard and past rejections say why', () => {
+  const TEXT2 =
+    "L'uomo osservò L'uomo osserva Allora sto cercando di dettare. Elena posò lentamente la tazza.";
+  const raw: ModelOutput['suggestions'] = [
+    {
+      kind: 'style',
+      original: "L'uomo osservò L'uomo osserva Allora sto cercando di dettare.",
+      proposals: ["L'uomo osservò stupito."],
+      rationale: 'ritmo',
+    },
+    {
+      kind: 'style',
+      original: 'posò lentamente',
+      proposals: ['posò', 'posò piano'],
+      rationale: 'avverbio',
+    },
+  ];
+  const normalized = normalizeSuggestions({ suggestions: raw }, TEXT2, textHash(TEXT2), 'r', {
+    rejected: new Set([rejectionKey('posò lentamente', 'posò')]),
+  });
+  const t = buildRefineDebugTrace({
+    promptVersion: 3,
+    model: 'm',
+    book: { genre: '', language: 'it', synopsis: '', styleProfileId: null },
+    chapter: { title: '', outline: null },
+    text: TEXT2,
+    textHash: textHash(TEXT2),
+    raw,
+    parseDropped: 0,
+    history: null,
+    merged: raw,
+    normalized,
+  });
+
+  it('a suggestion emptied by the guard is dropped as unsafe-proposals', () => {
+    expect(t.dropped.map((d) => [d.reason, d.original.slice(0, 14)])).toEqual([
+      ['unsafe-proposals', "L'uomo osservò"],
+    ]);
+  });
+
+  it('every removed proposal is listed with the guard reason or already-rejected', () => {
+    expect(t.droppedProposals).toEqual([
+      {
+        kind: 'style',
+        original: "L'uomo osservò L'uomo osserva Allora sto cercando di dettare.",
+        proposal: "L'uomo osservò stupito.",
+        reason: 'removes-words',
+      },
+      { kind: 'style', original: 'posò lentamente', proposal: 'posò', reason: 'already-rejected' },
+    ]);
+    expect(t.normalized.map((s) => s.proposals)).toEqual([['posò piano']]);
   });
 });
