@@ -7,7 +7,7 @@
  * All logic lives in useChapterReview; only rendering is here.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -34,10 +34,13 @@ export interface ChapterEditorScreenProps {
   onOpenReview: () => void;
   /** If present, shows the back chevron to the Book. */
   onBack?: () => void;
+  /** The chapter's key beats (OutlineTrack), under the header. */
+  outlinePanel?: ReactNode;
 }
 
 export function ChapterEditorScreen({
   controller,
+  outlinePanel,
   chapterTitle,
   onOpenReview,
   onBack,
@@ -133,6 +136,8 @@ export function ChapterEditorScreen({
       </View>
 
       <OrnamentDivider style={{ marginHorizontal: spacing.xl, marginBottom: spacing.sm }} />
+
+      {outlinePanel}
 
       <ScrollView
         style={styles.textArea}

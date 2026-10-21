@@ -3,8 +3,12 @@
 // the chevron remembered across mounts (injected storage).
 
 import { act, fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 
-import { OutlineTrack, OUTLINE_TRACK_COLLAPSED_KEY } from '../OutlineTrack';
+import { OutlineTrack, outlineTrackCollapsedKey } from '../OutlineTrack';
+import type { OutlineTrackRepository } from '../OutlineTrack';
+import { contrast } from '../../../theme/testing/contrast';
+import { candlelightPalette, paperPalette } from '../../../theme/tokens';
 import { InMemoryChapterRepository } from '../../chapters';
 import type { ChapterOutline, KeyValueStorage } from '../../chapters';
 import { ThemeProvider } from '../../../theme';
@@ -28,19 +32,25 @@ function memoryStorage(initial: Record<string, string> = {}) {
   return { storage, data };
 }
 
+const KEY = outlineTrackCollapsedKey(CHAPTER);
+
 async function renderTrack(options?: {
   outline?: ChapterOutline | null;
   storage?: KeyValueStorage;
   chapterLabel?: string;
+  chapter?: typeof CHAPTER;
+  repository?: OutlineTrackRepository;
 }) {
-  const repository = new InMemoryChapterRepository();
+  const chapter = options?.chapter ?? CHAPTER;
+  const seeded = new InMemoryChapterRepository();
   if (options?.outline !== undefined) {
-    repository.seed(CHAPTER, '', { outline: options.outline });
+    seeded.seed(chapter, '', { outline: options.outline });
   }
+  const repository = options?.repository ?? seeded;
   const utils = await render(
     <ThemeProvider>
       <OutlineTrack
-        chapter={CHAPTER}
+        chapter={chapter}
         repository={repository}
         chapterLabel={options?.chapterLabel ?? 'Capitolo VII'}
         storage={options?.storage ?? memoryStorage().storage}
@@ -49,7 +59,7 @@ async function renderTrack(options?: {
   );
   // let the read of the remembered open/closed state finish
   await act(async () => {});
-  return { repository, ...utils };
+  return { repository: seeded, ...utils };
 }
 
 describe('OutlineTrack — when it appears', () => {
@@ -110,28 +120,90 @@ describe('OutlineTrack — ticked beats (visual only, persisted on the chapter)'
   });
 });
 
-describe('OutlineTrack — remembered open/close', () => {
-  it('closed via chevron: label and toggle remain, beats disappear, the choice is saved', async () => {
+describe('OutlineTrack — remembered open/close, never lost', () => {
+  it('closed via chevron: the header stays with the count and the next beat; the choice is saved', async () => {
     const { storage, data } = memoryStorage();
     const { getByTestId, queryByTestId } = await renderTrack({ outline: OUTLINE, storage });
 
     await fireEvent.press(getByTestId('outline-track-toggle'));
     expect(queryByTestId('outline-beat-0')).toBeNull();
     expect(getByTestId('outline-track')).toHaveTextContent(/Traccia · Capitolo VII/);
+    // closed is never empty: how many key beats, and the next one to cover
+    expect(getByTestId('outline-track')).toHaveTextContent(/0 su 2/);
+    expect(getByTestId('outline-next-beat')).toHaveTextContent(
+      /Nora trova la porta della cucina aperta/,
+    );
     await act(async () => {});
-    expect(data.get(OUTLINE_TRACK_COLLAPSED_KEY)).toBe('1');
+    expect(data.get(KEY)).toBe('1');
 
     await fireEvent.press(getByTestId('outline-track-toggle'));
     expect(getByTestId('outline-beat-0')).toBeTruthy();
     await act(async () => {});
-    expect(data.get(OUTLINE_TRACK_COLLAPSED_KEY)).toBe('0');
+    expect(data.get(KEY)).toBe('0');
   });
 
-  it('on the next mount it restarts as it was left (closed)', async () => {
-    const { storage } = memoryStorage({ [OUTLINE_TRACK_COLLAPSED_KEY]: '1' });
+  it('on the next mount the same chapter restarts as it was left (closed, header and next beat)', async () => {
+    const { storage } = memoryStorage({ [KEY]: '1' });
     const { getByTestId, queryByTestId } = await renderTrack({ outline: OUTLINE, storage });
-    expect(getByTestId('outline-track')).toBeTruthy();
     expect(queryByTestId('outline-beat-0')).toBeNull();
+    expect(getByTestId('outline-next-beat')).toBeTruthy();
+  });
+
+  it('the choice is per chapter: closing one chapter does not close another', async () => {
+    const { storage } = memoryStorage({ [KEY]: '1' });
+    const other = { bookId: 'libro-test', chapterId: 'cap-altro' };
+    const { getByTestId } = await renderTrack({ outline: OUTLINE, storage, chapter: other });
+    expect(getByTestId('outline-beat-0')).toBeTruthy();
+  });
+
+  it('the old app-wide "closed" preference no longer hides the beats', async () => {
+    const { storage } = memoryStorage({ 'bookvoice/dettatura/traccia-chiusa': '1' });
+    const { getByTestId } = await renderTrack({ outline: OUTLINE, storage });
+    expect(getByTestId('outline-beat-1')).toBeTruthy();
+  });
+
+  it('every beat covered: the closed header says so instead of going blank', async () => {
+    const { storage } = memoryStorage({ [KEY]: '1' });
+    const { getByTestId, queryByTestId } = await renderTrack({
+      outline: { ...OUTLINE, beatsDone: [0, 1] },
+      storage,
+    });
+    expect(getByTestId('outline-track')).toHaveTextContent(/2 su 2/);
+    expect(queryByTestId('outline-next-beat')).toBeNull();
+  });
+
+  it('a chapter snapshot that cannot be read does not wipe the beats already on screen', async () => {
+    let emit: (
+      chapter: Parameters<Parameters<OutlineTrackRepository['observeChapter']>[1]>[0],
+    ) => void = () => {};
+    const repository: OutlineTrackRepository = {
+      observeChapter: (_ref, onChange) => {
+        emit = onChange;
+        return () => {};
+      },
+      updateChapter: async () => {},
+    };
+    const { getByTestId } = await renderTrack({ repository });
+    await act(async () => {
+      emit({
+        ...CHAPTER,
+        id: CHAPTER.chapterId,
+        schemaVersion: 1,
+        order: 0,
+        title: 'Capitolo',
+        status: 'draft',
+        wordCount: 0,
+        rawText: '',
+        outline: OUTLINE,
+        updatedAt: 1,
+      });
+    });
+    expect(getByTestId('outline-beat-0')).toBeTruthy();
+    // while dictating, a snapshot can come back unreadable (null) for a moment
+    await act(async () => {
+      emit(null);
+    });
+    expect(getByTestId('outline-beat-0')).toBeTruthy();
   });
 
   it('unreadable storage: starts open without errors', async () => {
@@ -155,5 +227,43 @@ describe('OutlineTrack — remembered open/close', () => {
     const { getByTestId } = await renderTrack({ outline: OUTLINE, chapterLabel: '' });
     expect(getByTestId('outline-track')).toHaveTextContent(/Traccia/);
     expect(getByTestId('outline-track')).not.toHaveTextContent(/Traccia ·/);
+  });
+});
+
+// The panel is a Card (surface). Worst case for the label and the beats: the surface itself.
+describe('OutlineTrack — readable in both themes (AA, 4.5:1)', () => {
+  it.each([
+    ['black and gold', candlelightPalette],
+    ['cream', paperPalette],
+  ] as const)('%s: label, beats to cover and covered beats keep 4.5:1', (_name, palette) => {
+    for (const token of ['primary', 'text', 'textMutedStrong'] as const) {
+      expect(contrast(palette[token], palette.surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it.each([
+    ['candlelight', candlelightPalette],
+    ['paper', paperPalette],
+  ] as const)('%s: every text the panel draws is AA on its card', async (mode, palette) => {
+    const repository = new InMemoryChapterRepository();
+    repository.seed(CHAPTER, '', { outline: { ...OUTLINE, beatsDone: [0] } });
+    const screen = await render(
+      <ThemeProvider initialMode={mode}>
+        <OutlineTrack
+          chapter={CHAPTER}
+          repository={repository}
+          chapterLabel="Capitolo VII"
+          storage={memoryStorage().storage}
+        />
+      </ThemeProvider>,
+    );
+    await act(async () => {});
+    const texts = screen.getByTestId('outline-track').queryAll((node) => node.type === 'Text');
+    expect(texts.length).toBeGreaterThan(0);
+    for (const node of texts) {
+      const color = StyleSheet.flatten(node.props.style)?.color as string;
+      expect([color, contrast(color, palette.surface) >= 4.5]).toEqual([color, true]);
+    }
+    await screen.unmount();
   });
 });

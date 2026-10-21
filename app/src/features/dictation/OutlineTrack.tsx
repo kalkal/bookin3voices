@@ -1,12 +1,15 @@
 /**
- * Chapter track in Dictation:
- * a collapsible panel above the text with the label
- * "Traccia · Capitolo <roman numeral>" and the outline beats, each with the
- * gold diamond of the visual signature. Tapping a beat marks it covered/to-do:
- * a purely visual mark persisted in `outline.beatsDone` on the chapter, no
- * automation. The open/closed state is remembered across sessions; when
- * closed, only the header row remains. Chapter without an outline (or with
- * empty beats): the panel does not exist.
+ * The chapter's key beats, the ONE panel shown while dictating and in the
+ * chapter editor (Editor and Review): label "Traccia · Capitolo <roman
+ * numeral>" and the outline beats, each with the gold diamond of the visual
+ * signature. Tapping a beat marks it covered/to-do: a purely visual mark
+ * persisted in `outline.beatsDone` on the chapter, no automation.
+ *
+ * Collapsible but never lost: the open/closed choice is remembered PER
+ * CHAPTER, and closed still shows how many beats are covered and the next one
+ * to cover, with the chevron to open it again. A chapter snapshot that comes
+ * back unreadable for a moment (null) keeps the beats already on screen.
+ * Chapter without an outline (or with empty beats): the panel does not exist.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,8 +51,13 @@ export interface OutlineTrackProps {
   storage?: KeyValueStorage;
 }
 
-/** Single preference (not per chapter): the last open/closed choice applies everywhere. */
-export const OUTLINE_TRACK_COLLAPSED_KEY = 'bookvoice/dettatura/traccia-chiusa';
+/**
+ * Where the open/closed choice of ONE chapter is remembered. (It used to be a
+ * single app-wide key, 'bookvoice/dettatura/traccia-chiusa': closing it once
+ * hid the beats of every chapter. That key is no longer read.)
+ */
+export const outlineTrackCollapsedKey = (chapter: ChapterRef) =>
+  `bookvoice/outline-track/${chapter.bookId}/${chapter.chapterId}/collapsed`;
 
 export function OutlineTrack({
   chapter,
@@ -62,7 +70,10 @@ export function OutlineTrack({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    return repository.observeChapter(chapter, (doc) => setOutline(doc?.outline ?? null));
+    return repository.observeChapter(chapter, (doc) => {
+      // null = no readable document right now: keep what is on screen
+      if (doc !== null) setOutline(doc.outline);
+    });
     // the chapter coordinates are fixed for the screen's lifetime (key in App)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repository]);
@@ -70,7 +81,7 @@ export function OutlineTrack({
   useEffect(() => {
     let cancelled = false;
     storage
-      .getItem(OUTLINE_TRACK_COLLAPSED_KEY)
+      .getItem(outlineTrackCollapsedKey(chapter))
       .then((value) => {
         if (!cancelled && value === '1') setCollapsed(true);
       })
@@ -84,10 +95,13 @@ export function OutlineTrack({
 
   if (outline === null || outline.beats.length === 0) return null;
 
+  const doneCount = outline.beats.filter((_, index) => outline.beatsDone.includes(index)).length;
+  const nextBeat = outline.beats.find((_, index) => !outline.beatsDone.includes(index));
+
   const toggleCollapsed = () => {
     const next = !collapsed;
     setCollapsed(next);
-    storage.setItem(OUTLINE_TRACK_COLLAPSED_KEY, next ? '1' : '0').catch(() => {});
+    storage.setItem(outlineTrackCollapsedKey(chapter), next ? '1' : '0').catch(() => {});
   };
 
   const toggleBeat = (index: number) => {
@@ -134,15 +148,37 @@ export function OutlineTrack({
             ? t('dictation.outline.label')
             : t('dictation.outline.labelWith', { chapter: chapterLabel })}
         </Text>
+        <Text
+          testID="outline-track-count"
+          style={{
+            color: colors.textMutedStrong,
+            fontFamily: fonts.body,
+            fontSize: typeScale.label,
+          }}
+        >
+          {t('dictation.outline.progress', { done: doneCount, total: outline.beats.length })}
+        </Text>
         <Ionicons
           name={collapsed ? 'chevron-down' : 'chevron-up'}
           size={18}
-          color={colors.textMuted}
+          color={colors.textMutedStrong}
         />
       </Pressable>
 
       {collapsed
-        ? null
+        ? nextBeat !== undefined && (
+            <Text
+              testID="outline-next-beat"
+              numberOfLines={2}
+              style={{
+                color: colors.text,
+                fontFamily: fonts.body,
+                fontSize: typeScale.bodySmall,
+              }}
+            >
+              {t('dictation.outline.next', { beat: nextBeat })}
+            </Text>
+          )
         : outline.beats.map((beat, index) => {
             const done = outline.beatsDone.includes(index);
             return (
@@ -164,7 +200,9 @@ export function OutlineTrack({
                 <Text
                   style={{
                     flex: 1,
-                    color: done ? colors.textMuted : colors.text,
+                    // covered beats step back but stay AA on the card in both themes
+                    color: done ? colors.textMutedStrong : colors.text,
+                    textDecorationLine: done ? 'line-through' : 'none',
                     fontFamily: fonts.body,
                     fontSize: typeScale.bodySmall,
                   }}

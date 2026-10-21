@@ -34,7 +34,7 @@ export type { DictationScreenProps } from './DictationScreen';
 export { MicButton, micAppearance } from './MicButton';
 export { MicControl } from './MicControl';
 export type { MicVisualState } from './MicButton';
-export { OutlineTrack, OUTLINE_TRACK_COLLAPSED_KEY } from './OutlineTrack';
+export { OutlineTrack, outlineTrackCollapsedKey } from './OutlineTrack';
 export type { OutlineTrackProps, OutlineTrackRepository } from './OutlineTrack';
 export { useDictationController } from './useDictationController';
 export type { DictationController, DictationControllerOptions } from './useDictationController';

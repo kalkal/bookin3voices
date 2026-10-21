@@ -9,7 +9,7 @@
  * (Command pattern with undo).
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Animated,
   PanResponder,
@@ -33,9 +33,16 @@ export interface ReviewScreenProps {
   /** E.g. "Capitolo VII". */
   chapterLabel?: string;
   onBack: () => void;
+  /** The chapter's key beats (OutlineTrack), under the header. */
+  outlinePanel?: ReactNode;
 }
 
-export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenProps) {
+export function ReviewScreen({
+  controller,
+  chapterLabel,
+  onBack,
+  outlinePanel,
+}: ReviewScreenProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
   const footerBottom = useBottomClearance(spacing.md);
   const [filter, setFilter] = useState<'all' | SuggestionKind>('all');
@@ -74,6 +81,8 @@ export function ReviewScreen({ controller, chapterLabel, onBack }: ReviewScreenP
           </Text>
         </View>
       </View>
+
+      {outlinePanel}
 
       <View
         style={[

@@ -327,6 +327,7 @@ function AppNavigator({ services }: { services: AppServices }) {
             chapterRepository={services.chapterRepository}
             revisionRepository={services.revisionRepository}
             provider={services.suggestionsProvider}
+            outlineRepository={services.chapterRepository}
             onBack={pop}
           />
         );

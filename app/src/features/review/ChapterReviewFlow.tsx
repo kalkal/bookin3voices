@@ -7,7 +7,8 @@
  */
 import { useState } from 'react';
 
-import type { ChapterRef, ChapterTextRepository } from '../chapters';
+import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
+import { OutlineTrack, type OutlineTrackRepository } from '../dictation/OutlineTrack';
 import { ChapterEditorScreen } from './ChapterEditorScreen';
 import { ReviewScreen } from './ReviewScreen';
 import type { RevisionRepository } from './revisions';
@@ -23,6 +24,10 @@ export interface ChapterReviewFlowProps {
   provider: SuggestionsProvider;
   /** If present, the Editor shows the back chevron to the Book. */
   onBack?: () => void;
+  /** If present, Editor and Review show the chapter's key beats, as Dictation does. */
+  outlineRepository?: OutlineTrackRepository;
+  /** Storage of the beats panel's open/closed choice (tests); default AsyncStorage. */
+  outlineStateStorage?: KeyValueStorage;
 }
 
 export function ChapterReviewFlow({
@@ -32,6 +37,8 @@ export function ChapterReviewFlow({
   revisionRepository,
   provider,
   onBack,
+  outlineRepository,
+  outlineStateStorage,
 }: ChapterReviewFlowProps) {
   const controller = useChapterReview({
     chapter,
@@ -41,12 +48,24 @@ export function ChapterReviewFlow({
   });
   const [screen, setScreen] = useState<'editor' | 'review'>('editor');
 
+  // the same panel as in Dictation: "VII · La piena" → "Traccia · VII"
+  const outlinePanel =
+    outlineRepository === undefined ? undefined : (
+      <OutlineTrack
+        chapter={chapter}
+        repository={outlineRepository}
+        chapterLabel={chapterTitle?.split('·')[0]?.trim()}
+        storage={outlineStateStorage}
+      />
+    );
+
   if (screen === 'review') {
     return (
       <ReviewScreen
         controller={controller}
         chapterLabel={chapterTitle}
         onBack={() => setScreen('editor')}
+        outlinePanel={outlinePanel}
       />
     );
   }
@@ -56,6 +75,7 @@ export function ChapterReviewFlow({
       chapterTitle={chapterTitle}
       onOpenReview={() => setScreen('review')}
       onBack={onBack}
+      outlinePanel={outlinePanel}
     />
   );
 }

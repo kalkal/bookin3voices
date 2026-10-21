@@ -47,6 +47,51 @@ async function setup(
   return { screen, chapterRepository, revisionRepository };
 }
 
+describe('ChapterReviewFlow — the key beats of the chapter', () => {
+  function memoryStorage() {
+    const data = new Map<string, string>();
+    return {
+      getItem: async (key: string) => data.get(key) ?? null,
+      setItem: async (key: string) => {
+        data.set(key, '');
+      },
+    };
+  }
+
+  it('the Editor and the Review both show the beats, as in Dictation', async () => {
+    const chapterRepository = new InMemoryChapterRepository();
+    chapterRepository.seed(CHAPTER, BRANO, {
+      outline: {
+        summary: 'Nora e la macchia.',
+        beats: ['La macchia sul muro', 'La tazza'],
+        beatsDone: [],
+      },
+    });
+    const screen = await render(
+      <ThemeProvider>
+        <ChapterReviewFlow
+          chapter={CHAPTER}
+          chapterTitle="VII · La piena"
+          chapterRepository={chapterRepository}
+          outlineRepository={chapterRepository}
+          outlineStateStorage={memoryStorage()}
+          revisionRepository={new InMemoryRevisionRepository()}
+          provider={new FakeSuggestionsProvider()}
+        />
+      </ThemeProvider>,
+    );
+    await screen.findByTestId('editor-text-p0');
+    expect(await screen.findByTestId('outline-beat-0')).toHaveTextContent(/La macchia sul muro/);
+    expect(screen.getByTestId('outline-track')).toHaveTextContent(/Traccia · VII/);
+
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
+    expect(await screen.findByTestId('review-screen')).toBeOnTheScreen();
+    expect(await screen.findByTestId('outline-beat-1')).toHaveTextContent(/La tazza/);
+    await screen.unmount();
+  });
+});
+
 describe('ChapterReviewFlow — AI unreachable', () => {
   afterEach(() => jest.restoreAllMocks());
 
