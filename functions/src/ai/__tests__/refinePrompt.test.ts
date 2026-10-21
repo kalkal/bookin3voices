@@ -28,6 +28,16 @@ describe('buildRefinePrompt', () => {
     expect(buildRefinePrompt(BASE_INPUT)).toMatchSnapshot();
   });
 
+  it('snapshot: selection prompt (the chapter as context, only the selection to refine)', () => {
+    expect(
+      buildRefinePrompt({
+        ...BASE_INPUT,
+        text: 'Elena posò lentamente la tazza sul tavolo. Poi uscì fuori e chiuse la porta.',
+        selection: 'Poi uscì fuori e chiuse la porta.',
+      }),
+    ).toMatchSnapshot();
+  });
+
   it('snapshot: prompt with synopsis and outline', () => {
     expect(
       buildRefinePrompt({

@@ -32,6 +32,9 @@ export const review: Namespace = {
       'With the free key, submitted text may be used to train the models: the real text of the book waits for the final key.',
     'review.editor.refining': 'Refining…',
     'review.editor.refine': 'Refine with AI',
+    'review.editor.refineSelection': 'Refine the selection',
+    'review.editor.selectionTooShort':
+      'Select at least {count} words to refine, or clear the selection to refine the whole chapter.',
 
     'review.screen.title': 'Suggestions',
     'review.screen.pending': '{count} pending',
@@ -82,6 +85,9 @@ export const review: Namespace = {
       'Con la chiave gratuita i testi inviati possono essere usati per addestrare i modelli: il testo vero del libro aspetta la chiave definitiva.',
     'review.editor.refining': 'Rifinitura in corso…',
     'review.editor.refine': 'Rifinisci con AI',
+    'review.editor.refineSelection': 'Rifinisci la selezione',
+    'review.editor.selectionTooShort':
+      'Seleziona almeno {count} parole da rifinire, oppure togli la selezione per rifinire tutto il capitolo.',
 
     'review.screen.title': 'Suggerimenti',
     'review.screen.pending': '{count} in attesa',

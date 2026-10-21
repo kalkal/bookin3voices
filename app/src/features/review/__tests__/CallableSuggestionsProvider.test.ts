@@ -123,6 +123,16 @@ describe('CallableSuggestionsProvider and the dev test log', () => {
     expect(calls).toEqual([REQUEST]);
   });
 
+  it('with a log: a selection refine records its range (offsets and words)', async () => {
+    const log = captureTestLog();
+    const provider = new CallableSuggestionsProvider({ call: async () => answer({}) });
+    await provider.refine({ ...REQUEST, range: { from: 6, to: 21 } });
+    expect(log.events('refine.request')[0]).toMatchObject({
+      requestId: 'ref-1',
+      range: { from: 6, to: 21, words: 2 },
+    });
+  });
+
   it('with a log: asks for the debug trace and records request, result and trace', async () => {
     const log = captureTestLog();
     const calls: unknown[] = [];

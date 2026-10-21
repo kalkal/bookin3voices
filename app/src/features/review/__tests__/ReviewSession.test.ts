@@ -329,3 +329,24 @@ describe('accept never deletes or replaces text silently (phone test, 21 Oct)', 
     expect(s.text).toBe(PHONE_TEXT);
   });
 });
+
+describe('ingest of a selection refine (range)', () => {
+  it('replaces only the pendings touching the range, keeps the others and the history', () => {
+    const session = newSession([STYLE_ADVERB(), GRAMMAR_LOWER(), GRAMMAR_ELISION()]);
+    session.reject('s-avverbio');
+    const range = { from: TEXT.indexOf('aprì'), to: TEXT.length };
+    const fresh = sug('n-1', 'grammar', 'un altra', ["un'altra"]);
+    session.ingest(freshResult([fresh]), range);
+    expect(session.suggestions.map((s) => [s.id, s.state])).toEqual([
+      ['s-avverbio', 'rejected'],
+      ['n-1', 'pending'],
+    ]);
+  });
+
+  it('pendings outside the range survive a selection refine', () => {
+    const session = newSession([STYLE_ADVERB(), GRAMMAR_ELISION()]);
+    const range = { from: TEXT.indexOf('un altra'), to: TEXT.length };
+    session.ingest(freshResult([sug('n-2', 'grammar', 'un altra', ["un'altra"])]), range);
+    expect(session.pending.map((s) => s.id)).toEqual(['s-avverbio', 'n-2']);
+  });
+});

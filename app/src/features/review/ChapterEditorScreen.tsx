@@ -63,6 +63,8 @@ export function ChapterEditorScreen({
   const panelBottom = keyboardRoom > 0 ? spacing.md : bottomClearance;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  // «Rifinisci la selezione»: the selection of the edit field, if any
+  const [selection, setSelection] = useState<{ from: number; to: number } | null>(null);
 
   // leaving this screen (also towards the Review) saves what was typed
   const { flushDraft } = controller;
@@ -70,11 +72,22 @@ export function ChapterEditorScreen({
 
   const startEditing = () => {
     setDraft(controller.text);
+    setSelection(null);
     setEditing(true);
   };
   const finishEditing = () => {
     setEditing(false);
+    setSelection(null);
     void controller.applyManualEdit(draft);
+  };
+  const refineSelection = async (range: { from: number; to: number }) => {
+    // too short: stay in the editor with the selection, the message refers to it
+    if (!controller.checkSelection(draft, range)) return;
+    // the typed text is applied first: the range refers to it
+    setEditing(false);
+    setSelection(null);
+    await controller.applyManualEdit(draft);
+    await controller.refine(range);
   };
 
   const words = countWords(controller.text);
@@ -183,6 +196,10 @@ export function ChapterEditorScreen({
                 setDraft(next);
                 controller.editDraft(next);
               }}
+              onSelectionChange={({ nativeEvent }) => {
+                const { start, end } = nativeEvent.selection;
+                setSelection(end > start ? { from: start, to: end } : null);
+              }}
               style={{
                 color: colors.text,
                 fontFamily: fonts.body,
@@ -274,15 +291,17 @@ export function ChapterEditorScreen({
             >
               {controller.refineErrorMessage}
             </Text>
-            <Chip
-              label={t('common.retry')}
-              tone="green"
-              testID="editor-refine-retry"
-              onPress={() => {
-                flushDraft();
-                void controller.refine();
-              }}
-            />
+            {controller.refineErrorRetryable ? (
+              <Chip
+                label={t('common.retry')}
+                tone="green"
+                testID="editor-refine-retry"
+                onPress={() => {
+                  flushDraft();
+                  void controller.retryRefine();
+                }}
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -343,14 +362,24 @@ export function ChapterEditorScreen({
           <View style={styles.refineButton}>
             <PrimaryButton
               testID="editor-refine"
-              label={controller.refining ? t('review.editor.refining') : t('review.editor.refine')}
+              label={
+                controller.refining
+                  ? t('review.editor.refining')
+                  : selection !== null
+                    ? t('review.editor.refineSelection')
+                    : t('review.editor.refine')
+              }
               disabled={
                 controller.refining ||
-                editing ||
+                (editing && selection === null) ||
                 controller.loadState !== 'ready' ||
-                controller.text === ''
+                (controller.text === '' && !editing)
               }
               onPress={() => {
+                if (editing && selection !== null) {
+                  void refineSelection(selection);
+                  return;
+                }
                 flushDraft();
                 void controller.refine();
               }}

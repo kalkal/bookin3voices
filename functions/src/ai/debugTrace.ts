@@ -54,6 +54,8 @@ export interface RefineDebugTrace {
     textHash: string;
     textSnippet: string;
     densityCap: number;
+    /** «Rifinisci la selezione»: the refined range and its words; absent = whole chapter. */
+    range?: { from: number; to: number; words: number };
   };
   /** Suggestions of the refinement call, as the model returned them. */
   raw: TraceSuggestion[];
@@ -98,6 +100,7 @@ export function buildRefineDebugTrace(args: {
   history: HistoryCheckResult | null;
   merged: ModelSuggestion[];
   normalized: NormalizedSuggestions;
+  range?: { from: number; to: number };
 }): RefineDebugTrace {
   const { book, chapter, text, history, merged, normalized } = args;
   const words = text.match(/\S+/g)?.length ?? 0;
@@ -137,6 +140,14 @@ export function buildRefineDebugTrace(args: {
       textHash: args.textHash,
       textSnippet: text.slice(0, TRACE_SNIPPET_CHARS),
       densityCap: densityCap(words),
+      ...(args.range === undefined
+        ? {}
+        : {
+            range: {
+              ...args.range,
+              words: text.slice(args.range.from, args.range.to).match(/\S+/g)?.length ?? 0,
+            },
+          }),
     },
     raw: args.raw.map(toTrace),
     parseDropped: args.parseDropped,

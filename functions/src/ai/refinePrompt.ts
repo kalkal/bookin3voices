@@ -37,6 +37,8 @@ export interface RefinePromptInput {
   };
   /** The dictated text to refine (as the user sees it). */
   text: string;
+  /** «Rifinisci la selezione»: the part to refine; `text` is then context only. */
+  selection?: string;
 }
 
 export interface RefinePrompt {
@@ -152,14 +154,30 @@ export function buildRefinePrompt(input: RefinePromptInput): RefinePrompt {
     OUTPUT_RULES,
   ].join('\n');
 
-  const userText = [
-    contextBlock(input),
-    '',
-    'Testo del capitolo (dettato a voce, da rifinire con suggerimenti puntuali):',
-    '<<<',
-    input.text,
-    '>>>',
-  ].join('\n');
+  const userText = (
+    input.selection === undefined
+      ? [
+          contextBlock(input),
+          '',
+          'Testo del capitolo (dettato a voce, da rifinire con suggerimenti puntuali):',
+          '<<<',
+          input.text,
+          '>>>',
+        ]
+      : [
+          contextBlock(input),
+          '',
+          'Capitolo intero (solo contesto: non suggerire nulla fuori dalla parte da rifinire):',
+          '<<<',
+          input.text,
+          '>>>',
+          '',
+          'Parte da rifinire (dettata a voce; ogni «original» deve essere copiato da qui):',
+          '<<<',
+          input.selection,
+          '>>>',
+        ]
+  ).join('\n');
 
   return {
     systemInstruction,

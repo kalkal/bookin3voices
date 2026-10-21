@@ -115,6 +115,8 @@ export interface RefineRequest {
   rejected?: string[];
   /** Dev builds with the test log: ask for the server's debug trace. */
   debug?: boolean;
+  /** «Rifinisci la selezione»: refine only [from, to) of `text`; absent = whole chapter. */
+  range?: Span;
 }
 
 /** Refinement response, validated at the boundary with Zod. */

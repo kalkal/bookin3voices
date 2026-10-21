@@ -132,6 +132,8 @@ export const refineChapterInputSchema = z.object({
     .array(z.string().regex(/^v1-[0-9a-f]{16}$/))
     .max(500)
     .optional(),
+  /** «Rifinisci la selezione»: refine only [from, to) of `text`; absent = the whole chapter. */
+  range: z.object({ from: z.number().int().min(0), to: z.number().int().min(0) }).optional(),
   /** Dev builds ask for a debug trace; honoured only where the deployment allows it. */
   debug: z.boolean().optional(),
 });

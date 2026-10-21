@@ -42,6 +42,7 @@ import {
   type RefineModel,
   type RefineRegistryDoc,
 } from './refineTypes';
+import { pendingToReplace, selectionProblem } from './refineSelection';
 import { resolveStyleId } from './styles';
 import { loadStyleProfileContent, type StyleProfileContent } from './styleProfileContent';
 import { textHash } from './textHash';
@@ -116,9 +117,11 @@ export function buildPromptForBook(args: {
   };
   chapter: { title: string; outline: { summary: string; beats: string[] } | null };
   text: string;
+  /** «Rifinisci la selezione»: the part to refine; `text` is then context. */
+  selection?: string;
   loadStyleProfile: (profileId: string) => StyleProfileContent;
 }): ReturnType<typeof buildRefinePrompt> {
-  const { book, chapter, text, loadStyleProfile } = args;
+  const { book, chapter, text, selection, loadStyleProfile } = args;
   const profile = loadStyleProfile(resolveStyleId(book.styleProfileId));
   return buildRefinePrompt({
     styleBible: profile.styleBible,
@@ -131,6 +134,7 @@ export function buildPromptForBook(args: {
     },
     chapter: { title: chapter.title, outline: chapter.outline },
     text,
+    ...(selection === undefined ? {} : { selection }),
   });
 }
 
@@ -238,6 +242,15 @@ export async function runRefineChapter(
   if (textHash(input.text) !== input.textHash) {
     throw new HttpsError('invalid-argument', 'textHash does not match the text sent.');
   }
+  // «Rifinisci la selezione»: the range must sit in the text and hold enough words
+  const range = input.range;
+  if (range !== undefined) {
+    const problem = selectionProblem(input.text, range);
+    if (problem !== null) {
+      throw new HttpsError('invalid-argument', `Selection not usable: ${problem}.`);
+    }
+  }
+  const scopeText = range === undefined ? input.text : input.text.slice(range.from, range.to);
 
   const registryRef = db.doc(`users/${uid}/refines/${input.requestId}`);
 
@@ -268,8 +281,17 @@ export async function runRefineChapter(
     book,
     chapter,
     text: input.text,
+    ...(range === undefined ? {} : { selection: scopeText }),
     loadStyleProfile,
   });
+  if (range !== undefined) {
+    logger.info('refineChapter: selection', {
+      requestId: input.requestId,
+      from: range.from,
+      to: range.to,
+      words: scopeText.match(/\S+/g)?.length ?? 0,
+    });
+  }
 
   // the history check runs in parallel: it adds no latency, and a failure only
   // means no history suggestions (degraded mode), never a failed refinement
@@ -280,7 +302,7 @@ export async function runRefineChapter(
       ? Promise.resolve(null)
       : runHistoryCheckWithin({
           provider: historyProvider(),
-          text: input.text,
+          text: scopeText,
           language: book.language,
         }),
   ]);
@@ -292,10 +314,11 @@ export async function runRefineChapter(
     });
   }
   const merged = {
-    suggestions: mergeWithHistory(output.suggestions, history?.suggestions ?? [], input.text),
+    suggestions: mergeWithHistory(output.suggestions, history?.suggestions ?? [], scopeText),
   };
   const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId, {
     rejected: new Set(input.rejected ?? []),
+    ...(range === undefined ? {} : { range }),
   });
   if (normalized.alreadyRejected > 0) {
     logger.info('refineChapter: already rejected proposals dropped', {
@@ -356,7 +379,25 @@ export async function runRefineChapter(
       createdAt: now(),
     };
 
-    for (const pending of pendingSnap.docs) tx.delete(pending.ref);
+    // a selection replaces only the pendings it touches (and any on an older text)
+    const replace = new Set(
+      pendingToReplace(
+        pendingSnap.docs.map((d) => {
+          const data = d.data() as { span?: { from?: unknown; to?: unknown }; textHash?: unknown };
+          return {
+            id: d.id,
+            span: {
+              from: typeof data.span?.from === 'number' ? data.span.from : 0,
+              to: typeof data.span?.to === 'number' ? data.span.to : Number.MAX_SAFE_INTEGER,
+            },
+            textHash: typeof data.textHash === 'string' ? data.textHash : '',
+          };
+        }),
+        input.textHash,
+        range,
+      ),
+    );
+    for (const pending of pendingSnap.docs) if (replace.has(pending.id)) tx.delete(pending.ref);
     for (const suggestion of suggestions) {
       tx.set(suggestionsRef.doc(suggestion.id), {
         schemaVersion: 1,
@@ -387,6 +428,7 @@ export async function runRefineChapter(
       history,
       merged: merged.suggestions,
       normalized,
+      ...(range === undefined ? {} : { range }),
     }),
   };
 }

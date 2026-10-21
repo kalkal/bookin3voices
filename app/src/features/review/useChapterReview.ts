@@ -17,8 +17,9 @@ import { ReviewSession, type AcceptFailure } from './ReviewSession';
 import type { RevisionRepository } from './revisions';
 import { textHash } from './textHash';
 import { rejectedKeys } from './rejections';
+import { MIN_SELECTION_WORDS, selectionWords } from './selection';
 import { refineResultSchema } from './types';
-import type { Suggestion, SuggestionKind, SuggestionsProvider } from './types';
+import type { Span, Suggestion, SuggestionKind, SuggestionsProvider } from './types';
 
 export type ReviewLoadState = 'loading' | 'ready' | 'load-error';
 export type ReviewSaveStatus = 'saved' | 'saving' | 'error';
@@ -45,12 +46,22 @@ export interface ChapterReviewController {
   refineFailed: boolean;
   /** Plain message for the last failure, saying what to do next ('' when none). */
   refineErrorMessage: string;
+  /** false when retrying the same request cannot help (e.g. a too-short selection). */
+  refineErrorRetryable: boolean;
   /** The last batch was born stale: the text changed during refinement. */
   refineBornStale: boolean;
   saveStatus: ReviewSaveStatus;
   /** Plain message when an Accept was not applied (text left intact); '' otherwise. */
   acceptNotice: string;
-  refine(): Promise<void>;
+  /** Refines the whole chapter, or only `range` («Rifinisci la selezione»). */
+  refine(range?: Span): Promise<void>;
+  /** Repeats the last refine; after an edit of the text, on the whole chapter (the Retry button). */
+  retryRefine(): Promise<void>;
+  /**
+   * Checks a selection before leaving the editor: false (and the plain message)
+   * when it is too short to refine, so the user still sees what they selected.
+   */
+  checkSelection(text: string, range: Span): boolean;
   accept(suggestionId: string, proposalIndex?: number): Promise<void>;
   reject(suggestionId: string): Promise<void>;
   acceptAll(kind: SuggestionKind): Promise<void>;
@@ -89,6 +100,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const [canUndo, setCanUndo] = useState(false);
   const [refining, setRefining] = useState(false);
   const [refineErrorMessage, setRefineErrorMessage] = useState('');
+  const [refineErrorRetryable, setRefineErrorRetryable] = useState(true);
   const [refineBornStale, setRefineBornStale] = useState(false);
   const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>('saved');
   const [acceptNotice, setAcceptNotice] = useState('');
@@ -136,44 +148,77 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     }
   }, [chapter, chapterRepository]);
 
-  const refine = useCallback(async () => {
-    const session = sessionRef.current;
-    if (!session || session.text === '') return;
-    setRefining(true);
-    setRefineErrorMessage('');
-    setAcceptNotice('');
+  // the range of the last refine, with the text it referred to: offsets are
+  // meaningless on another text, so Retry then refines the whole chapter
+  const lastRangeRef = useRef<{ range: Span; textHash: string } | undefined>(undefined);
+  const refine = useCallback(
+    async (range?: Span) => {
+      const session = sessionRef.current;
+      if (!session || session.text === '') return;
+      lastRangeRef.current =
+        range === undefined ? undefined : { range, textHash: textHash(session.text) };
+      if (
+        range !== undefined &&
+        (range.to > session.text.length ||
+          selectionWords(session.text, range) < MIN_SELECTION_WORDS)
+      ) {
+        // nothing is sent: a few words give the model nothing to work on
+        setRefineBornStale(false);
+        setRefineErrorRetryable(false);
+        setRefineErrorMessage(t('review.editor.selectionTooShort', { count: MIN_SELECTION_WORDS }));
+        return;
+      }
+      setRefining(true);
+      setRefineErrorRetryable(true);
+      setRefineErrorMessage('');
+      setAcceptNotice('');
+      setRefineBornStale(false);
+      const requestId = newRequestId();
+      try {
+        // what the user already rejected is never proposed again (filtered by the server)
+        const revisions = await revisionRepository.list(chapter).catch(() => {
+          // refine anyway, but not silently: rejected pairs may come back this once
+          console.warn('rejections-unavailable', { requestId });
+          return [];
+        });
+        const rejected = rejectedKeys(revisions);
+        const raw = await provider.refine({
+          bookId: chapter.bookId,
+          chapterId: chapter.chapterId,
+          text: session.text,
+          textHash: textHash(session.text),
+          requestId,
+          rejected,
+          ...(range === undefined ? {} : { range }),
+        });
+        // provider output validated at the boundary, even when the
+        // provider is the fake: the contract is the same as the refineChapter callable's
+        const result = refineResultSchema.parse(raw);
+        const outcome = session.ingest(result, range);
+        setRefineBornStale(outcome.bornStale);
+        syncFromSession();
+      } catch (error) {
+        // the text is untouched: the session only changes on a valid result
+        logCallableFailure('refine', requestId, error);
+        setRefineErrorMessage(callableErrorMessage('refine', error));
+      } finally {
+        setRefining(false);
+      }
+    },
+    [chapter, newRequestId, provider, revisionRepository, syncFromSession],
+  );
+  const retryRefine = useCallback(() => {
+    const last = lastRangeRef.current;
+    const text = sessionRef.current?.text ?? '';
+    return refine(last !== undefined && last.textHash === textHash(text) ? last.range : undefined);
+  }, [refine]);
+  const checkSelection = useCallback((text: string, range: Span) => {
+    if (range.to <= text.length && selectionWords(text, range) >= MIN_SELECTION_WORDS) return true;
     setRefineBornStale(false);
-    const requestId = newRequestId();
-    try {
-      // what the user already rejected is never proposed again (filtered by the server)
-      const revisions = await revisionRepository.list(chapter).catch(() => {
-        // refine anyway, but not silently: rejected pairs may come back this once
-        console.warn('rejections-unavailable', { requestId });
-        return [];
-      });
-      const rejected = rejectedKeys(revisions);
-      const raw = await provider.refine({
-        bookId: chapter.bookId,
-        chapterId: chapter.chapterId,
-        text: session.text,
-        textHash: textHash(session.text),
-        requestId,
-        rejected,
-      });
-      // provider output validated at the boundary, even when the
-      // provider is the fake: the contract is the same as the refineChapter callable's
-      const result = refineResultSchema.parse(raw);
-      const outcome = session.ingest(result);
-      setRefineBornStale(outcome.bornStale);
-      syncFromSession();
-    } catch (error) {
-      // the text is untouched: the session only changes on a valid result
-      logCallableFailure('refine', requestId, error);
-      setRefineErrorMessage(callableErrorMessage('refine', error));
-    } finally {
-      setRefining(false);
-    }
-  }, [chapter, newRequestId, provider, revisionRepository, syncFromSession]);
+    setRefineErrorRetryable(false);
+    setRefineErrorMessage(t('review.editor.selectionTooShort', { count: MIN_SELECTION_WORDS }));
+    return false;
+  }, []);
 
   const accept = useCallback(
     async (suggestionId: string, proposalIndex = 0) => {
@@ -337,10 +382,13 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     refining,
     refineFailed: refineErrorMessage !== '',
     refineErrorMessage,
+    refineErrorRetryable,
     refineBornStale,
     saveStatus,
     acceptNotice,
     refine,
+    retryRefine,
+    checkSelection,
     accept,
     reject,
     acceptAll,

@@ -5,6 +5,7 @@
 // refineResultSchema drops the server's extra fields (model, discarded, ...)
 // and guarantees the proposal hierarchy.
 
+import { selectionWords } from './selection';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { z } from 'zod';
 
@@ -64,6 +65,9 @@ export class CallableSuggestionsProvider implements SuggestionsProvider {
         requestId,
         words: text.match(/\S+/g)?.length ?? 0,
         chars: text.length,
+        ...(request.range === undefined
+          ? {}
+          : { range: { ...request.range, words: selectionWords(text, request.range) } }),
       });
     }
     let result: { data: unknown };

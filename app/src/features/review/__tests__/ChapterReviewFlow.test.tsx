@@ -241,6 +241,130 @@ describe('ChapterReviewFlow — rejected suggestions are not proposed again', ()
   });
 });
 
+describe('ChapterReviewFlow — refine the selection', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  function recordingProvider() {
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    const provider: SuggestionsProvider = {
+      refine: (request) => {
+        requests.push(request);
+        return fake.refine(request);
+      },
+    };
+    return { provider, requests };
+  }
+
+  it('with text selected the button says «Rifinisci la selezione» and sends the range', async () => {
+    const { provider, requests } = recordingProvider();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    const from = BRANO.indexOf('aprì');
+    const to = BRANO.length;
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: from, end: to } },
+    });
+    const button = screen.getByTestId('editor-refine');
+    expect(button).toHaveTextContent(/Rifinisci la selezione/);
+    expect(button).not.toBeDisabled();
+    await fireEvent.press(button);
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.range).toEqual({ from, to });
+    expect(requests[0]?.text).toBe(BRANO);
+    await screen.unmount();
+  });
+
+  it('without a selection «Rifinisci» works on the whole chapter (no range)', async () => {
+    const { provider, requests } = recordingProvider();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    expect(screen.getByTestId('editor-refine')).toHaveTextContent(/Rifinisci con AI/);
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.range).toBeUndefined();
+    await screen.unmount();
+  });
+
+  it('Retry after a manual edit does not reuse the old offsets: it refines the whole chapter', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    let failNext = true;
+    const provider: SuggestionsProvider = {
+      refine: async (request) => {
+        requests.push(request);
+        if (failNext) {
+          failNext = false;
+          throw new Error('unreachable');
+        }
+        return fake.refine(request);
+      },
+    };
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    const from = BRANO.indexOf('aprì');
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: from, end: BRANO.length } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await screen.findByTestId('editor-refine-error');
+
+    // the user edits the text: the old offsets now point elsewhere
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    await fireEvent.changeText(screen.getByTestId('editor-input'), `Prologo aggiunto. ${BRANO}`);
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    await fireEvent.press(await screen.findByTestId('editor-refine-retry'));
+
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests[0]?.range).toEqual({ from, to: BRANO.length });
+    expect(requests[1]?.range).toBeUndefined();
+    expect(requests[1]?.text).toBe(`Prologo aggiunto. ${BRANO}`);
+    await screen.unmount();
+  });
+
+  it('a too-short selection keeps the editor open with the selection, so the message makes sense', async () => {
+    const { provider, requests } = recordingProvider();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    const from = BRANO.indexOf('aprì');
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: from, end: from + 'aprì la finestra'.length } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(
+      /togli la selezione/,
+    );
+    expect(screen.getByTestId('editor-input')).toBeOnTheScreen();
+    expect(screen.getByTestId('editor-refine')).toHaveTextContent(/Rifinisci la selezione/);
+    expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+
+  it('a selection under 5 words: a clear message, nothing sent', async () => {
+    const { provider, requests } = recordingProvider();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    const from = BRANO.indexOf('aprì');
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: from, end: from + 'aprì la finestra'.length } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(
+      /Seleziona almeno 5 parole da rifinire, oppure togli la selezione per rifinire tutto il capitolo\./,
+    );
+    // retrying the same selection would say the same: no Retry button
+    expect(screen.queryByTestId('editor-refine-retry')).toBeNull();
+    expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+});
+
 describe('ChapterReviewFlow (editor + review)', () => {
   it('Rifinisci generates the suggestions: counter chip and inline highlights', async () => {
     const { screen } = await setup();

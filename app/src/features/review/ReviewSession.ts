@@ -124,12 +124,23 @@ export class ReviewSession {
    * batch is born stale; in any case every pending is verified
    * against the current text (slice === original), never blind trust.
    */
-  ingest(result: RefineResult): IngestOutcome {
+  ingest(result: RefineResult, range?: Span): IngestOutcome {
     const currentHash = textHash(this.currentText);
     const bornStale = result.textHash !== currentHash;
-    this.items = result.suggestions.map((sug) =>
+    const incoming = result.suggestions.map((sug) =>
       bornStale && sug.state === 'pending' ? { ...sug, state: 'stale' as const } : { ...sug },
     );
+    // a selection refine replaces only the pendings it touched (as the server does);
+    // decided ones stay as history, pendings elsewhere stay pending
+    const kept =
+      range === undefined
+        ? []
+        : this.items.filter(
+            (s) =>
+              s.state !== 'pending' ||
+              Math.max(s.span.from, range.from) >= Math.min(s.span.to, range.to),
+          );
+    this.items = [...kept, ...incoming].sort((a, b) => a.span.from - b.span.from);
     this.revalidatePending();
     // new batch = new review: the undo history no longer makes sense
     this.undoStack.length = 0;

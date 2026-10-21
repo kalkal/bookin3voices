@@ -72,6 +72,12 @@ export interface NormalizedSuggestions {
 export interface NormalizeOptions {
   /** rejectionKey of every (original, proposal) pair the user rejected. */
   rejected?: ReadonlySet<string>;
+  /**
+   * «Rifinisci la selezione»: originals are located inside [from, to) only (exactly
+   * once there), density is measured on the selection, and spans come back shifted
+   * to the whole text.
+   */
+  range?: { from: number; to: number };
 }
 
 export const MAX_SUGGESTIONS = 30;
@@ -102,6 +108,9 @@ export function normalizeSuggestions(
   options: NormalizeOptions = {},
 ): NormalizedSuggestions {
   const located: Located[] = [];
+  // spans are computed inside the scope, then shifted to the whole text
+  const scope = options.range ? text.slice(options.range.from, options.range.to) : text;
+  const offset = options.range?.from ?? 0;
   const droppedItems: DroppedSuggestion[] = [];
   const droppedProposals: DroppedProposal[] = [];
   const drop = (
@@ -114,11 +123,11 @@ export function normalizeSuggestions(
     // models often add stray leading/trailing whitespace when copying a span:
     // retry with the trimmed span before giving up (still exactly-one match)
     let raw = rawSuggestion;
-    let occurrences = occurrencesOf(text, raw.original);
+    let occurrences = occurrencesOf(scope, raw.original);
     const trimmed = raw.original.trim();
     if (occurrences.length === 0 && trimmed !== '' && trimmed !== raw.original) {
       raw = { ...rawSuggestion, original: trimmed };
-      occurrences = occurrencesOf(text, trimmed);
+      occurrences = occurrencesOf(scope, trimmed);
     }
     if (occurrences.length !== 1) {
       // absent or ambiguous: never guess the span
@@ -193,7 +202,7 @@ export function normalizeSuggestions(
     nonOverlapping.push(sug);
   }
 
-  const kept = applyDensityCap(nonOverlapping, text);
+  const kept = applyDensityCap(nonOverlapping, scope);
   const densityCut = nonOverlapping.length - kept.length;
   const keptSet = new Set(kept);
   for (const sug of nonOverlapping) if (!keptSet.has(sug)) drop(sug, 'density-cap');
@@ -203,6 +212,7 @@ export function normalizeSuggestions(
       .sort((a, b) => a.span.from - b.span.from)
       .map((sug, index) => ({
         ...sug,
+        span: { from: sug.span.from + offset, to: sug.span.to + offset },
         id: `${requestId}-${index + 1}`,
       })),
     droppedItems,
