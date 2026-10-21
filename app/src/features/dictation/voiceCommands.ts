@@ -87,12 +87,11 @@ const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
 // punctuation a recognizer may glue to a spoken command word («virgola.»)
 const GLUED_PUNCTUATION = /^[.,;:!?…«»"']+|[.,;:!?…«»"']+$/g;
 
-/** «Un» but not «UE» or «iPhone»: the capital a recognizer puts on every piece. */
-const isTitleCase = (word: string) => /^\p{Lu}\p{Ll}*$/u.test(word.replace(GLUED_PUNCTUATION, ''));
-
 /**
  * Accumulates final transcripts, applying voice commands, spacing
- * (no space before punctuation) and capitalization at sentence start.
+ * (no space before punctuation) and capitalization at sentence start. A capital
+ * is only ever ADDED (after . ? !), never removed: a name or «I» at the start of
+ * a piece keeps it (the recognizer adds no formatting: addsPunctuation false).
  * Not thread-safe nor shared: one composer per dictation session.
  */
 export class TranscriptComposer {
@@ -115,12 +114,6 @@ export class TranscriptComposer {
   /** Appends a raw final transcript; returns the updated text. */
   append(finalTranscript: string): string {
     const tokens = finalTranscript.trim().split(/\s+/).filter(Boolean);
-    // a recognizer that formats its text starts every piece with a capital, even
-    // after a comma: the capital belongs only after a full stop (or ? !)
-    const first = tokens[0];
-    if (first !== undefined && !this.capitalizeNext && isTitleCase(first)) {
-      tokens[0] = first.charAt(0).toLocaleLowerCase(LOCALE[this.language]) + first.slice(1);
-    }
     let i = 0;
     while (i < tokens.length) {
       const match = this.matchCommand(tokens, i);

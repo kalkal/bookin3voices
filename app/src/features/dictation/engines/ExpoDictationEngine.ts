@@ -67,14 +67,22 @@ export class ExpoDictationEngine implements DictationEngine {
   private readonly onDevice = new Map<string, Promise<boolean>>();
   /** Bumped by every start/stop: a start still preparing gives up if it changed. */
   private generation = 0;
+  /** module.start() was called and its native start event has not come yet. */
+  private startSent = false;
   /** The language of the running start, if it went on-device. */
   private onDeviceLang?: string;
 
   constructor(module: SpeechModule = ExpoSpeechRecognitionModule) {
     this.module = module;
     this.subscriptions = [
-      this.module.addListener('start', () => this.events.onStart?.()),
-      this.module.addListener('end', () => this.events.onEnd?.()),
+      this.module.addListener('start', () => {
+        this.startSent = false;
+        this.events.onStart?.();
+      }),
+      this.module.addListener('end', () => {
+        this.startSent = false;
+        this.events.onEnd?.();
+      }),
       this.module.addListener('result', (event: ExpoSpeechRecognitionResultEvent) => {
         const transcript = event.results?.[0]?.transcript;
         if (typeof transcript !== 'string' || transcript === '') return;
@@ -128,6 +136,7 @@ export class ExpoDictationEngine implements DictationEngine {
     const requiresOnDeviceRecognition = await this.canRecognizeOnDevice(options.lang);
     if (generation !== this.generation) return; // paused or left meanwhile
     this.onDeviceLang = requiresOnDeviceRecognition ? options.lang : undefined;
+    this.startSent = true;
     this.module.start({
       lang: options.lang,
       interimResults: true,
@@ -141,6 +150,11 @@ export class ExpoDictationEngine implements DictationEngine {
 
   cancelPendingStart(): void {
     this.generation += 1;
+    // already sent to the recognizer but not confirmed: it must be stopped too
+    if (this.startSent) {
+      this.startSent = false;
+      this.module.stop();
+    }
   }
 
   async stop(): Promise<void> {

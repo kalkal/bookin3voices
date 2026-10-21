@@ -170,6 +170,7 @@ export class DictationSession {
     switch (effect) {
       case 'resetTranscript':
         this.composer.reset();
+        this.pendingPartial = '';
         this.restarts = 0;
         this.restartTimestamps = [];
         this.lastError = undefined;

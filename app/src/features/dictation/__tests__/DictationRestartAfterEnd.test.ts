@@ -356,3 +356,34 @@ describe('Punctuation only from voice commands (Galaxy A53, 21 Oct)', () => {
     );
   });
 });
+
+describe('Review follow-ups (#22)', () => {
+  it('a pause after module.start() but before the native start event stops the recognizer', async () => {
+    const recognizer = fakeRecognizer();
+    // the native start event arrives late: the start was sent, not yet confirmed
+    recognizer.module.start.mockImplementation(() => {
+      recognizer.starts += 1;
+    });
+    const engine = new ExpoDictationEngine(recognizer.module as unknown as SpeechModule);
+    const session = new DictationSession({ engine, onFlush: jest.fn(), lang: 'it-IT' });
+    session.start();
+    await flush();
+    expect(recognizer.starts).toBe(1);
+    session.pause();
+    expect(recognizer.module.stop).toHaveBeenCalled();
+  });
+
+  it('a new dictation forgets the interim result of the previous one', async () => {
+    const { recognizer, session } = await setup();
+    const handler = (name: string) =>
+      recognizer.module.addListener.mock.calls.find(([n]) => n === name)?.[1] as (
+        event: unknown,
+      ) => void;
+    handler('result')({ isFinal: false, results: [{ transcript: 'parole vecchie' }] });
+    session.stop();
+    session.start(); // from idle: a new dictation
+    await flush();
+    handler('error')({ error: 'client', message: 'Other client side errors' });
+    expect(session.text).toBe('');
+  });
+});

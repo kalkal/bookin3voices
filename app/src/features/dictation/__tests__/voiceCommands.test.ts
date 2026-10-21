@@ -155,11 +155,18 @@ describe('TranscriptComposer with a recognizer that formats its own text (Galaxy
     expect(composer.value).toBe('Siamo nel Medioevo,');
   });
 
-  it('after a comma the next piece does not start with the capital the recognizer gave it', () => {
+  it('after a comma a lowercase piece stays lowercase', () => {
     const composer = new TranscriptComposer('', 'it');
     composer.append('Siamo nel Medioevo virgola');
-    composer.append('Un gatto dorme sul cuscino punto');
+    composer.append('un gatto dorme sul cuscino punto');
     expect(composer.value).toBe('Siamo nel Medioevo, un gatto dorme sul cuscino.');
+  });
+
+  it('never lowers a capital: names after a pause keep it', () => {
+    const composer = new TranscriptComposer('', 'it');
+    composer.append('Siamo arrivati virgola');
+    composer.append('Nora guardava Roma');
+    expect(composer.value).toBe('Siamo arrivati, Nora guardava Roma');
   });
 
   it('after a full stop the next piece still starts with a capital', () => {
@@ -169,10 +176,10 @@ describe('TranscriptComposer with a recognizer that formats its own text (Galaxy
     expect(composer.value).toBe('Siamo nel Medioevo. Un gatto dorme');
   });
 
-  it('works the same in English («comma.»)', () => {
+  it('works the same in English («comma.»), and «I» keeps its capital', () => {
     const composer = new TranscriptComposer('', 'en');
     composer.append('The cat sleeps comma.');
-    composer.append('Then it wakes up');
-    expect(composer.value).toBe('The cat sleeps, then it wakes up');
+    composer.append('I wake up');
+    expect(composer.value).toBe('The cat sleeps, I wake up');
   });
 });
