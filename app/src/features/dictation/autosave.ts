@@ -3,10 +3,15 @@
 // pause/background/close. The two rules coexist: debounce here, and in
 // DictationSession the guarantee that text never lives only in RAM.
 
-export type SaveStatus = 'saved' | 'pending' | 'saving' | 'error';
+/**
+ * 'idle' = nothing to save yet (never «Salvato» before a real save);
+ * 'saved-local' = safe on the phone, the cloud will catch up.
+ */
+export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'saved-local' | 'error';
 
 export interface DebouncedSaverOptions {
-  save: (text: string) => Promise<void>;
+  /** Resolves once stored; 'local-only' = stored on the phone only. */
+  save: (text: string) => Promise<unknown>;
   /** Debounce toward the repository; typical range 3-5 s. */
   delayMs?: number;
   onStatus?: (status: SaveStatus) => void;
@@ -74,8 +79,8 @@ export class DebouncedSaver {
     const text = this.latestText;
     this.options.onStatus?.('saving');
     try {
-      await this.options.save(text);
-      if (!this.dirty) this.options.onStatus?.('saved');
+      const outcome = await this.options.save(text);
+      if (!this.dirty) this.options.onStatus?.(outcome === 'local-only' ? 'saved-local' : 'saved');
     } catch {
       // text kept: retried on the next debounce round
       this.dirty = true;

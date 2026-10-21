@@ -5,8 +5,6 @@
 
 import { z } from 'zod';
 
-import { AI_PROVIDER_IDS, DEFAULT_AI_PROVIDER_ID } from './aiProviders';
-
 /** Theme preference: cream paper, black and gold ("candlelight"), or automatic. */
 export const THEME_PREFERENCES = ['paper', 'candlelight', 'auto'] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
@@ -30,7 +28,8 @@ export const AUTHOR_NAME_MAX = 200;
 // external data (disk today, Firestore tomorrow) validated at the boundary with Zod
 export const appSettingsSchema = z.object({
   schemaVersion: z.literal(1),
-  aiProvider: z.enum(AI_PROVIDER_IDS),
+  // no aiProvider: the server picks the engine; an old local value is dropped
+  // by the parse (unknown keys are stripped) and cleaned on load
   theme: z.enum(THEME_PREFERENCES),
   /**
    * The theme was picked in Settings. Absent in payloads saved before black and
@@ -59,13 +58,9 @@ export const appSettingsSchema = z.object({
 
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
-/**
- * Starting values of the `settings/app` doc: Amazon Nova (bedrock) is the
- * DEFAULT provider; the app's default theme is black and gold.
- */
+/** Starting values of the `settings/app` doc: the app's default theme is black and gold. */
 export const DEFAULT_SETTINGS: AppSettings = {
   schemaVersion: 1,
-  aiProvider: DEFAULT_AI_PROVIDER_ID,
   theme: 'candlelight',
   dailyGoalWords: 500,
   backupFrequency: 'weekly',

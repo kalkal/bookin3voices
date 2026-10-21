@@ -60,6 +60,23 @@ describe('CallableSuggestionsProvider', () => {
     expect(result).not.toHaveProperty('model');
   });
 
+  it('reports the model the server really used (for Settings), outside the result', async () => {
+    const served: string[] = [];
+    const provider = new CallableSuggestionsProvider({
+      call: async () => ({
+        data: {
+          requestId: 'ref-1',
+          model: 'amazon.nova-pro-v1:0',
+          textHash: textHash(TEXT),
+          suggestions: [SERVER_SUGGESTION],
+        },
+      }),
+      onServedModel: (model) => served.push(model),
+    });
+    await provider.refine(REQUEST);
+    expect(served).toEqual(['amazon.nova-pro-v1:0']);
+  });
+
   it('non-conforming response → throw (never unvalidated suggestions in the UI)', async () => {
     const provider = new CallableSuggestionsProvider({
       call: async () => ({ data: { suggestions: 'non-un-array' } }),

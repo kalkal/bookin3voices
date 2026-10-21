@@ -46,7 +46,7 @@ import { loadStyleProfileContent, type StyleProfileContent } from './styleProfil
 import { textHash } from './textHash';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
-/** Ids of the supported AI providers (catalog shared with the app). */
+/** Ids of the supported AI providers (the app only shows the one in use). */
 export const AI_PROVIDER_IDS = ['bedrock', 'gemini'] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
 

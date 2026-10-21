@@ -24,7 +24,13 @@ export class LocalSettingsRepository implements SettingsRepository {
     const raw = await this.storage.getItem(STORAGE_KEY);
     if (raw === null) return DEFAULT_SETTINGS;
     try {
-      const settings = appSettingsSchema.parse(JSON.parse(raw));
+      const stored: unknown = JSON.parse(raw);
+      const settings = appSettingsSchema.parse(stored);
+      if (typeof stored === 'object' && stored !== null && 'aiProvider' in stored) {
+        // the old provider choice lived only here and never reached the server:
+        // drop it from disk so it can never be shown again
+        await this.storage.setItem(STORAGE_KEY, JSON.stringify(settings)).catch(() => {});
+      }
       // Before black and gold became the default every change saved the whole
       // document with the old default ("paper"), so an unmarked "paper" was never
       // a choice: move it to the new default. Picking a theme sets themeChosen.

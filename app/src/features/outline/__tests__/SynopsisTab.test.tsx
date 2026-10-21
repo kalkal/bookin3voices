@@ -3,6 +3,8 @@
 
 import { fireEvent, render, waitFor, within } from '@testing-library/react-native';
 
+import { FirebaseError } from 'firebase/app';
+
 import { ThemeProvider } from '../../../theme';
 import { InMemoryBookRepository } from '../../books';
 import { InMemoryChapterRepository } from '../../chapters';
@@ -198,15 +200,26 @@ describe('SynopsisTab', () => {
     await screen.unmount();
   });
 
-  it('a callable error becomes a readable message', async () => {
+  it('a callable error becomes a plain message with Retry, never the raw text', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const { result, outlineService } = setup();
-    outlineService.nextError = new Error('Il modello non ha prodotto una scaletta valida.');
+    outlineService.nextError = new FirebaseError(
+      'functions/internal',
+      'The model did not produce a valid outline: chapters.0.title. Try again.',
+    );
     const screen = await result;
 
     await fireEvent.press(await screen.findByTestId('synopsis-generate'));
-    expect(await screen.findByTestId('synopsis-status')).toHaveTextContent(/scaletta valida/);
+    const status = await screen.findByTestId('synopsis-status');
+    expect(status).toHaveTextContent('La scaletta non è arrivata. Riprova tra poco.');
+    expect(status).not.toHaveTextContent(/model/);
     // no preview on error
     expect(screen.queryByTestId('outline-card-0')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('synopsis-retry'));
+    expect(await screen.findByTestId('outline-card-0')).toBeOnTheScreen();
+    expect(outlineService.requests).toHaveLength(2);
+    jest.restoreAllMocks();
     await screen.unmount();
   });
 

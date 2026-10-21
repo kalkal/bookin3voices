@@ -20,6 +20,7 @@ export const dictation: Namespace = {
     'dictation.mic.idle': 'Start dictating',
     'dictation.mic.listening': 'Pause dictation',
     'dictation.mic.paused': 'Resume dictation',
+    'dictation.mic.reconnecting': 'Reconnecting: tap to pause',
     'dictation.outline.open': 'Open the outline',
     'dictation.outline.close': 'Close the outline',
     'dictation.outline.label': 'Outline',
@@ -28,6 +29,7 @@ export const dictation: Namespace = {
     'dictation.error.audioInterruption': 'The microphone was interrupted by another app.',
     'dictation.error.noSpeech': 'The engine hasn’t heard any speech for a while.',
     'dictation.error.network': 'No connection: recognition can’t reach the cloud.',
+    'dictation.error.busy': 'Speech recognition is busy: tap the microphone to try again.',
     'dictation.error.unknown': 'The dictation engine stopped unexpectedly.',
     'dictation.backToBook': 'Back to the book',
     'dictation.loadError':
@@ -39,14 +41,21 @@ export const dictation: Namespace = {
     'dictation.caption.loadError': 'Chapter can’t be read',
     'dictation.caption.preflight': 'Checking microphone and language…',
     'dictation.caption.fixIssues': 'Fix the issues above to dictate',
-    'dictation.caption.listening': 'Listening — tap to pause',
-    'dictation.caption.pausedAuto': 'Paused automatically (audio interrupted) — tap to resume',
+    'dictation.caption.listening': 'Listening…',
+    'dictation.caption.reconnecting': 'Reconnecting…',
+    'dictation.caption.pausedAuto':
+      'Paused automatically: a call or another app took the microphone — tap to resume',
+    'dictation.caption.pausedSilence':
+      'Paused automatically: no voice for 2 minutes — tap to resume',
+    'dictation.caption.pausedEngine':
+      'Paused automatically: speech recognition isn’t answering, check the connection — tap to resume',
     'dictation.caption.paused': 'Paused — tap to resume',
     'dictation.caption.committing': 'Finishing dictation…',
     'dictation.caption.offline': 'You’re offline: without a language pack dictation may stop',
     'dictation.caption.idle': 'Tap the microphone to dictate',
     'dictation.save.saved': 'Saved',
-    'dictation.save.error': 'Not saved',
+    'dictation.save.savedLocal': 'Saved on the phone, syncing as soon as possible',
+    'dictation.save.error': 'Not saved yet: retrying, keep the app open',
     'dictation.save.saving': 'Saving…',
   },
   it: {
@@ -68,6 +77,7 @@ export const dictation: Namespace = {
     'dictation.mic.idle': 'Inizia a dettare',
     'dictation.mic.listening': 'Metti in pausa la dettatura',
     'dictation.mic.paused': 'Riprendi la dettatura',
+    'dictation.mic.reconnecting': 'Riconnessione: tocca per mettere in pausa',
     'dictation.outline.open': 'Apri la traccia',
     'dictation.outline.close': 'Chiudi la traccia',
     'dictation.outline.label': 'Traccia',
@@ -76,6 +86,8 @@ export const dictation: Namespace = {
     'dictation.error.audioInterruption': 'Il microfono è stato interrotto da un’altra app.',
     'dictation.error.noSpeech': 'Il motore non sente parlato da un po’.',
     'dictation.error.network': 'Rete assente: il riconoscimento non raggiunge il cloud.',
+    'dictation.error.busy':
+      'Il riconoscimento vocale è occupato: tocca il microfono per riprovare.',
     'dictation.error.unknown': 'Il motore di dettatura si è fermato in modo inatteso.',
     'dictation.backToBook': 'Torna al Libro',
     'dictation.loadError':
@@ -87,14 +99,21 @@ export const dictation: Namespace = {
     'dictation.caption.loadError': 'Capitolo non leggibile',
     'dictation.caption.preflight': 'Controllo di microfono e lingua…',
     'dictation.caption.fixIssues': 'Risolvi i problemi qui sopra per dettare',
-    'dictation.caption.listening': 'In ascolto — tocca per mettere in pausa',
-    'dictation.caption.pausedAuto': 'In pausa automatica (audio interrotto) — tocca per riprendere',
+    'dictation.caption.listening': 'Sto ascoltando…',
+    'dictation.caption.reconnecting': 'Riconnessione…',
+    'dictation.caption.pausedAuto':
+      'In pausa automatica: una chiamata o un’altra app ha preso il microfono — tocca per riprendere',
+    'dictation.caption.pausedSilence':
+      'In pausa automatica: nessuna voce da 2 minuti — tocca per riprendere',
+    'dictation.caption.pausedEngine':
+      'In pausa automatica: il riconoscimento vocale non risponde, controlla la connessione — tocca per riprendere',
     'dictation.caption.paused': 'In pausa — tocca per riprendere',
     'dictation.caption.committing': 'Chiusura della dettatura…',
     'dictation.caption.offline': 'Sei offline: senza pacchetto lingua la dettatura può fermarsi',
     'dictation.caption.idle': 'Tocca il microfono per dettare',
     'dictation.save.saved': 'Salvato',
-    'dictation.save.error': 'Non salvato',
+    'dictation.save.savedLocal': 'Salvato sul telefono, sincronizzo appena possibile',
+    'dictation.save.error': 'Non ancora salvato: riprovo, tieni aperta l’app',
     'dictation.save.saving': 'Salvataggio…',
   },
 };

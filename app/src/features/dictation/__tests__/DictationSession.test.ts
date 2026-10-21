@@ -2,6 +2,11 @@ import { DictationSession, type DictationSessionEvent } from '../DictationSessio
 import { FakeDictationEngine } from '../engines/FakeDictationEngine';
 import type { SessionState } from '../sessionMachine';
 
+// the session arms a 2-minute silence timer while listening: fake timers keep
+// the sessions these tests leave listening from holding the process open
+beforeEach(() => jest.useFakeTimers());
+afterEach(() => jest.useRealTimers());
+
 function setup(options?: { autoEmitStart?: boolean; voiceCommands?: boolean; lang?: string }) {
   const engine = new FakeDictationEngine();
   if (options?.autoEmitStart === false) engine.autoEmitStart = false;
@@ -177,18 +182,22 @@ describe('DictationSession — audio interruption', () => {
     engine.emitError({ code: 'audio-interruption', recoverable: true, message: 'telefonata' });
     expect(session.state).toBe('paused');
     expect(onFlush).toHaveBeenCalledWith('Dettato prima della telefonata');
-    expect(events).toContainEqual(expect.objectContaining({ type: 'audio-interruption' }));
+    expect(events).toContainEqual({ type: 'auto-pause', reason: 'audio-interruption' });
     // the engine dies from the interruption: no automatic restart
     engine.emitEnd();
     expect(engine.startCalls).toHaveLength(1);
     expect(session.state).toBe('paused');
   });
 
-  it('network down (cloud recognition): same automatic pause', () => {
+  it('network down (cloud recognition): no pause, the engine restarts after a wait', () => {
     const { engine, session } = setup();
     session.start();
     engine.emitError({ code: 'network', recoverable: true });
-    expect(session.state).toBe('paused');
+    engine.emitSingleEnd();
+    expect(session.state).toBe('listening');
+    expect(engine.startCalls).toHaveLength(1);
+    jest.advanceTimersByTime(1000);
+    expect(engine.startCalls).toHaveLength(2);
   });
 
   it('benign error (silence): no pause, the end→restart cycle continues', () => {

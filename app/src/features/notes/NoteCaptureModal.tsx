@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Card, Chip, OrnamentDivider, PrimaryButton } from '../../components';
-import { MicButton, TranscriptComposer } from '../dictation';
+import { MicControl, TranscriptComposer } from '../dictation';
 import type { DictationEngine, DictationErrorCode } from '../dictation';
 import { t } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -138,28 +138,19 @@ export function NoteCaptureModal({
           </Text>
           <OrnamentDivider />
 
-          <View style={styles.micRow}>
-            <MicButton
-              state={listening ? 'listening' : 'idle'}
-              onPress={toggleMic}
-              testID="note-capture-mic"
-            />
-          </View>
-          <Text
-            testID="note-capture-caption"
-            style={{
-              fontFamily: fonts.bodyItalic,
-              fontSize: typeScale.caption,
-              color: colors.textMutedStrong,
-              textAlign: 'center',
-            }}
-          >
-            {errorCode
-              ? errorMessage(errorCode)
-              : listening
-                ? t('notes.capture.listening')
-                : t('notes.capture.idle')}
-          </Text>
+          <MicControl
+            state={listening ? 'listening' : 'idle'}
+            status={
+              errorCode
+                ? errorMessage(errorCode)
+                : listening
+                  ? t('notes.capture.listening')
+                  : t('notes.capture.idle')
+            }
+            onPress={toggleMic}
+            testID="note-capture-mic"
+            statusTestID="note-capture-caption"
+          />
 
           <TextInput
             testID="note-capture-text"
@@ -244,7 +235,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  micRow: { alignItems: 'center' },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

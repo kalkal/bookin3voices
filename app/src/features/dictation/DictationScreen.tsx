@@ -16,12 +16,15 @@ import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
 import { ExpoDictationEngine } from './engines/ExpoDictationEngine';
-import { MicButton, type MicVisualState } from './MicButton';
+import type { MicVisualState } from './MicButton';
+import { MicControl } from './MicControl';
 import { OutlineTrack, type OutlineTrackRepository } from './OutlineTrack';
 import { commandLanguage, dictationLocale } from './dictationLanguage';
 import { downloadOfflineModel, type PreflightChecks, type PreflightIssue } from './preflight';
+import type { AutoPauseReason } from './DictationSession';
 import type { DictationEngine, DictationError } from './types';
 import { useDictationController } from './useDictationController';
+import type { SaveStatus } from './autosave';
 import { voiceCommandHints } from './voiceCommands';
 
 export interface DictationScreenProps {
@@ -51,7 +54,14 @@ const ERROR_MESSAGE_KEYS: Record<DictationError['code'], string> = {
   'audio-interruption': 'dictation.error.audioInterruption',
   'no-speech': 'dictation.error.noSpeech',
   network: 'dictation.error.network',
+  busy: 'dictation.error.busy',
   unknown: 'dictation.error.unknown',
+};
+
+const AUTO_PAUSE_KEYS: Record<AutoPauseReason, string> = {
+  'audio-interruption': 'dictation.caption.pausedAuto',
+  silence: 'dictation.caption.pausedSilence',
+  'engine-unavailable': 'dictation.caption.pausedEngine',
 };
 
 export function DictationScreen({
@@ -96,7 +106,9 @@ export function DictationScreen({
 
   const micState: MicVisualState =
     controller.sessionState === 'listening'
-      ? 'listening'
+      ? controller.reconnecting
+        ? 'reconnecting'
+        : 'listening'
       : controller.sessionState === 'paused'
         ? 'paused'
         : 'idle';
@@ -243,7 +255,7 @@ export function DictationScreen({
               formatted: controller.sessionWords.toLocaleString(uiLocale()),
             })}
           </Text>
-          <SaveIndicator status={controller.saveStatus} />
+          <SaveIndicator status={controller.saveStatus} offline={offline} />
           {offline ? (
             <View style={[styles.inlineBadge, { gap: spacing.xs }]} testID="dictation-offline">
               <Ionicons name="cloud-offline-outline" size={14} color={colors.accentText} />
@@ -266,28 +278,14 @@ export function DictationScreen({
           ))}
         </View>
 
-        <View style={styles.micRow}>
-          <MicButton
-            state={micState}
-            disabled={controller.micDisabled}
-            onPress={controller.toggleMic}
-            testID="dictation-mic"
-          />
-        </View>
-
-        <Text
-          testID="dictation-caption"
-          style={[
-            styles.caption,
-            {
-              color: colors.textMutedStrong,
-              fontFamily: fonts.bodyItalic,
-              fontSize: typeScale.caption,
-            },
-          ]}
-        >
-          {caption}
-        </Text>
+        <MicControl
+          state={micState}
+          status={caption}
+          disabled={controller.micDisabled}
+          onPress={controller.toggleMic}
+          testID="dictation-mic"
+          statusTestID="dictation-caption"
+        />
       </View>
     </Screen>
   );
@@ -305,10 +303,12 @@ function captionFor(
   }
   switch (controller.sessionState) {
     case 'listening':
-      return t('dictation.caption.listening');
+      return controller.reconnecting
+        ? t('dictation.caption.reconnecting')
+        : t('dictation.caption.listening');
     case 'paused':
-      return controller.pausedByInterruption
-        ? t('dictation.caption.pausedAuto')
+      return controller.autoPauseReason !== undefined
+        ? t(AUTO_PAUSE_KEYS[controller.autoPauseReason])
         : t('dictation.caption.paused');
     case 'committing':
       return t('dictation.caption.committing');
@@ -319,19 +319,39 @@ function captionFor(
   }
 }
 
-function SaveIndicator({ status }: { status: 'saved' | 'pending' | 'saving' | 'error' }) {
+function SaveIndicator({ status, offline }: { status: SaveStatus; offline: boolean }) {
   const { colors, fonts, typeScale, spacing } = useTheme();
-  const label =
-    status === 'saved'
+  // nothing saved yet in this session: no claim at all
+  if (status === 'idle') return null;
+  // offline Firestore only queues the write in RAM: the safe copy is the phone's
+  const onPhoneOnly = status === 'saved-local' || (status === 'saved' && offline);
+  const label = onPhoneOnly
+    ? t('dictation.save.savedLocal')
+    : status === 'saved'
       ? t('dictation.save.saved')
       : status === 'error'
         ? t('dictation.save.error')
         : t('dictation.save.saving');
+  const icon: keyof typeof Ionicons.glyphMap | null = onPhoneOnly
+    ? 'phone-portrait-outline'
+    : status === 'saved'
+      ? 'checkmark'
+      : status === 'error'
+        ? 'alert-circle-outline'
+        : null;
   const color =
-    status === 'saved' ? colors.primary : status === 'error' ? colors.accentText : colors.textMuted;
+    status === 'saved' || onPhoneOnly
+      ? colors.primary
+      : status === 'error'
+        ? colors.accentText
+        : colors.textMuted;
   return (
-    <View style={[styles.inlineBadge, { gap: spacing.xs }]} testID="dictation-save-indicator">
-      {status === 'saved' ? <Ionicons name="checkmark" size={15} color={color} /> : null}
+    <View
+      style={[styles.inlineBadge, { gap: spacing.xs }]}
+      testID="dictation-save-indicator"
+      accessibilityLiveRegion="polite"
+    >
+      {icon !== null ? <Ionicons name={icon} size={15} color={color} /> : null}
       <Text style={{ color, fontFamily: fonts.body, fontSize: typeScale.caption }}>{label}</Text>
     </View>
   );
@@ -426,7 +446,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexWrap: 'wrap',
   },
-  micRow: { alignItems: 'center' },
-  caption: { textAlign: 'center' },
   inlineBadge: { flexDirection: 'row', alignItems: 'center' },
 });

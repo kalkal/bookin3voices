@@ -20,11 +20,13 @@ import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Book, BookRepository } from '../books';
 import { preflightNote } from './kdpMessages';
+import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
 import { makeRequestId } from './requestId';
 import {
   EXPORT_FORMATS,
   FORMAT_LABELS,
   type BookExportService,
+  type ExportFile,
   type ExportFileSink,
   type ExportFormat,
   type PendingSuggestionsRepository,
@@ -46,12 +48,7 @@ type Progress =
   | { phase: 'idle' }
   | { phase: 'working'; message: string }
   | { phase: 'done'; message: string }
-  | { phase: 'error'; message: string };
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim() !== '') return error.message;
-  return t('export.error.unexpected');
-}
+  | { phase: 'error'; message: string; retry?: () => void };
 
 export function ExportTab({
   book,
@@ -114,11 +111,43 @@ export function ExportTab({
 
   const working = progress.phase === 'working';
 
+  // sharing is the phone's job, not the server's: its own message, and Retry
+  // shares the same file again instead of exporting a new one
+  const share = async (file: ExportFile, synced: boolean) => {
+    setProgress({ phase: 'working', message: t('export.progress.opening') });
+    try {
+      await fileSink.saveAndShare(file);
+    } catch (error) {
+      console.warn('export-share-failed', {
+        code: error instanceof Error ? error.name : typeof error,
+      });
+      setProgress({
+        phase: 'error',
+        // the sink throws localized text (export.share.unavailable)
+        message:
+          error instanceof Error && error.message.trim() !== ''
+            ? error.message
+            : t('export.share.failed'),
+        retry: () => void share(file, synced),
+      });
+      return;
+    }
+    setProgress({
+      phase: 'done',
+      message: t('export.progress.done', {
+        fileName: file.fileName,
+        size: Math.max(1, Math.round(file.size / 1024)),
+        note: preflightNote(file) + (synced ? '' : t('export.note.notSynced')),
+      }),
+    });
+  };
+
   const generate = async () => {
     setProgress({
       phase: 'working',
       message: t('export.progress.generating', { format: FORMAT_LABELS[format] }),
     });
+    const requestId = makeRequestId();
     try {
       // what is on screen is what gets exported: unsaved metadata (a name
       // offered from Settings, too) is saved on the book first
@@ -128,23 +157,15 @@ export function ExportTab({
       }
       // the callable reads from the server: let the local saves reach it first
       const synced = waitForSync ? await waitForSync().catch(() => false) : true;
-      const file = await exportService.exportBook({
-        bookId: book.id,
-        format,
-        requestId: makeRequestId(),
-      });
-      setProgress({ phase: 'working', message: t('export.progress.opening') });
-      await fileSink.saveAndShare(file);
-      setProgress({
-        phase: 'done',
-        message: t('export.progress.done', {
-          fileName: file.fileName,
-          size: Math.max(1, Math.round(file.size / 1024)),
-          note: preflightNote(file) + (synced ? '' : t('export.note.notSynced')),
-        }),
-      });
+      const file = await exportService.exportBook({ bookId: book.id, format, requestId });
+      await share(file, synced);
     } catch (error) {
-      setProgress({ phase: 'error', message: errorMessage(error) });
+      logCallableFailure('export', requestId, error);
+      setProgress({
+        phase: 'error',
+        message: callableErrorMessage('export', error),
+        retry: () => void generate(),
+      });
     }
   };
 
@@ -364,6 +385,7 @@ export function ExportTab({
           {working && <ActivityIndicator size="small" color={colors.primary} />}
           <Text
             testID="export-status"
+            accessibilityLiveRegion="polite"
             style={{
               fontFamily: fonts.bodyItalic,
               fontSize: typeScale.bodySmall,
@@ -379,6 +401,14 @@ export function ExportTab({
           >
             {progress.message}
           </Text>
+          {progress.phase === 'error' && progress.retry !== undefined && (
+            <Chip
+              label={t('common.retry')}
+              tone="green"
+              testID="export-retry"
+              onPress={progress.retry}
+            />
+          )}
         </View>
       )}
       <ArchesFill />

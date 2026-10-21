@@ -17,7 +17,6 @@ export const review: Namespace = {
       'Could not read the saved chapter. Close and reopen the app before editing.',
     'review.editor.emptyHint':
       'The chapter is empty: dictate or write something,\nthen "Refine with AI".',
-    'review.editor.refineFailed': 'Refinement failed: your text is untouched, try again shortly.',
     'review.editor.refineStale':
       'The text changed during refinement: suggestions need to be regenerated.',
     'review.editor.freeKeyTitle': 'Development AI key active — refine ONLY sample text',
@@ -60,8 +59,6 @@ export const review: Namespace = {
       'Impossibile leggere il capitolo salvato. Chiudi e riapri l’app prima di modificare.',
     'review.editor.emptyHint':
       'Il capitolo è vuoto: detta o scrivi qualcosa,\npoi «Rifinisci con AI».',
-    'review.editor.refineFailed':
-      'La rifinitura non è riuscita: il testo è intatto, riprova tra poco.',
     'review.editor.refineStale':
       'Il testo è cambiato durante la rifinitura: suggerimenti da rigenerare.',
     'review.editor.freeKeyTitle': 'Chiave AI di sviluppo attiva — rifinisci SOLO testi di prova',

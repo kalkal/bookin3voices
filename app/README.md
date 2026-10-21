@@ -40,6 +40,15 @@ Rules: components never touch the Firebase SDK (repository pattern), pure logic 
   failed – your text is kept here).
 - «Saved» appears only once the text is really stored in a safe place, never before.
 
+What the dictation save indicator means (`DictationScreen` + `OfflineFirstChapterRepository`):
+
+- «Salvato»: the text is on the phone (AsyncStorage mirror, durable) **and** handed to
+  Firestore. Firestore confirms the write in the background (`commitInBackground`); a later
+  server rejection is logged and the mirror pushes the text again on the next load.
+- «Salvato sul telefono, sincronizzo appena possibile»: the phone is offline or Firestore
+  refused the write; the text is safe in the mirror and goes up on the next save or load.
+- Nothing is shown before the first save of the session.
+
 ## Pre-commit (Husky + lint-staged)
 
 `npm install` (the `prepare` script) sets `core.hooksPath = app/.husky/_` in the

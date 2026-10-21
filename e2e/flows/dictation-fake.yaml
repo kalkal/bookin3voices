@@ -21,7 +21,7 @@ name: Dictation with FakeDictationEngine
     id: "dictation-mic"
 - extendedWaitUntil:
     visible:
-      text: "In ascolto.*"
+      text: "Sto ascoltando.*"
     timeout: 10000
 
 # The consolidated text reaches the screen (last sentence of the script included).

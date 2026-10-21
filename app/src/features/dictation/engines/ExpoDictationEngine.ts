@@ -30,8 +30,9 @@ const ERROR_MAP: Partial<Record<string, { code: DictationErrorCode; recoverable:
   // the mic/audio was lost or taken by others: the session pauses
   'audio-capture': { code: 'audio-interruption', recoverable: true },
   interrupted: { code: 'audio-interruption', recoverable: true },
-  busy: { code: 'audio-interruption', recoverable: true },
-  // no network for cloud recognition: pause, not a restart loop
+  // transient (seen on a Galaxy A53 after a silence): the session restarts the
+  // engine with a bounded backoff instead of pausing
+  busy: { code: 'busy', recoverable: true },
   network: { code: 'network', recoverable: true },
   // benign: the engine ends on its own and the session restarts it
   'no-speech': { code: 'no-speech', recoverable: true },
@@ -111,5 +112,6 @@ function mapError(event: ExpoSpeechRecognitionErrorEvent): DictationError {
     code: mapped?.code ?? 'unknown',
     recoverable: mapped?.recoverable ?? false,
     message: event.message || event.error,
+    nativeCode: event.error,
   };
 }

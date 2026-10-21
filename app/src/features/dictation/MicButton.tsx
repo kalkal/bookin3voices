@@ -1,17 +1,18 @@
 /**
- * Dominant microphone button of the Dictation screen:
- * an 88px library-green circle with three visual states: idle, listening
- * (pulsing gold ring), paused (circle on paper with a green border).
- * Haptics belong to the caller: only rendering and accessibility live here.
+ * Dominant microphone button of the Dictation screen, 88px, three states:
+ * idle (library-green circle), listening (gold circle with a pulsing ring),
+ * paused (grey ring and slashed mic). In the black and gold theme primary IS
+ * gold, so listening and paused used to look alike: the mic tokens keep them
+ * apart in both themes. Haptics belong to the caller.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
 import { t } from '../../i18n';
-import { useTheme } from '../../theme';
+import { useTheme, type Palette } from '../../theme';
 
-export type MicVisualState = 'idle' | 'listening' | 'paused';
+export type MicVisualState = 'idle' | 'listening' | 'paused' | 'reconnecting';
 
 interface MicButtonProps {
   state: MicVisualState;
@@ -28,7 +29,40 @@ const ACCESSIBILITY_LABEL_KEYS: Record<MicVisualState, string> = {
   idle: 'dictation.mic.idle',
   listening: 'dictation.mic.listening',
   paused: 'dictation.mic.paused',
+  reconnecting: 'dictation.mic.reconnecting',
 };
+
+export interface MicAppearance {
+  icon: 'mic' | 'mic-off' | 'sync';
+  iconColor: string;
+  background: string;
+  border?: string;
+}
+
+/** Colours and glyph per state: the state is never told by colour alone. */
+export function micAppearance(state: MicVisualState, colors: Palette): MicAppearance {
+  switch (state) {
+    case 'listening':
+      return { icon: 'mic', iconColor: colors.onMicListening, background: colors.micListening };
+    case 'paused':
+      return {
+        icon: 'mic-off',
+        iconColor: colors.micPaused,
+        background: colors.surface,
+        border: colors.micPaused,
+      };
+    case 'reconnecting':
+      // gold outline, no pulse: still dictating, but the engine is off for a moment
+      return {
+        icon: 'sync',
+        iconColor: colors.micListening,
+        background: colors.surface,
+        border: colors.micListening,
+      };
+    default:
+      return { icon: 'mic', iconColor: colors.onPrimary, background: colors.primary };
+  }
+}
 
 export function MicButton({ state, onPress, disabled = false, testID }: MicButtonProps) {
   const { colors } = useTheme();
@@ -62,7 +96,7 @@ export function MicButton({ state, onPress, disabled = false, testID }: MicButto
     return () => loop.stop();
   }, [pulse, state]);
 
-  const paused = state === 'paused';
+  const look = micAppearance(state, colors);
 
   return (
     <View style={styles.container}>
@@ -92,18 +126,19 @@ export function MicButton({ state, onPress, disabled = false, testID }: MicButto
         style={({ pressed }) => [
           styles.button,
           {
-            backgroundColor: paused ? colors.surface : colors.primary,
-            borderWidth: paused ? 2 : 0,
-            borderColor: paused ? colors.primary : undefined,
+            backgroundColor: look.background,
+            borderWidth: look.border !== undefined ? 2 : 0,
+            borderColor: look.border,
             shadowColor: colors.shadow,
             opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
           },
         ]}
       >
         <Ionicons
-          name={paused ? 'mic-outline' : 'mic'}
+          testID={testID ? `${testID}-icon-${look.icon}` : undefined}
+          name={look.icon}
           size={36}
-          color={paused ? colors.primary : colors.onPrimary}
+          color={look.iconColor}
         />
       </Pressable>
     </View>

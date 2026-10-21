@@ -18,7 +18,7 @@ import {
   View,
 } from 'react-native';
 
-import { OrnamentDivider, PrimaryButton, Screen, useBottomClearance } from '../../components';
+import { Chip, OrnamentDivider, PrimaryButton, Screen, useBottomClearance } from '../../components';
 import { SHOW_FREE_TIER_WARNING } from '../../lib/freeTier';
 import { countWords } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
@@ -187,19 +187,6 @@ export function ChapterEditorScreen({
             onPressSuggestion={() => onOpenReview()}
           />
         )}
-        {controller.refineFailed ? (
-          <Text
-            testID="editor-refine-error"
-            style={{
-              color: colors.accentText,
-              fontFamily: fonts.bodyItalic,
-              fontSize: typeScale.caption,
-              marginTop: spacing.lg,
-            }}
-          >
-            {t('review.editor.refineFailed')}
-          </Text>
-        ) : null}
         {controller.refineBornStale ? (
           <Text
             testID="editor-refine-stale"
@@ -214,6 +201,48 @@ export function ChapterEditorScreen({
           </Text>
         ) : null}
       </ScrollView>
+
+      {controller.refineFailed ? (
+        // outside the scroll: on a long chapter a message at the bottom of the
+        // text was never seen, and the failure looked silent
+        <View
+          testID="editor-refine-error"
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+          style={[
+            styles.errorBanner,
+            {
+              marginHorizontal: spacing.xl,
+              marginBottom: spacing.sm,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              borderColor: colors.accent,
+              gap: spacing.md,
+            },
+          ]}
+        >
+          <Ionicons name="alert-circle-outline" size={18} color={colors.accentText} />
+          <Text
+            style={{
+              flex: 1,
+              color: colors.text,
+              fontFamily: fonts.body,
+              fontSize: typeScale.caption,
+            }}
+          >
+            {controller.refineErrorMessage}
+          </Text>
+          <Chip
+            label={t('common.retry')}
+            tone="green"
+            testID="editor-refine-retry"
+            onPress={() => {
+              flushDraft();
+              void controller.refine();
+            }}
+          />
+        </View>
+      ) : null}
 
       {SHOW_FREE_TIER_WARNING && (
         <View
@@ -331,6 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refineButton: { flex: 1 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8 },
   roundButton: {
     width: 48,
     height: 48,

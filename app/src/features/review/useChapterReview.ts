@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import type { ChapterRef, ChapterTextRepository } from '../chapters';
+import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
 import { makeRequestId } from '../../lib/requestId';
 import { DebouncedSaver } from '../dictation/autosave';
 import { ReviewSession } from './ReviewSession';
@@ -39,6 +40,8 @@ export interface ChapterReviewController {
   refining: boolean;
   /** The last refinement failed (provider unreachable or invalid output). */
   refineFailed: boolean;
+  /** Plain message for the last failure, saying what to do next ('' when none). */
+  refineErrorMessage: string;
   /** The last batch was born stale: the text changed during refinement. */
   refineBornStale: boolean;
   saveStatus: ReviewSaveStatus;
@@ -67,7 +70,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const [suggestions, setSuggestions] = useState<readonly Suggestion[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [refining, setRefining] = useState(false);
-  const [refineFailed, setRefineFailed] = useState(false);
+  const [refineErrorMessage, setRefineErrorMessage] = useState('');
   const [refineBornStale, setRefineBornStale] = useState(false);
   const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>('saved');
 
@@ -118,15 +121,16 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     const session = sessionRef.current;
     if (!session || session.text === '') return;
     setRefining(true);
-    setRefineFailed(false);
+    setRefineErrorMessage('');
     setRefineBornStale(false);
+    const requestId = newRequestId();
     try {
       const raw = await provider.refine({
         bookId: chapter.bookId,
         chapterId: chapter.chapterId,
         text: session.text,
         textHash: textHash(session.text),
-        requestId: newRequestId(),
+        requestId,
       });
       // provider output validated at the boundary, even when the
       // provider is the fake: the contract is the same as the refineChapter callable's
@@ -134,8 +138,10 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
       const outcome = session.ingest(result);
       setRefineBornStale(outcome.bornStale);
       syncFromSession();
-    } catch {
-      setRefineFailed(true);
+    } catch (error) {
+      // the text is untouched: the session only changes on a valid result
+      logCallableFailure('refine', requestId, error);
+      setRefineErrorMessage(callableErrorMessage('refine', error));
     } finally {
       setRefining(false);
     }
@@ -248,7 +254,8 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     staleCount,
     canUndo,
     refining,
-    refineFailed,
+    refineFailed: refineErrorMessage !== '',
+    refineErrorMessage,
     refineBornStale,
     saveStatus,
     refine,

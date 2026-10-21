@@ -10,7 +10,7 @@ import { DictationScreen } from '../DictationScreen';
 import { FakeDictationEngine } from '../engines/FakeDictationEngine';
 import type { PreflightChecks } from '../preflight';
 import { InMemoryChapterRepository } from '../../chapters';
-import type { ChapterOutline, KeyValueStorage } from '../../chapters';
+import type { ChapterOutline, ChapterTextRepository, KeyValueStorage } from '../../chapters';
 import { ThemeProvider } from '../../../theme';
 
 // haptics, keep-awake and speech-recognition are covered by the automatic mocks
@@ -40,6 +40,8 @@ async function renderScreen(options?: {
   chapterTitle?: string;
   /** If present, the chapter is seeded with the outline and the track is active. */
   outline?: ChapterOutline;
+  /** Wraps the in-memory repository (e.g. to report a save that stayed on the phone). */
+  wrapRepository?: (inner: InMemoryChapterRepository) => ChapterTextRepository;
 }) {
   const engine = new FakeDictationEngine();
   const repository = new InMemoryChapterRepository();
@@ -58,7 +60,7 @@ async function renderScreen(options?: {
       <DictationScreen
         chapter={CHAPTER}
         chapterTitle={options?.chapterTitle ?? 'Capitolo I'}
-        repository={repository}
+        repository={options?.wrapRepository?.(repository) ?? repository}
         engine={engine}
         preflightChecks={options?.checks ?? okChecks()}
         debounceMs={options?.debounceMs}
@@ -98,9 +100,7 @@ describe('DictationScreen — full flow dictate → pause → resume', () => {
     });
 
     await fireEvent.press(getByTestId('dictation-mic'));
-    expect(getByTestId('dictation-caption')).toHaveTextContent(
-      'In ascolto — tocca per mettere in pausa',
-    );
+    expect(getByTestId('dictation-caption')).toHaveTextContent('Sto ascoltando…');
     expect(engine.startCalls).toEqual([{ lang: 'it-IT' }]);
 
     await act(async () => engine.emitPartial('il vento'));
@@ -155,7 +155,19 @@ describe('DictationScreen — full flow dictate → pause → resume', () => {
     await act(async () => engine.emitStart()); // the restart is confirmed
     await act(async () => engine.emitFinal('e dopo'));
     expect(getByTestId('dictation-live-text')).toHaveTextContent('Testo prima del giunto e dopo');
-    expect(getByTestId('dictation-caption')).toHaveTextContent(/In ascolto/);
+    expect(getByTestId('dictation-caption')).toHaveTextContent(/Sto ascoltando/);
+  });
+});
+
+describe('DictationScreen — microphone state is visible', () => {
+  it('listening shows the gold mic; paused the slashed grey mic, with words', async () => {
+    const { getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    expect(getByTestId('dictation-mic-icon-mic')).toBeOnTheScreen();
+    expect(getByTestId('dictation-caption')).toHaveTextContent('Sto ascoltando…');
+    await fireEvent.press(getByTestId('dictation-mic'));
+    expect(getByTestId('dictation-mic-icon-mic-off')).toBeOnTheScreen();
+    expect(getByTestId('dictation-caption')).toHaveTextContent('In pausa — tocca per riprendere');
   });
 });
 
@@ -179,6 +191,56 @@ describe('DictationScreen — debounced autosave', () => {
     await act(async () => {});
     expect(repository.savedTexts).toEqual(['Prima frase. Seconda frase']);
     expect(getByTestId('dictation-save-indicator')).toHaveTextContent(/Salvato/);
+  });
+});
+
+describe('DictationScreen — honest save indicator', () => {
+  it('opening a chapter does not claim «Salvato» before anything is saved', async () => {
+    const { getByTestId, queryByText } = await renderScreen({ initialText: 'Prologo.' });
+    expect(queryByText(/Salvato/)).toBeNull();
+    expect(getByTestId('dictation-caption')).toHaveTextContent('Tocca il microfono per dettare');
+  });
+
+  it('starting to dictate still does not claim «Salvato»; it appears after the save', async () => {
+    const { engine, getByTestId, queryByText } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    expect(queryByText(/Salvato/)).toBeNull();
+    await act(async () => engine.emitFinal('una frase'));
+    expect(queryByText(/Salvato/)).toBeNull();
+    await fireEvent.press(getByTestId('dictation-mic')); // pause → immediate save
+    await act(async () => {});
+    expect(getByTestId('dictation-save-indicator')).toHaveTextContent(/^\W*Salvato$/);
+  });
+
+  it('cloud down, text safe on the phone: says so instead of «Salvato»', async () => {
+    const { engine, getByTestId } = await renderScreen({
+      wrapRepository: (inner) => ({
+        loadRawText: (ref) => inner.loadRawText(ref),
+        saveRawText: async (ref, text) => {
+          await inner.saveRawText(ref, text);
+          return 'local-only' as const;
+        },
+      }),
+    });
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('una frase'));
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => {});
+    expect(getByTestId('dictation-save-indicator')).toHaveTextContent(
+      /Salvato sul telefono, sincronizzo appena possibile/,
+    );
+  });
+
+  it('offline: a save is on the phone only, and the indicator says so', async () => {
+    mockNetworkState.isConnected = false;
+    const { engine, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('una frase'));
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => {});
+    expect(getByTestId('dictation-save-indicator')).toHaveTextContent(
+      /Salvato sul telefono, sincronizzo appena possibile/,
+    );
   });
 });
 
@@ -214,6 +276,50 @@ describe('DictationScreen — background and interruptions', () => {
     expect(repository.savedTexts).toContain('Dettato prima della telefonata');
   });
 
+  it('engine busy (Galaxy A53 after a silence): keeps listening, logs only the code', async () => {
+    jest.useFakeTimers();
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { engine, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('il mulino era fermo'));
+    await act(async () =>
+      engine.emitError({
+        code: 'busy',
+        recoverable: true,
+        nativeCode: 'busy',
+        message: 'il mulino',
+      }),
+    );
+    await act(async () => engine.emitSingleEnd());
+    // engine off during the wait: the mic must not claim it is listening
+    expect(getByTestId('dictation-caption')).toHaveTextContent('Riconnessione…');
+    expect(getByTestId('dictation-mic-icon-sync')).toBeOnTheScreen();
+    await act(async () => jest.advanceTimersByTime(1000));
+    expect(engine.startCalls).toHaveLength(2);
+    expect(getByTestId('dictation-caption')).toHaveTextContent(/Sto ascoltando/);
+    expect(getByTestId('dictation-mic-icon-mic')).toBeOnTheScreen();
+    expect(warn).toHaveBeenCalledWith('dictation-engine-error', {
+      code: 'busy',
+      nativeCode: 'busy',
+      recoverable: true,
+    });
+    expect(JSON.stringify(warn.mock.calls)).not.toMatch(/mulino/);
+    jest.useRealTimers();
+  });
+
+  it('two minutes without speech: pause that says why', async () => {
+    jest.useFakeTimers();
+    const { engine, repository, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('ultima frase'));
+    await act(async () => jest.advanceTimersByTime(120_000));
+    expect(getByTestId('dictation-caption')).toHaveTextContent(
+      'In pausa automatica: nessuna voce da 2 minuti — tocca per riprendere',
+    );
+    expect(repository.savedTexts).toContain('Ultima frase');
+    jest.useRealTimers();
+  });
+
   it('fatal error: clear message, the mic restarts fresh while keeping the text', async () => {
     const { engine, repository, getByTestId } = await renderScreen();
     await fireEvent.press(getByTestId('dictation-mic'));
@@ -226,7 +332,7 @@ describe('DictationScreen — background and interruptions', () => {
     expect(repository.savedTexts).toContain('Salva questo');
 
     await fireEvent.press(getByTestId('dictation-mic')); // reset + new start
-    expect(getByTestId('dictation-caption')).toHaveTextContent(/In ascolto/);
+    expect(getByTestId('dictation-caption')).toHaveTextContent(/Sto ascoltando/);
     await act(async () => engine.emitFinal('e questo dopo'));
     expect(getByTestId('dictation-live-text')).toHaveTextContent('Salva questo E questo dopo');
   });
@@ -304,7 +410,7 @@ describe('DictationScreen — chapter track', () => {
     expect((await repository.getChapter(CHAPTER))?.outline?.beatsDone).toEqual([0]);
     // the live text is still there and the mic keeps listening
     expect(getByTestId('dictation-live-text')).toHaveTextContent('La porta era aperta');
-    expect(getByTestId('dictation-caption')).toHaveTextContent(/In ascolto/);
+    expect(getByTestId('dictation-caption')).toHaveTextContent(/Sto ascoltando/);
   });
 
   it('chapter without outline: no panel (no regressions on the existing flow)', async () => {

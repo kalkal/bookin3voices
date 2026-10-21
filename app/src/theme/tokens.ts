@@ -54,6 +54,12 @@ export interface Palette {
   danger: string;
   /** Sealing-wax red: history suggestions (category tag and inline underline). */
   history: string;
+  /** Microphone listening: the gold circle (3:1 on the panel). */
+  micListening: string;
+  /** Mic glyph on the listening circle. */
+  onMicListening: string;
+  /** Microphone paused: grey ring and slashed glyph, never mistaken for gold. */
+  micPaused: string;
 }
 
 /** Cream "paper" theme: the alternative look, selectable in Settings. */
@@ -82,6 +88,10 @@ export const paperPalette: Palette = {
   shadow: 'rgba(44, 36, 27, 0.25)',
   danger: '#5C4030',
   history: '#8B3A2B',
+  // the paper accent (#A8853B) is 2.8:1 on the panel: the darker readable gold
+  micListening: '#8A6D2F',
+  onMicListening: '#F5EFE0',
+  micPaused: '#6B6762',
 };
 
 /**
@@ -116,6 +126,9 @@ export const candlelightPalette: Palette = {
   shadow: 'rgba(0, 0, 0, 0.6)',
   danger: '#F2777A',
   history: '#D98C6E',
+  micListening: '#C9A24E',
+  onMicListening: '#121012',
+  micPaused: '#9A948C',
 };
 
 /** Spacing scale (px). */

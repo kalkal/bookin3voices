@@ -11,7 +11,7 @@ export type SessionEventType =
   | 'USER_PAUSE'
   | 'USER_STOP'
   | 'ENGINE_ENDED' // engine session end, ALREADY deduplicated by DictationSession
-  | 'AUDIO_INTERRUPTED' // phone call / mic lost / network down → automatic pause + flush
+  | 'AUDIO_INTERRUPTED' // automatic pause + flush (call/mic lost, long silence, engine down)
   | 'COMMIT_DONE'
   | 'FATAL_ERROR'
   | 'RESET';

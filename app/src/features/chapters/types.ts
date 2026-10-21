@@ -90,6 +90,12 @@ export interface CreateChapterInput {
 }
 
 /**
+ * Where a save landed: 'synced' = on the phone AND handed to the cloud;
+ * 'local-only' = safe on the phone, the cloud will catch up later.
+ */
+export type SaveOutcome = 'synced' | 'local-only';
+
+/**
  * Minimal contract used by Dictation and Editor: raw text only.
  * Screens that write text depend on this, not on the full CRUD.
  */
@@ -99,8 +105,12 @@ export interface ChapterTextRepository {
    * A read error is an exception: never confuse "empty" with "broken".
    */
   loadRawText(ref: ChapterRef): Promise<string | null>;
-  /** Replaces the chapter's raw text (source of truth). */
-  saveRawText(ref: ChapterRef, rawText: string): Promise<void>;
+  /**
+   * Replaces the chapter's raw text (source of truth). Resolves only once the
+   * text is stored; an implementation that knows the text stayed on the phone
+   * says so with 'local-only' (void = stored).
+   */
+  saveRawText(ref: ChapterRef, rawText: string): Promise<SaveOutcome | void>;
 }
 
 /** Stops an observe* subscription (Observer). */

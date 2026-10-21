@@ -6,7 +6,9 @@ import { ChapterReviewFlow } from '../ChapterReviewFlow';
 import { FakeSuggestionsProvider } from '../FakeSuggestionsProvider';
 import { InMemoryRevisionRepository } from '../revisions';
 import { textHash } from '../textHash';
-import type { RefineResult } from '../types';
+import { FirebaseError } from 'firebase/app';
+
+import type { RefineResult, SuggestionsProvider } from '../types';
 
 const CHAPTER = { bookId: 'libro', chapterId: 'cap-1' };
 
@@ -24,7 +26,10 @@ async function previewSuggestions(): Promise<RefineResult> {
   });
 }
 
-async function setup(initialText = BRANO) {
+async function setup(
+  initialText = BRANO,
+  provider: SuggestionsProvider = new FakeSuggestionsProvider(),
+) {
   const chapterRepository = new InMemoryChapterRepository();
   chapterRepository.seed(CHAPTER, initialText);
   const revisionRepository = new InMemoryRevisionRepository();
@@ -35,12 +40,50 @@ async function setup(initialText = BRANO) {
         chapterTitle="VII · La piena"
         chapterRepository={chapterRepository}
         revisionRepository={revisionRepository}
-        provider={new FakeSuggestionsProvider()}
+        provider={provider}
       />
     </ThemeProvider>,
   );
   return { screen, chapterRepository, revisionRepository };
 }
+
+describe('ChapterReviewFlow — AI unreachable', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('refine failing (expired cloud credentials): plain message, text kept, Retry works', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const fake = new FakeSuggestionsProvider();
+    let failNext = true;
+    const provider: SuggestionsProvider = {
+      refine: async (request) => {
+        if (failNext) {
+          failNext = false;
+          throw new FirebaseError('functions/internal', 'The security token is expired');
+        }
+        return fake.refine(request);
+      },
+    };
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(await screen.findByTestId('editor-refine'));
+
+    const banner = await screen.findByTestId('editor-refine-error');
+    expect(banner).toHaveTextContent(/I suggerimenti non sono arrivati\. Riprova tra poco\./);
+    expect(banner).not.toHaveTextContent(/token/);
+    expect(screen.getByTestId('editor-text-p0')).toHaveTextContent(/lentamente il telefono/);
+    // structured log: requestId and code, never the chapter text
+    expect(warn).toHaveBeenCalledWith(
+      'callable-failed',
+      expect.objectContaining({ action: 'refine', code: 'internal' }),
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toMatch(/lentamente il telefono/);
+
+    await fireEvent.press(screen.getByTestId('editor-refine-retry'));
+    expect(await screen.findByTestId('editor-suggestions-chip')).toBeOnTheScreen();
+    expect(screen.queryByTestId('editor-refine-error')).toBeNull();
+    await screen.unmount();
+  });
+});
 
 describe('ChapterReviewFlow (editor + review)', () => {
   it('Rifinisci generates the suggestions: counter chip and inline highlights', async () => {

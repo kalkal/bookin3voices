@@ -24,10 +24,12 @@ import {
 import {
   ArchesFill,
   Card,
+  Chip,
   OrnamentDivider,
   PrimaryButton,
   useBottomClearance,
 } from '../../components';
+import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
 import { makeRequestId } from '../../lib/requestId';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
@@ -58,7 +60,7 @@ type Progress =
   | { phase: 'idle' }
   | { phase: 'working'; message: string }
   | { phase: 'done'; message: string }
-  | { phase: 'error'; message: string };
+  | { phase: 'error'; message: string; retry?: () => void };
 
 interface CardDraft {
   index: number;
@@ -66,6 +68,8 @@ interface CardDraft {
   summary: string;
   beatsText: string;
 }
+
+const toErrorName = (error: unknown) => (error instanceof Error ? error.name : typeof error);
 
 /** Below this many words a one-line synopsis gives the model too little to build on. */
 const THIN_SYNOPSIS_WORDS = 25;
@@ -75,11 +79,6 @@ export function isThinSynopsis(synopsis: string): boolean {
   const text = synopsis.trim();
   if (text === '' || text.includes('\n')) return false;
   return text.split(/\s+/).length < THIN_SYNOPSIS_WORDS;
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim() !== '') return error.message;
-  return t('outline.errorUnexpected');
 }
 
 function mergeMessage(result: { updated: number; created: number; skipped: number }): string {
@@ -160,17 +159,23 @@ export function SynopsisTab({
 
   const generate = async () => {
     setProgress({ phase: 'working', message: t('outline.generating') });
+    const requestId = makeRequestId('out');
     try {
       const proposal = await outlineService.generateOutline({
         bookId: book.id,
         synopsis: synopsis.trim(),
-        requestId: makeRequestId('out'),
+        requestId,
         styleId: resolveStyleId(book.styleProfileId),
       });
       setCards(proposal.chapters);
       setProgress({ phase: 'idle' });
     } catch (error) {
-      setProgress({ phase: 'error', message: errorMessage(error) });
+      logCallableFailure('outline', requestId, error);
+      setProgress({
+        phase: 'error',
+        message: callableErrorMessage('outline', error),
+        retry: () => void generate(),
+      });
     }
   };
 
@@ -183,7 +188,12 @@ export function SynopsisTab({
       setCards(null);
       setProgress({ phase: 'done', message: mergeMessage(result) });
     } catch (error) {
-      setProgress({ phase: 'error', message: errorMessage(error) });
+      console.warn('outline-merge-failed', { bookId: book.id, error: toErrorName(error) });
+      setProgress({
+        phase: 'error',
+        message: t('outline.mergeFailed'),
+        retry: () => void confirm(),
+      });
     }
   };
 
@@ -462,6 +472,7 @@ export function SynopsisTab({
             {working && <ActivityIndicator size="small" color={colors.primary} />}
             <Text
               testID="synopsis-status"
+              accessibilityLiveRegion="polite"
               style={{
                 fontFamily: fonts.bodyItalic,
                 fontSize: typeScale.bodySmall,
@@ -477,6 +488,14 @@ export function SynopsisTab({
             >
               {progress.message}
             </Text>
+            {progress.phase === 'error' && progress.retry !== undefined && (
+              <Chip
+                label={t('common.retry')}
+                tone="green"
+                testID="synopsis-retry"
+                onPress={progress.retry}
+              />
+            )}
           </View>
         )}
 

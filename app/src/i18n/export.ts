@@ -29,8 +29,8 @@ export const exportStrings: Namespace = {
     'export.kdp.warnings_other': '{count} warnings',
 
     'export.share.unavailable': 'Sharing is not available on this device.',
-    'export.error.unexpected': 'Unexpected error during export.',
-    'export.error.saveMetadata': 'Could not save the metadata.',
+    'export.share.failed': 'The file is ready but sharing didn’t open. Try again.',
+    'export.error.saveMetadata': 'Could not save the details: tap Save again.',
     'export.note.notSynced': ' The export may not include changes that are not synced yet.',
     'export.progress.generating': 'Generating {format}…',
     'export.progress.opening': 'File ready, opening sharing…',
@@ -87,8 +87,8 @@ export const exportStrings: Namespace = {
     'export.kdp.warnings_other': '{count} avvisi',
 
     'export.share.unavailable': 'La condivisione non è disponibile su questo dispositivo.',
-    'export.error.unexpected': 'Errore inatteso durante l’export.',
-    'export.error.saveMetadata': 'Salvataggio dei metadati non riuscito.',
+    'export.share.failed': 'Il file è pronto ma la condivisione non si è aperta. Riprova.',
+    'export.error.saveMetadata': 'Dati del libro non salvati: tocca di nuovo Salva.',
     'export.note.notSynced':
       ' L’export potrebbe non includere le modifiche non ancora sincronizzate.',
     'export.progress.generating': 'Generazione {format} in corso…',

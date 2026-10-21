@@ -6,6 +6,7 @@
 // and guarantees the proposal hierarchy.
 
 import { httpsCallable, type Functions } from 'firebase/functions';
+import { z } from 'zod';
 
 import {
   refineResultSchema,
@@ -16,15 +17,23 @@ import {
 
 type CallRefine = (data: RefineRequest) => Promise<{ data: unknown }>;
 
-export type CallableSuggestionsProviderDeps =
+export type CallableSuggestionsProviderDeps = (
   | { functions: Functions }
   /** Injectable in tests in place of httpsCallable. */
-  | { call: CallRefine };
+  | { call: CallRefine }
+) & {
+  /** The model the server says it used (shown in Settings, never guessed). */
+  onServedModel?: (model: string) => void;
+};
+
+const servedModelSchema = z.object({ model: z.string().min(1) });
 
 export class CallableSuggestionsProvider implements SuggestionsProvider {
   private readonly call: CallRefine;
+  private readonly onServedModel?: (model: string) => void;
 
   constructor(deps: CallableSuggestionsProviderDeps) {
+    this.onServedModel = deps.onServedModel;
     this.call =
       'call' in deps
         ? deps.call
@@ -35,6 +44,9 @@ export class CallableSuggestionsProvider implements SuggestionsProvider {
 
   async refine(request: RefineRequest): Promise<RefineResult> {
     const result = await this.call(request);
-    return refineResultSchema.parse(result.data);
+    const parsed = refineResultSchema.parse(result.data);
+    const served = servedModelSchema.safeParse(result.data);
+    if (served.success) this.onServedModel?.(served.data.model);
+    return parsed;
   }
 }

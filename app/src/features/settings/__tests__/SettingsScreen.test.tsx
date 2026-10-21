@@ -37,6 +37,7 @@ function ModeProbe() {
 async function renderScreen(
   storage: KeyValueStorage,
   backupService: BackupService = new InMemoryBackupService(),
+  servedModel: string | null = null,
 ) {
   const repository = new LocalSettingsRepository(storage);
   const fileSink = new InMemoryExportFileSink();
@@ -47,6 +48,7 @@ async function renderScreen(
         repository={repository}
         backupService={backupService}
         backupFileSink={fileSink}
+        servedModel={{ load: async () => servedModel }}
       />
     </ThemeProvider>,
   );
@@ -68,16 +70,43 @@ describe('SettingsScreen — author name', () => {
 });
 
 describe('SettingsScreen', () => {
-  it('by default the active engine is Amazon Nova, with Gemini as the alternative', async () => {
+  it('the AI section is read-only: «AI: Amazon Nova Pro» and the model version', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
-    const provider = await screen.findByTestId('provider-bedrock');
-    expect(provider).toHaveTextContent(/Amazon Nova/);
-    expect(provider).toHaveTextContent(/Attivo/);
-    expect(screen.getByTestId('provider-gemini')).not.toHaveTextContent(/Attivo/);
-    expect(screen.getByText('Lite')).toBeOnTheScreen();
-    expect(screen.getByText('Flash')).toBeOnTheScreen();
+    expect(await screen.findByTestId('ai-engine')).toHaveTextContent('AI: Amazon Nova Pro');
+    expect(screen.getByTestId('ai-model')).toHaveTextContent(/amazon\.nova-pro-v1:0/);
+    expect(screen.queryByTestId('provider-bedrock')).toBeNull();
+    expect(screen.queryByTestId('provider-gemini')).toBeNull();
+    expect(screen.queryByText(/Gemini/)).toBeNull();
     expect(screen.getByTestId('goal-value')).toHaveTextContent('500');
+    await screen.unmount();
+  });
+
+  it('the old local «Google Gemini» choice (September) is ignored and cleaned', async () => {
+    const { storage, data } = memoryStorage({
+      [KEY]: JSON.stringify({
+        schemaVersion: 1,
+        aiProvider: 'gemini',
+        theme: 'candlelight',
+        dailyGoalWords: 700,
+        backupFrequency: 'weekly',
+      }),
+    });
+    const screen = await renderScreen(storage);
+    expect(await screen.findByTestId('ai-engine')).toHaveTextContent('AI: Amazon Nova Pro');
+    expect(screen.queryByText(/Gemini/)).toBeNull();
+    await waitFor(() => expect(JSON.parse(data.get(KEY) ?? '{}')).not.toHaveProperty('aiProvider'));
+    expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({ dailyGoalWords: 700 });
+    await screen.unmount();
+  });
+
+  it('shows the model the server actually answered with', async () => {
+    const { storage } = memoryStorage();
+    const screen = await renderScreen(storage, undefined, 'amazon.nova-lite-v1:0');
+    await waitFor(() =>
+      expect(screen.getByTestId('ai-engine')).toHaveTextContent('AI: Amazon Nova Lite'),
+    );
+    expect(screen.getByTestId('ai-model')).toHaveTextContent(/amazon\.nova-lite-v1:0/);
     await screen.unmount();
   });
 

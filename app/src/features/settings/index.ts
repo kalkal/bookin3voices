@@ -1,13 +1,7 @@
 // Public API of the Settings feature.
-// The AiProvider catalog is meant to be reused by the Functions.
 
-export {
-  AI_PROVIDERS,
-  AI_PROVIDER_IDS,
-  DEFAULT_AI_PROVIDER_ID,
-  isAiProviderId,
-} from './aiProviders';
-export type { AiProviderId, AiProviderInfo, AiProviderTier } from './aiProviders';
+export { aiModelLabel, DEFAULT_AI_MODEL_ID, LocalServedModelStore } from './aiModel';
+export type { ServedModelSource } from './aiModel';
 export {
   appSettingsSchema,
   BACKUP_FREQUENCIES,

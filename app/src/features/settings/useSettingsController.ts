@@ -9,7 +9,6 @@ import { useColorScheme } from 'react-native';
 import { resolveLanguage, setLanguage } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ThemeMode } from '../../theme';
-import type { AiProviderId } from './aiProviders';
 import { AUTHOR_NAME_MAX, DAILY_GOAL_MAX, DAILY_GOAL_MIN, DEFAULT_SETTINGS } from './types';
 import type {
   AppSettings,
@@ -37,7 +36,6 @@ export interface SettingsController {
   /** false until the document has been read from the repository. */
   ready: boolean;
   settings: AppSettings;
-  setAiProvider: (id: AiProviderId) => void;
   setThemePreference: (preference: ThemePreference) => void;
   /** Switches the cathedral drawing on or off (saved, applied right away). */
   setOrnaments: (on: boolean) => void;
@@ -101,7 +99,6 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     [repository],
   );
 
-  const setAiProvider = useCallback((id: AiProviderId) => update({ aiProvider: id }), [update]);
   const setThemePreference = useCallback(
     (preference: ThemePreference) => update({ theme: preference, themeChosen: true }),
     [update],
@@ -136,7 +133,6 @@ export function useSettingsController(repository: SettingsRepository): SettingsC
     ready,
     settings,
     setAuthorName,
-    setAiProvider,
     setThemePreference,
     setOrnaments,
     setDailyGoalWords,

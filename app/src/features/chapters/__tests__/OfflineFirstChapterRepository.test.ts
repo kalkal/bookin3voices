@@ -80,11 +80,16 @@ describe('OfflineFirstChapterRepository', () => {
     expect(remote.saveRawText).toHaveBeenCalledWith(REF, 'Il mulino era fermo.');
   });
 
-  it('a failing remote does not fail the save (text is in the mirror)', async () => {
+  it('a failing remote does not fail the save, and says the text is only local', async () => {
     const { repo, mirror, remote } = makeRepo();
     remote.saveRawText.mockRejectedValueOnce(new Error('permissions'));
-    await expect(repo.saveRawText(REF, 'Testo prezioso')).resolves.toBeUndefined();
+    await expect(repo.saveRawText(REF, 'Testo prezioso')).resolves.toBe('local-only');
     expect(await mirror.loadRawText(REF)).toBe('Testo prezioso');
+  });
+
+  it('mirror and remote both written: the save reports synced', async () => {
+    const { repo } = makeRepo();
+    await expect(repo.saveRawText(REF, 'Testo')).resolves.toBe('synced');
   });
 
   it('reads from the remote when the mirror has nothing', async () => {

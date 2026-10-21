@@ -117,3 +117,21 @@ describe('radii and spacing', () => {
     expect(typeScale.title).toBeLessThan(typeScale.display);
   });
 });
+
+describe('microphone states (listening gold, paused grey), both themes', () => {
+  it.each([
+    ['paper', paperPalette],
+    ['candlelight', candlelightPalette],
+  ] as const)('%s: listening and paused are told apart and readable (AA)', (_name, palette) => {
+    // the listening circle and the paused glyph are controls: 3:1 on the panel
+    expect(contrast(palette.micListening, palette.panel)).toBeGreaterThanOrEqual(3);
+    expect(contrast(palette.onMicListening, palette.micListening)).toBeGreaterThanOrEqual(3);
+    expect(contrast(palette.micPaused, palette.surface)).toBeGreaterThanOrEqual(3);
+    expect(contrast(palette.micPaused, palette.panel)).toBeGreaterThanOrEqual(3);
+    // reconnecting: gold glyph and ring on the surface circle
+    expect(contrast(palette.micListening, palette.surface)).toBeGreaterThanOrEqual(3);
+    // grey and gold are different colours, not two shades of the same accent
+    expect(palette.micPaused).not.toBe(palette.micListening);
+    expect(palette.micPaused).not.toBe(palette.primary);
+  });
+});

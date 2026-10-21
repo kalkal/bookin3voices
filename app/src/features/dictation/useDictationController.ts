@@ -16,7 +16,7 @@ import { AppState } from 'react-native';
 import type { ChapterRef, ChapterTextRepository } from '../chapters';
 import { appendText, countWords } from '../../lib/text';
 import { DebouncedSaver, type SaveStatus } from './autosave';
-import { DictationSession } from './DictationSession';
+import { DictationSession, type AutoPauseReason } from './DictationSession';
 import type { DictationEngine, DictationError } from './types';
 import type { SessionState } from './sessionMachine';
 import {
@@ -51,8 +51,12 @@ export interface DictationController {
   sessionWords: number;
   saveStatus: SaveStatus;
   dictationError?: DictationError;
-  /** true if the current pause is automatic (phone call, network, background). */
+  /** true if the current pause is automatic (phone call, long silence, engine down). */
   pausedByInterruption: boolean;
+  /** Listening, but the engine is off waiting to retry (busy/network). */
+  reconnecting: boolean;
+  /** Why the current automatic pause happened (undefined when not auto-paused). */
+  autoPauseReason?: AutoPauseReason;
   preflight: PreflightReport | undefined;
   /** true until the pre-flight has finished. */
   preflightRunning: boolean;
@@ -75,9 +79,10 @@ export function useDictationController(options: DictationControllerOptions): Dic
   const [baseText, setBaseText] = useState('');
   const [sessionText, setSessionText] = useState('');
   const [partial, setPartial] = useState('');
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [dictationError, setDictationError] = useState<DictationError | undefined>();
-  const [pausedByInterruption, setPausedByInterruption] = useState(false);
+  const [autoPauseReason, setAutoPauseReason] = useState<AutoPauseReason | undefined>();
+  const [reconnecting, setReconnecting] = useState(false);
   const [preflight, setPreflight] = useState<PreflightReport | undefined>();
   const [preflightRunning, setPreflightRunning] = useState(true);
 
@@ -122,12 +127,20 @@ export function useDictationController(options: DictationControllerOptions): Dic
           if (unmountedRef.current) return;
           setSessionState(state);
           if (state !== 'listening') setPartial('');
-          if (state === 'listening') setPausedByInterruption(false);
+          if (state === 'listening') setAutoPauseReason(undefined);
           if (state === 'error') setDictationError(holder.session?.error);
         },
         onEvent: (event) => {
-          if (event.type === 'audio-interruption' && !unmountedRef.current) {
-            setPausedByInterruption(true);
+          if (event.type === 'engine-error') {
+            // diagnostics: the codes only, never the message (it may echo speech)
+            const { code, nativeCode, recoverable } = event.error;
+            console.warn('dictation-engine-error', { code, nativeCode, recoverable });
+          }
+          if (event.type === 'reconnecting' && !unmountedRef.current) {
+            setReconnecting(event.active);
+          }
+          if (event.type === 'auto-pause' && !unmountedRef.current) {
+            setAutoPauseReason(event.reason);
             haptic(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning));
           }
         },
@@ -267,7 +280,9 @@ export function useDictationController(options: DictationControllerOptions): Dic
     sessionWords,
     saveStatus,
     dictationError,
-    pausedByInterruption,
+    pausedByInterruption: autoPauseReason !== undefined,
+    autoPauseReason,
+    reconnecting,
     preflight,
     preflightRunning,
     micDisabled,

@@ -7,7 +7,8 @@ export type DictationErrorCode =
   | 'permission-denied' // microphone/recognition permission denied
   | 'audio-interruption' // a phone call or another app took the microphone
   | 'no-speech' // prolonged silence: benign, the engine ends on its own
-  | 'network' // cloud recognition cannot reach the network
+  | 'network' // cloud recognition cannot reach the network: transient, retried
+  | 'busy' // the recognizer is still busy with the previous session: transient, retried
   | 'unknown';
 
 export interface DictationError {
@@ -15,6 +16,8 @@ export interface DictationError {
   message?: string;
   /** true if the session can continue (pause/restart), false if it must stop */
   recoverable: boolean;
+  /** Native error code as the recognizer sent it (diagnostics, never user text). */
+  nativeCode?: string;
 }
 
 export interface DictationEngineEvents {

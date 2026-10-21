@@ -1,14 +1,13 @@
 /**
  * Settings screen (foundations version):
- * AI engine (provider selector, today only Gemini with Flash/Pro tiers shown
- * as information), Writing (daily word goal), Appearance (theme
+ * AI engine (read-only: the engine and model the server really uses), Writing (daily word goal), Appearance (theme
  * paper / candlelight / automatic, wired to the ThemeProvider),
  * Data (backup frequency with visual reminder and "Scarica backup ora")
  * and Style profiles (static list, "Suspense/Horror" active — editing
  * is future work). Logic lives in useSettingsController/useBackupDownload; here only
  * the rendering.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -24,7 +23,7 @@ import { getLanguage, t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { ExportFileSink } from '../export';
 import { DEFAULT_STYLE_ID, STYLES } from '../books/styles';
-import { AI_PROVIDERS } from './aiProviders';
+import { aiModelLabel, DEFAULT_AI_MODEL_ID, type ServedModelSource } from './aiModel';
 import { backupStatus } from './backup';
 import type { BackupService } from './backup';
 import { DAILY_GOAL_STEP, UI_LANGUAGES } from './types';
@@ -39,6 +38,8 @@ export interface SettingsScreenProps {
   backupFileSink: ExportFileSink;
   /** If present, shows the back chevron (gear icon in the Library). */
   onBack?: () => void;
+  /** Model the server answered with last time; absent = the server's default. */
+  servedModel?: ServedModelSource;
 }
 
 const THEME_VALUES: readonly ThemePreference[] = ['paper', 'candlelight', 'auto'];
@@ -49,11 +50,28 @@ export function SettingsScreen({
   backupService,
   backupFileSink,
   onBack,
+  servedModel,
 }: SettingsScreenProps) {
   const { colors, fonts, spacing, typeScale, letterSpacing } = useTheme();
   const controller = useSettingsController(repository);
   const { settings } = controller;
   const backup = useBackupDownload(backupService, backupFileSink, controller.setLastBackupAt);
+  const [lastModel, setLastModel] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    servedModel
+      ?.load()
+      .then((model) => {
+        if (!cancelled) setLastModel(model);
+      })
+      .catch(() => {
+        // unreadable: the server's default is shown, still true until a refinement
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [servedModel]);
+  const modelId = lastModel ?? DEFAULT_AI_MODEL_ID;
   const bottom = useBottomClearance(spacing.xl);
 
   const sectionLabelStyle = {
@@ -121,35 +139,15 @@ export function SettingsScreen({
 
         <Text style={sectionLabelStyle}>{t('settings.ai.section')}</Text>
         <Card>
-          {AI_PROVIDERS.map((provider) => {
-            const active = settings.aiProvider === provider.id;
-            return (
-              <View key={provider.id}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                  testID={`provider-${provider.id}`}
-                  onPress={() => controller.setAiProvider(provider.id)}
-                  style={[styles.row, { paddingVertical: spacing.xs }]}
-                >
-                  <Text style={rowTitleStyle}>{provider.label}</Text>
-                  {active ? <Chip label={t('settings.ai.active')} selected /> : null}
-                </Pressable>
-                {provider.tiers.map((tier) => (
-                  <View
-                    key={tier.id}
-                    style={[styles.tierRow, { marginTop: spacing.sm, gap: spacing.sm }]}
-                  >
-                    <Chip label={tier.label} tone="gold" uppercase />
-                    <Text style={[captionStyle, styles.tierDescription]}>
-                      {t(tier.descriptionKey)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            );
-          })}
-          <Text style={[captionStyle, { marginTop: spacing.md }]}>{t('settings.ai.note')}</Text>
+          <Text testID="ai-engine" style={rowTitleStyle}>
+            {t('settings.ai.engine', { label: aiModelLabel(modelId) })}
+          </Text>
+          <Text testID="ai-model" style={[captionStyle, { marginTop: spacing.xs }]}>
+            {t('settings.ai.model', { model: modelId })}
+          </Text>
+          <Text style={[captionStyle, { marginTop: spacing.md }]}>
+            {t(lastModel === null ? 'settings.ai.noteDefault' : 'settings.ai.noteServed')}
+          </Text>
         </Card>
 
         <Text style={sectionLabelStyle}>{t('settings.writing.section')}</Text>

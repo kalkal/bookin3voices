@@ -4,6 +4,7 @@ function setup(options?: { delayMs?: number }) {
   const saves: string[] = [];
   const statuses: SaveStatus[] = [];
   let failNext = false;
+  let localOnlyNext = false;
   const saver = new DebouncedSaver({
     save: async (text) => {
       if (failNext) {
@@ -11,11 +12,21 @@ function setup(options?: { delayMs?: number }) {
         throw new Error('disk full');
       }
       saves.push(text);
+      if (localOnlyNext) {
+        localOnlyNext = false;
+        return 'local-only';
+      }
     },
     delayMs: options?.delayMs,
     onStatus: (s) => statuses.push(s),
   });
-  return { saver, saves, statuses, failNext: () => (failNext = true) };
+  return {
+    saver,
+    saves,
+    statuses,
+    failNext: () => (failNext = true),
+    localOnlyNext: () => (localOnlyNext = true),
+  };
 }
 
 const flushMicrotasks = async () => {
@@ -26,6 +37,14 @@ const flushMicrotasks = async () => {
 describe('DebouncedSaver', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
+
+  it('a save that stayed on the phone is reported as saved-local, not saved', async () => {
+    const { saver, statuses, localOnlyNext } = setup();
+    localOnlyNext();
+    saver.flushNow('testo');
+    await flushMicrotasks();
+    expect(statuses).toEqual(['saving', 'saved-local']);
+  });
 
   it('debounce: saves only once after the delay, with the latest text', async () => {
     const { saver, saves, statuses } = setup();

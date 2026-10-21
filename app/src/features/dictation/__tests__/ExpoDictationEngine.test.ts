@@ -85,7 +85,7 @@ describe('ExpoDictationEngine — adapter over expo-speech-recognition', () => {
   it.each([
     ['audio-capture', 'audio-interruption', true],
     ['interrupted', 'audio-interruption', true],
-    ['busy', 'audio-interruption', true],
+    ['busy', 'busy', true],
     ['network', 'network', true],
     ['no-speech', 'no-speech', true],
     ['speech-timeout', 'no-speech', true],

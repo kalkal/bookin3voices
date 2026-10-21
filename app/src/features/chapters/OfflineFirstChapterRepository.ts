@@ -20,6 +20,7 @@ import type {
   ChapterRepository,
   ChapterSummary,
   CreateChapterInput,
+  SaveOutcome,
   Unsubscribe,
 } from './types';
 
@@ -98,16 +99,18 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
     return text;
   }
 
-  async saveRawText(ref: ChapterRef, rawText: string): Promise<void> {
+  async saveRawText(ref: ChapterRef, rawText: string): Promise<SaveOutcome> {
     // durability first: the on-disk mirror is the "real" save;
     // Firestore follows (and offline it stays queued only for the current session)
     await this.mirror.saveRawText(ref, rawText);
+    let outcome: SaveOutcome = 'synced';
     try {
       await this.remote.saveRawText(ref, rawText);
     } catch (error) {
       // the text is already safe in the mirror: the remote will catch up on the
-      // next save or via the recovery in loadRawText
+      // next save or via the recovery in loadRawText; the UI says so honestly
       console.warn('Firestore save failed (text is safe in the mirror)', error);
+      outcome = 'local-only';
     }
 
     const key = this.keyFor(ref);
@@ -117,6 +120,7 @@ export class OfflineFirstChapterRepository implements ChapterRepository {
       this.onWordsAdded?.(words - previous);
     }
     this.lastWords.set(key, words);
+    return outcome;
   }
 
   // CRUD and subscriptions stay with the remote: the metadata can be

@@ -2,7 +2,7 @@ import type { Namespace } from './index';
 
 export const outline: Namespace = {
   en: {
-    'outline.errorUnexpected': 'Unexpected error while generating the outline.',
+    'outline.mergeFailed': 'The chapters couldn’t be created. Try again.',
     'outline.mergeUpdated_one': '{count} empty chapter filled',
     'outline.mergeUpdated_other': '{count} empty chapters filled',
     'outline.mergeCreated_one': '{count} new chapter',
@@ -11,7 +11,7 @@ export const outline: Namespace = {
     'outline.mergeSkipped_other': '{count} skipped because they already have text',
     'outline.mergeNone': 'No chapters to create.',
     'outline.mergeSaved': 'Outline saved: {parts}.',
-    'outline.saveFailed': 'Could not save the synopsis.',
+    'outline.saveFailed': 'Could not save the synopsis: tap Save again.',
     'outline.generating': 'Generating the outline…',
     'outline.creating': 'Creating the chapters…',
     'outline.devKeyTitle': 'Development AI key active',
@@ -50,7 +50,7 @@ export const outline: Namespace = {
     'outline.cancel': 'Cancel',
   },
   it: {
-    'outline.errorUnexpected': 'Errore inatteso durante la generazione della scaletta.',
+    'outline.mergeFailed': 'Non sono riuscito a creare i capitoli. Riprova.',
     'outline.mergeUpdated_one': '{count} capitolo vuoto riempito',
     'outline.mergeUpdated_other': '{count} capitoli vuoti riempiti',
     'outline.mergeCreated_one': '{count} capitolo nuovo',
@@ -59,7 +59,7 @@ export const outline: Namespace = {
     'outline.mergeSkipped_other': '{count} saltati perché hanno già testo',
     'outline.mergeNone': 'Nessun capitolo da creare.',
     'outline.mergeSaved': 'Scaletta salvata: {parts}.',
-    'outline.saveFailed': 'Salvataggio della sinossi non riuscito.',
+    'outline.saveFailed': 'Sinossi non salvata: tocca di nuovo Salva.',
     'outline.generating': 'Generazione della scaletta in corso…',
     'outline.creating': 'Creazione dei capitoli…',
     'outline.devKeyTitle': 'Chiave AI di sviluppo attiva',

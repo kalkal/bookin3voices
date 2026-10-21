@@ -1,5 +1,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+import { FirebaseError } from 'firebase/app';
+
 import { ThemeProvider } from '../../../theme';
 import { InMemoryBookRepository } from '../../books';
 import { ExportTab } from '../ExportTab';
@@ -158,10 +160,14 @@ describe('ExportTab', () => {
     await screen.unmount();
   });
 
-  it('a callable error becomes a readable message', async () => {
+  it('a book that is not ready: says what to fix', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const failing: BookExportService = {
       exportBook: async () => {
-        throw new Error('Il libro non ha capitoli da esportare.');
+        throw new FirebaseError(
+          'functions/failed-precondition',
+          'Il libro non ha capitoli da esportare.',
+        );
       },
     };
     const { result } = setup({ exportService: failing });
@@ -169,8 +175,56 @@ describe('ExportTab', () => {
 
     await fireEvent.press(await screen.findByTestId('export-generate'));
     expect(await screen.findByTestId('export-status')).toHaveTextContent(
-      'Il libro non ha capitoli da esportare.',
+      'Il libro non è ancora pronto per l’esportazione: controlla i capitoli e i dati del libro, poi riprova.',
     );
+    jest.restoreAllMocks();
+    await screen.unmount();
+  });
+
+  it('share sheet unavailable: its own message, and Retry shares again without a new export', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const { result, fileSink, exportService } = setup();
+    const share = jest
+      .spyOn(fileSink, 'saveAndShare')
+      .mockRejectedValueOnce(new Error('La condivisione non è disponibile su questo dispositivo.'));
+    const exportBook = jest.spyOn(exportService, 'exportBook');
+    const screen = await result;
+
+    await fireEvent.press(await screen.findByTestId('export-generate'));
+    expect(await screen.findByTestId('export-status')).toHaveTextContent(
+      'La condivisione non è disponibile su questo dispositivo.',
+    );
+    await fireEvent.press(screen.getByTestId('export-retry'));
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(2));
+    expect(exportBook).toHaveBeenCalledTimes(1);
+    jest.restoreAllMocks();
+    await screen.unmount();
+  });
+
+  it('server unreachable: plain message with Retry, never the raw text', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const working = new InMemoryBookExportService();
+    let failNext = true;
+    const flaky: BookExportService = {
+      exportBook: async (request) => {
+        if (failNext) {
+          failNext = false;
+          throw new FirebaseError('functions/internal', 'INTERNAL');
+        }
+        return working.exportBook(request);
+      },
+    };
+    const { result, fileSink } = setup({ exportService: flaky });
+    const screen = await result;
+
+    await fireEvent.press(await screen.findByTestId('export-generate'));
+    const status = await screen.findByTestId('export-status');
+    expect(status).toHaveTextContent('L’esportazione non è riuscita. Riprova tra poco.');
+    expect(status).not.toHaveTextContent(/INTERNAL/);
+
+    await fireEvent.press(screen.getByTestId('export-retry'));
+    await waitFor(() => expect(fileSink.shared).toHaveLength(1));
+    jest.restoreAllMocks();
     await screen.unmount();
   });
 

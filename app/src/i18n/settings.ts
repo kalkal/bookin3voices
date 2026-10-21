@@ -5,13 +5,12 @@ export const settings: Namespace = {
     'settings.back': 'Back to Library',
     'settings.title': 'SETTINGS',
     'settings.ai.section': 'AI engine',
-    'settings.ai.active': 'Active',
-    'settings.ai.note':
-      'The refinement engine is chosen by the server (AI_PROVIDER variable, default Amazon Nova); your preference is kept here.',
-    'settings.ai.bedrock.pro': 'The default model: follows the chosen style more closely',
-    'settings.ai.bedrock.lite': 'Cheaper, simpler suggestions',
-    'settings.ai.gemini.flash': 'Quick, inexpensive suggestions',
-    'settings.ai.gemini.pro': 'More accurate refinements on difficult passages',
+    'settings.ai.engine': 'AI: {label}',
+    'settings.ai.model': 'Model: {model}',
+    'settings.ai.noteServed':
+      'The version the server used for your last refinement. The engine is chosen by the server.',
+    'settings.ai.noteDefault':
+      'The server’s default version; after your first refinement this shows the one really used.',
     'settings.writing.section': 'Writing',
     'settings.writing.authorName': 'Author name',
     'settings.writing.authorNamePlaceholder': 'The name on your books',
@@ -92,13 +91,12 @@ export const settings: Namespace = {
     'settings.back': 'Torna alla Libreria',
     'settings.title': 'IMPOSTAZIONI',
     'settings.ai.section': 'Motore AI',
-    'settings.ai.active': 'Attivo',
-    'settings.ai.note':
-      'Il motore delle rifiniture lo decide il server (variabile AI_PROVIDER, predefinito Amazon Nova); qui resta la tua preferenza.',
-    'settings.ai.bedrock.pro': 'Il modello predefinito: segue meglio lo stile scelto',
-    'settings.ai.bedrock.lite': 'Più economico, suggerimenti più semplici',
-    'settings.ai.gemini.flash': 'Suggerimenti rapidi ed economici',
-    'settings.ai.gemini.pro': 'Rifiniture più accurate sui passaggi difficili',
+    'settings.ai.engine': 'AI: {label}',
+    'settings.ai.model': 'Modello: {model}',
+    'settings.ai.noteServed':
+      'La versione usata dal server per la tua ultima rifinitura. Il motore lo sceglie il server.',
+    'settings.ai.noteDefault':
+      'La versione predefinita del server; dopo la prima rifinitura qui compare quella usata davvero.',
     'settings.writing.section': 'Scrittura',
     'settings.writing.authorName': 'Nome dell’autore',
     'settings.writing.authorNamePlaceholder': 'Il nome che vuoi sui tuoi libri',

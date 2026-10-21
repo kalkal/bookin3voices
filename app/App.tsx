@@ -77,11 +77,12 @@ import type { RevisionRepository, SuggestionsProvider } from './src/features/rev
 import {
   CallableBackupService,
   InMemoryBackupService,
+  LocalServedModelStore,
   LocalSettingsRepository,
   SettingsScreen,
   resolveThemeMode,
 } from './src/features/settings';
-import type { BackupService, SettingsRepository } from './src/features/settings';
+import type { BackupService, ServedModelSource, SettingsRepository } from './src/features/settings';
 import { ensureSignedIn } from './src/lib/auth';
 import { auth, firestore, functions } from './src/lib/firebase';
 import { toRoman } from './src/lib/roman';
@@ -98,6 +99,8 @@ export interface AppServices {
   dailyProgressRepository: DailyProgressRepository;
   revisionRepository: RevisionRepository;
   suggestionsProvider: SuggestionsProvider;
+  /** Model the server answered with last time (Settings); absent = server default. */
+  servedModel?: ServedModelSource;
   exportService: BookExportService;
   pendingSuggestions: PendingSuggestionsRepository;
   exportFileSink: ExportFileSink;
@@ -123,6 +126,7 @@ function defaultServices(uid: string): AppServices {
       dailyProgressRepository.addWords(delta).catch(() => {});
     },
   });
+  const servedModel = new LocalServedModelStore();
   return {
     bookRepository: new FirestoreBookRepository({ db: firestore, uid }),
     chapterRepository,
@@ -136,7 +140,13 @@ function defaultServices(uid: string): AppServices {
     dailyProgressRepository,
     revisionRepository: new LocalRevisionRepository(),
     // real refinement: refineChapter callable behind the same interface
-    suggestionsProvider: new CallableSuggestionsProvider({ functions }),
+    suggestionsProvider: new CallableSuggestionsProvider({
+      functions,
+      onServedModel: (model) => {
+        servedModel.save(model).catch(() => {});
+      },
+    }),
+    servedModel,
     exportService: new CallableBookExportService({ functions }),
     pendingSuggestions: new FirestorePendingSuggestionsRepository({ db: firestore, uid }),
     exportFileSink: new ShareSheetExportFileSink(),
@@ -345,6 +355,7 @@ function AppNavigator({ services }: { services: AppServices }) {
             repository={services.settingsRepository}
             backupService={services.backupService}
             backupFileSink={services.exportFileSink}
+            servedModel={services.servedModel}
             onBack={pop}
           />
         );
