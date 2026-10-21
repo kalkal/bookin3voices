@@ -7,8 +7,16 @@
  * absolutely, and an absolute child ignores the parent's padding: so the inset
  * is never left to SafeAreaView padding, it is added once, here.
  */
-import { useState, type ReactNode } from 'react';
-import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import {
+  Keyboard,
+  Platform,
+  View,
+  type KeyboardEvent,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../theme';
@@ -21,6 +29,36 @@ export const BOTTOM_COMFORT = 16;
 export function useBottomClearance(base: number = BOTTOM_COMFORT): number {
   const { bottom } = useSafeAreaInsets();
   return Math.max(0, bottom) + base;
+}
+
+/**
+ * Height the open keyboard covers at the bottom of the screen (0 when closed),
+ * for a screen with text input to keep its content above it. The app is
+ * edge-to-edge, so Android no longer shrinks the window for the keyboard; and
+ * React Native reports the Android keyboard height WITHOUT the navigation bar
+ * (IME inset minus system bars), while the content reaches under that bar:
+ * there the bottom inset is added back. iOS reports it from the screen edge.
+ */
+export function useKeyboardRoom(): number {
+  const { bottom } = useSafeAreaInsets();
+  const [keyboard, setKeyboard] = useState(0);
+
+  useEffect(() => {
+    // iOS announces the keyboard before it moves; Android only once it is up
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const shown = Keyboard.addListener(showEvent, (event: KeyboardEvent) =>
+      setKeyboard(Math.max(0, event.endCoordinates.height)),
+    );
+    const hidden = Keyboard.addListener(hideEvent, () => setKeyboard(0));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  if (keyboard === 0) return 0;
+  return Platform.OS === 'android' ? keyboard + Math.max(0, bottom) : keyboard;
 }
 
 export function Screen({

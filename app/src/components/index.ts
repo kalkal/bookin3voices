@@ -13,5 +13,6 @@ export {
   BOTTOM_COMFORT,
   Screen,
   useBottomClearance,
+  useKeyboardRoom,
 } from './ScreenLayout';
 export { Wordmark } from './Wordmark';
