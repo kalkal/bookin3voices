@@ -13,6 +13,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -24,7 +25,16 @@ import {
 import { timestampsToMillis, toError } from '../../lib/firestoreCodec';
 import type { Unsubscribe } from '../chapters';
 import { decodeBookDoc, newBookDoc, toBook } from './bookCodec';
-import type { Book, BookPatch, BookRepository, CreateBookInput } from './types';
+import type {
+  Book,
+  BookDoc,
+  BookPatch,
+  BookRepository,
+  BookSeeder,
+  CreateBookInput,
+  SeedChapter,
+  SeedOutcome,
+} from './types';
 
 /** Firestore batches accept at most 500 operations. */
 const BATCH_LIMIT = 500;
@@ -37,7 +47,7 @@ export interface FirestoreBookRepositoryOptions {
   onWriteError?: (error: Error) => void;
 }
 
-export class FirestoreBookRepository implements BookRepository {
+export class FirestoreBookRepository implements BookRepository, BookSeeder {
   private readonly db: Firestore;
   private readonly uid: string;
   private readonly onWriteError?: (error: Error) => void;
@@ -131,6 +141,36 @@ export class FirestoreBookRepository implements BookRepository {
       }),
     );
     return toBook(ref.id, domainDoc);
+  }
+
+  /**
+   * Create-if-missing in a transaction: the read and the writes commit together,
+   * so a second start racing the first sees the book and writes nothing.
+   * Transactions need the server (no offline queue): an offline start rejects,
+   * and the caller simply tries again on the next start.
+   */
+  async createBookIfMissing(
+    bookId: string,
+    book: BookDoc,
+    chapters: readonly SeedChapter[],
+  ): Promise<SeedOutcome> {
+    const bookRef = this.bookRef(bookId);
+    return runTransaction(this.db, async (transaction) => {
+      const existing = await transaction.get(bookRef);
+      if (existing.exists()) return 'exists';
+      transaction.set(bookRef, {
+        ...book,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      for (const chapter of chapters) {
+        transaction.set(doc(this.chaptersCol(bookId), chapter.id), {
+          ...chapter.doc,
+          updatedAt: serverTimestamp(),
+        });
+      }
+      return 'created';
+    });
   }
 
   async updateBook(bookId: string, patch: BookPatch): Promise<void> {

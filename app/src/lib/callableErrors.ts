@@ -2,9 +2,15 @@
 // Rule: failures are never silent and never technical. The raw server message
 // (English, sometimes provider details like expired credentials) is never
 // shown; the code picks a message that says what to do next.
+//
+// The judges build (contest demo) adds reasons in the error `details`: the AI
+// calls need an access code, have daily and total caps and a closing date.
+// Without those details (every other build) the messages are the usual ones.
+
+import { z } from 'zod';
 
 import { logTestEvent } from '../features/testLog';
-import { t } from '../i18n';
+import { t, uiLocale } from '../i18n';
 
 export type CallableAction = 'refine' | 'outline' | 'export' | 'title';
 
@@ -28,7 +34,68 @@ export function callableErrorCode(error: unknown): string {
   return firebaseCode(error) ?? (error instanceof Error ? error.name : typeof error);
 }
 
+const detailsSchema = z.object({
+  reason: z.string(),
+  scope: z.enum(['user', 'global', 'total']).optional(),
+  maxChars: z.number().int().positive().optional(),
+});
+
+/** The server's `details` (reason and its parameters), when they are well formed. */
+function callableDetails(error: unknown): z.infer<typeof detailsSchema> | undefined {
+  if (typeof error !== 'object' || error === null) return undefined;
+  const parsed = detailsSchema.safeParse((error as { details?: unknown }).details);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** Callable code and `details.reason` together, e.g. 'permission-denied/access-code-required'. */
+function codeAndReason(error: unknown): string | undefined {
+  const code = firebaseCode(error);
+  const reason = callableDetails(error)?.reason;
+  return code === undefined || reason === undefined ? undefined : `${code}/${reason}`;
+}
+
+/** The AI call was refused because this phone has not entered a valid access code yet. */
+export function isAccessCodeRequired(error: unknown): boolean {
+  return codeAndReason(error) === 'permission-denied/access-code-required';
+}
+
+/**
+ * The live AI is off for now (demo closed, or a daily/total cap reached): the
+ * sample book can switch to its pre-recorded example suggestions.
+ */
+export function isAiUnavailable(error: unknown): boolean {
+  const key = codeAndReason(error);
+  return key === 'failed-precondition/demo-closed' || key === 'resource-exhausted/limit-reached';
+}
+
+/** Message for the judges-build reasons; undefined when the error carries none of them. */
+function demoMessageFor(action: CallableAction, error: unknown): string | undefined {
+  const key = codeAndReason(error);
+  // without the code the server refuses every call, export included
+  if (key === 'permission-denied/access-code-required') {
+    return t('common.callable.demo.accessCodeRequired');
+  }
+  if (action === 'export') return undefined;
+  const details = callableDetails(error);
+  switch (key) {
+    case 'failed-precondition/demo-closed':
+      return `${t('common.callable.demo.closed')} ${t('common.callable.demo.sampleBook')}`;
+    case 'resource-exhausted/limit-reached':
+      return `${t(`common.callable.demo.limit.${details?.scope ?? 'user'}`)} ${t(
+        'common.callable.demo.sampleBook',
+      )}`;
+    case 'invalid-argument/text-too-long':
+      if (details?.maxChars === undefined) return undefined;
+      return t(`common.callable.demo.textTooLong.${action}`, {
+        maxChars: details.maxChars.toLocaleString(uiLocale()),
+      });
+  }
+  return undefined;
+}
+
 function messageFor(action: CallableAction, error: unknown): string {
+  const demo = demoMessageFor(action, error);
+  if (demo !== undefined) return demo;
   switch (firebaseCode(error)) {
     case 'unauthenticated':
       return t('common.callable.sessionExpired');
@@ -54,5 +121,11 @@ export function logCallableFailure(
   requestId: string,
   error: unknown,
 ): void {
-  console.warn('callable-failed', { action, requestId, code: callableErrorCode(error) });
+  const reason = callableDetails(error)?.reason;
+  console.warn('callable-failed', {
+    action,
+    requestId,
+    code: callableErrorCode(error),
+    ...(reason === undefined ? {} : { reason }),
+  });
 }

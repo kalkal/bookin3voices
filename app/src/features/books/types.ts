@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-import type { Unsubscribe } from '../chapters';
+import type { ChapterDoc, Unsubscribe } from '../chapters';
 
 /**
  * Book status. The field does not fix the values:
@@ -87,4 +87,26 @@ export interface BookRepository {
    * skipped when the session dies before the remote state is known).
    */
   reconcileCounters(bookId: string): Promise<void>;
+}
+
+/** A chapter written together with its book by createBookIfMissing, under a fixed id. */
+export interface SeedChapter {
+  id: string;
+  doc: ChapterDoc;
+}
+
+export type SeedOutcome = 'created' | 'exists';
+
+/**
+ * Create-if-missing for a book with FIXED ids (the bundled sample book): the
+ * book and its chapters are written together only when the book document does
+ * not exist yet, atomically, so two racing starts never write twice. Unlike the
+ * optimistic writes it waits for the server: it needs the network.
+ */
+export interface BookSeeder {
+  createBookIfMissing(
+    bookId: string,
+    book: BookDoc,
+    chapters: readonly SeedChapter[],
+  ): Promise<SeedOutcome>;
 }

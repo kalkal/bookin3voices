@@ -5,6 +5,8 @@
 
 import { z } from 'zod';
 
+import { docIdSchema } from '../docId';
+
 import type { PreflightReport } from './kdpPreflight';
 
 export const EXPORT_FORMATS = ['epub', 'docx'] as const;
@@ -16,7 +18,7 @@ export type ExportFormat = (typeof EXPORT_FORMATS)[number];
  * its format is restricted to characters safe for a Firestore id.
  */
 export const exportBookInputSchema = z.object({
-  bookId: z.string().min(1),
+  bookId: docIdSchema,
   format: z.enum(EXPORT_FORMATS),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
   /** When true, KDP preflight errors block the export (failed-precondition). */

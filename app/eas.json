@@ -13,13 +13,25 @@
         "EXPO_PUBLIC_TEST_LOG": "1"
       }
     },
-    "preview": {
+    "internal-apk": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
+      }
+    },
+    "preview": {
+      "extends": "internal-apk",
       "env": {
         "EXPO_PUBLIC_TEST_LOG": "1"
+      }
+    },
+    "judges": {
+      "extends": "internal-apk",
+      "environment": "preview",
+      "env": {
+        "APP_VARIANT": "judges",
+        "EXPO_PUBLIC_ACCESS_GATE": "1",
+        "EXPO_PUBLIC_SAMPLE_BOOK": "1"
       }
     }
   }

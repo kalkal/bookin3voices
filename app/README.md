@@ -69,6 +69,60 @@ profiles in `eas.json`) write the manual test session as JSON Lines
 - Refine calls send `debug: true`; the server answers with a `debugTrace` only where
   `DEBUG_TRACE=1` is set (a dev project) or in the emulator.
 
+## Judges build (contest demo)
+
+The `judges` profile in `eas.json` builds an internal APK for the contest judges, installable
+next to the regular app:
+
+- `APP_VARIANT=judges`: `app.config.ts` takes `app.json` as it is and only changes the Android
+  package to `dev.kalkal.bookvoice.demo` and the name to «bookin3voice (demo)».
+- `EXPO_PUBLIC_ACCESS_GATE=1` (`src/features/accessCode`): without the access code the app
+  touches nothing on the server. After the anonymous sign-in the app reads the ID token claims:
+  - no `judge: true` claim → **offline sample mode**: in-memory repositories with the bundled
+    sample book, example suggestions for Refine, and a banner «Sample mode — enter the access code
+    to use your own books and AI» with an «Enter code» button. Every other server action (outline,
+    export, backup, refine with no example) opens the access code prompt;
+  - the prompt sends the code to the `redeemAccessCode` callable (the server sets the claim),
+    refreshes the ID token, switches to the Firestore repositories (every screen remounts) and
+    creates the sample book there if it is missing;
+  - claim already present → online directly; the live AI falls back to the example suggestions
+    when it is unavailable (demo closed, limits reached).
+
+  The code is never stored on the phone: the claim lives on the anonymous account.
+
+- `EXPO_PUBLIC_SAMPLE_BOOK=1`: the bundled sample book (`src/features/sample`).
+- No `EXPO_PUBLIC_TEST_LOG`: the judges' phones write no test log.
+
+The Firebase web config of the judges project is **not** in the repository. Set the five
+`EXPO_PUBLIC_FIREBASE_*` variables (`API_KEY`, `AUTH_DOMAIN`, `PROJECT_ID`, `STORAGE_BUCKET`,
+`APP_ID`) as EAS environment variables of the environment the profile reads (`"environment":
+"preview"` in `eas.json`), with plain-text or sensitive visibility. If the regular preview build
+needs a different Firebase project, create a dedicated environment for the judges project and
+point the profile's `environment` at it instead.
+
+## Sample book (judges' build only)
+
+`EXPO_PUBLIC_SAMPLE_BOOK=1` at build time turns it on; without it the app is unchanged.
+
+- Content: `content/sample-book/` (`book.json` + one Markdown file per chapter) is the
+  source of truth. After editing it run `node scripts/build-sample-book.js` (from `app/`) to
+  regenerate `src/features/sample/sampleBookContent.ts`; a unit test fails if they drift.
+- Without the access code the app touches nothing on the server:
+  `createOfflineSampleRepositories()` returns in-memory book, chapter and note repositories
+  pre-filled with book `sample` and chapters `sample-1..3`, plus a suggestions provider that
+  serves only the pre-recorded examples. Dictation and editing work locally; nothing syncs,
+  and a restart starts again from the bundled text.
+- With the access code (`judge` claim on the ID token): `seedSampleBook({ bookRepository,
+marker, uid })` creates the same book in the user's Firestore space, in one transaction
+  that writes only when the book does not exist (racing calls never duplicate). A local
+  marker then keeps a deleted sample book from coming back; a failure is logged and retried
+  on the next call.
+- Example mode: the pre-recorded suggestions stored with the content (`exampleRefineResult`)
+  are served only on the sample book, offline (no claim) or, with the claim, when the live AI
+  is unavailable (`ExampleFallbackSuggestionsProvider`; its `isAiUnavailable` parameter
+  decides, a placeholder on callable codes for now). They are always labelled «Example —
+  pre-recorded, not live AI» in the editor, the review screen and on each card.
+
 ## Pre-commit (Husky + lint-staged)
 
 `npm install` (the `prepare` script) sets `core.hooksPath = app/.husky/_` in the

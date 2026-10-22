@@ -6,6 +6,8 @@
 
 import { z } from 'zod';
 
+import { docIdSchema } from '../docId';
+
 import type { OutlinePrompt } from './outlinePrompt';
 import { resolveStyleId, RETIRED_STYLE_IDS, STYLE_IDS } from './styles';
 
@@ -36,7 +38,7 @@ export type Outline = z.infer<typeof outlineSchema>;
  * editing it).
  */
 export const generateOutlineInputSchema = z.object({
-  bookId: z.string().min(1),
+  bookId: docIdSchema,
   synopsis: z.string().trim().min(1).max(20_000),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
   /**

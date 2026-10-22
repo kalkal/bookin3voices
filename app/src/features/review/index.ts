@@ -23,6 +23,7 @@ export type {
   SuggestionsProvider,
 } from './types';
 export { textHash } from './textHash';
+export { EXAMPLE_SUGGESTION_ID_PREFIX, isExampleSuggestion } from './example';
 export { applyPatch, diffAsPatch, invertPatch, remapSpan } from './patches';
 export type { PatchFailure, PatchResult, TextPatch } from './patches';
 export { ReviewSession } from './ReviewSession';

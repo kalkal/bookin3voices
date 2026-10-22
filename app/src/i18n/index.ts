@@ -7,6 +7,7 @@
 // Each feature owns one namespace file in this folder (`books.ts`, `review.ts`, ...)
 // exporting `{ en, it }` with the same keys, prefixed by the namespace name.
 
+import { accessCode } from './accessCode';
 import { books } from './books';
 import { chapters } from './chapters';
 import { common } from './common';
@@ -26,6 +27,7 @@ export interface Namespace {
 }
 
 export const NAMESPACES: Record<string, Namespace> = {
+  accessCode,
   books,
   chapters,
   common,

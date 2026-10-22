@@ -12,6 +12,8 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 
+import { demoUsageLimits, requireDemoAccess, type CallerClaims } from '../demo/demoGate';
+import { reportSuspiciousInput } from '../security/suspiciousInput';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 import { buildOutlinePrompt, OUTLINE_PROMPT_VERSION, outlineStyleOf } from './outlinePrompt';
 import {
@@ -33,7 +35,9 @@ export interface GenerateOutlineDeps {
   /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
   /** Daily usage caps; defaults to DEFAULT_USAGE_LIMITS. */
-  usageLimits?: Record<UsageAction, UsageLimit>;
+  usageLimits?: Partial<Record<UsageAction, UsageLimit>>;
+  /** Judges' demo (DEMO_GATE=1): access code and demo caps (demo/demoGate.ts). */
+  demoGate?: boolean;
 }
 
 /**
@@ -126,7 +130,8 @@ async function generateValidatedOutline(
   }
   throw new HttpsError(
     'unavailable',
-    `The model did not produce a valid outline: ${lastIssue.slice(0, 200)}. Try again.`,
+    // the provider's own message stays in the log above, never sent to a client
+    'The model did not produce a valid outline. Try again.',
   );
 }
 
@@ -146,8 +151,12 @@ export async function runGenerateOutline(
   deps: GenerateOutlineDeps,
   uid: string,
   input: GenerateOutlineInput,
+  claims?: CallerClaims,
 ): Promise<GenerateOutlineResponse> {
   const { db, model, now = Date.now, usageLimits } = deps;
+  // judges' demo: open demo + this phone's code, then the demo's caps
+  const demo = deps.demoGate === true ? await requireDemoAccess(db, uid, claims, now()) : undefined;
+  const limits = demo !== undefined ? demoUsageLimits(demo) : usageLimits;
   const registryRef = db.doc(`users/${uid}/outlines/${input.requestId}`);
 
   // Network retry: if the registry document already exists, reuse the saved
@@ -164,7 +173,9 @@ export async function runGenerateOutline(
 
   // Anti-abuse cap: after the idempotency short-circuit (a retry reuses the
   // saved outline, zero budget) and before the call to the Pro model.
-  await enforceUsageLimit({ db, uid, action: 'generateOutline', now, limits: usageLimits });
+  await enforceUsageLimit({ db, uid, action: 'generateOutline', now, limits });
+  // monitoring only, after the cap: free text is data, flagged by kind, never refused
+  reportSuspiciousInput('synopsis', input.synopsis, { requestId: input.requestId });
 
   const { book, writtenChapterTitles } = await readBookForOutline(db, uid, input.bookId);
   const prompt = buildOutlinePrompt({
@@ -217,6 +228,6 @@ export function createGenerateOutlineHandler(
         'Expected { bookId, synopsis, requestId, styleId? }.',
       );
     }
-    return runGenerateOutline(deps, uid, parsed.data);
+    return runGenerateOutline(deps, uid, parsed.data, request.auth?.token);
   };
 }

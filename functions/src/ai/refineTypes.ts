@@ -14,6 +14,8 @@
 
 import { z } from 'zod';
 
+import { docIdSchema } from '../docId';
+
 import type { RefineDebugTrace } from './debugTrace';
 
 export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing', 'history'] as const;
@@ -126,8 +128,8 @@ export type Suggestion = z.infer<typeof suggestionSchema>;
 
 /** Callable input (mirrors RefineRequest in the app). */
 export const refineChapterInputSchema = z.object({
-  bookId: z.string().min(1),
-  chapterId: z.string().min(1),
+  bookId: docIdSchema,
+  chapterId: docIdSchema,
   /** Chapter text AS THE USER SEES IT: during a session the local editor is the
    *  master, so the client's text is authoritative, not the rawText on
    *  Firestore (which the debounce can leave behind). */

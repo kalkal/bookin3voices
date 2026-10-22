@@ -21,7 +21,13 @@ import { z } from 'zod';
 
 /** Actions with a cap. Separate counters per action: a limit on refine (flash,
  *  frequent) must not eat into the outline budget (Pro, expensive but rare). */
-export const USAGE_ACTIONS = ['refineChapter', 'generateOutline', 'refineTitle'] as const;
+export const USAGE_ACTIONS = [
+  'refineChapter',
+  'generateOutline',
+  'refineTitle',
+  'redeemAccessCode',
+  'redeemAccessCodeIp',
+] as const;
 export type UsageAction = (typeof USAGE_ACTIONS)[number];
 
 export interface UsageLimit {
@@ -29,7 +35,15 @@ export interface UsageLimit {
   perUserPerDay: number;
   /** Overall daily cap (guards against many anonymous uids). */
   globalPerDay: number;
+  /**
+   * Cap over the whole life of the deployment (the judges' demo until the end
+   * of judging): absent = no total cap. Counted in usageTotal/{action}.
+   */
+  total?: number;
 }
+
+/** Which cap stopped the call: the client tells the user what resets when. */
+export type LimitScope = 'user' | 'global' | 'total';
 
 // Defaults calibrated for a single-user app: generous for one user, tight for
 // an attacker. The global cap is in effect the spending hard-cap: by limiting
@@ -43,7 +57,28 @@ export const DEFAULT_USAGE_LIMITS: Record<UsageAction, UsageLimit> = {
   generateOutline: { perUserPerDay: 15, globalPerDay: 25 },
   // a short call (title + excerpt), but still a model call
   refineTitle: { perUserPerDay: 100, globalPerDay: 200 },
+  // access-code attempts (judges' demo only), per phone: every attempt counts.
+  // No real overall cap: a flood of throwaway accounts must not lock the real
+  // judges out (the wrong codes raise a log alarm instead)
+  redeemAccessCode: { perUserPerDay: 10, globalPerDay: Number.MAX_SAFE_INTEGER },
+  // wrong codes per network address (hashed): many phones behind one address
+  // are fine, a script cycling new accounts is not; a right code always passes
+  redeemAccessCodeIp: { perUserPerDay: 30, globalPerDay: Number.MAX_SAFE_INTEGER },
 };
+
+/** Next midnight UTC: when the daily counters start again from zero. */
+export function nextUsageDayStart(nowMs: number): number {
+  const day = new Date(nowMs);
+  return Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1);
+}
+
+function limitReached(scope: LimitScope, message: string, nowMs: number): HttpsError {
+  return new HttpsError('resource-exhausted', message, {
+    reason: 'limit-reached',
+    scope,
+    ...(scope === 'total' ? {} : { resetsAt: nextUsageDayStart(nowMs) }),
+  });
+}
 
 // The counter is internal data, but it is re-read with Zod at the boundary.
 // Fail-closed: an EXISTING but corrupted document must not "unlock" the cap by
@@ -82,7 +117,7 @@ export interface EnforceUsageOptions {
   /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
   /** Limits, injectable in tests; default DEFAULT_USAGE_LIMITS. */
-  limits?: Record<UsageAction, UsageLimit>;
+  limits?: Partial<Record<UsageAction, UsageLimit>>;
 }
 
 /**
@@ -98,39 +133,62 @@ export interface EnforceUsageOptions {
  */
 export async function enforceUsageLimit(options: EnforceUsageOptions): Promise<void> {
   const { db, uid, action, now = Date.now, limits = DEFAULT_USAGE_LIMITS } = options;
-  const limit = limits[action];
+  const limit = limits[action] ?? DEFAULT_USAGE_LIMITS[action];
   const day = usageDayKey(now());
 
   // usageDaily/{day__action}                -> global counter
   // usageDaily/{day__action}/users/{uid}    -> per-uid counter
   const globalRef = db.doc(`usageDaily/${day}__${action}`);
   const userRef = globalRef.collection('users').doc(uid);
+  // usageTotal/{action}                     -> counter over the deployment's life
+  const totalRef = limit.total === undefined ? undefined : db.doc(`usageTotal/${action}`);
 
   await db.runTransaction(async (tx) => {
     // all reads before any write (transaction constraint)
-    const [globalSnap, userSnap] = await Promise.all([tx.get(globalRef), tx.get(userRef)]);
+    const [globalSnap, userSnap, totalSnap] = await Promise.all([
+      tx.get(globalRef),
+      tx.get(userRef),
+      totalRef === undefined ? Promise.resolve(undefined) : tx.get(totalRef),
+    ]);
     const globalCount = readCounter(globalSnap);
     const userCount = readCounter(userSnap);
+    const totalCount = totalSnap === undefined ? 0 : readCounter(totalSnap);
+    const stamp = now();
 
+    if (limit.total !== undefined && totalCount >= limit.total) {
+      throw limitReached(
+        'total',
+        `The demo's total limit for this operation has been reached (${limit.total}).`,
+        stamp,
+      );
+    }
     if (userCount >= limit.perUserPerDay) {
-      throw new HttpsError(
-        'resource-exhausted',
+      throw limitReached(
+        'user',
         `Daily limit reached for this operation (${limit.perUserPerDay}/day). Try again tomorrow.`,
+        stamp,
       );
     }
     if (globalCount >= limit.globalPerDay) {
-      throw new HttpsError(
-        'resource-exhausted',
+      throw limitReached(
+        'global',
         'Service temporarily unavailable: the overall usage limit has been reached. Try again later.',
+        stamp,
       );
     }
 
-    const stamp = now();
     tx.set(
       globalRef,
       { schemaVersion: 1, action, count: globalCount + 1, updatedAt: stamp },
       { merge: true },
     );
     tx.set(userRef, { schemaVersion: 1, count: userCount + 1, updatedAt: stamp }, { merge: true });
+    if (totalRef !== undefined) {
+      tx.set(
+        totalRef,
+        { schemaVersion: 1, action, count: totalCount + 1, updatedAt: stamp },
+        { merge: true },
+      );
+    }
   });
 }

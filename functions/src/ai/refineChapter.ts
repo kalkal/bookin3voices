@@ -48,6 +48,13 @@ import { pendingToReplace, selectionProblem } from './refineSelection';
 import { resolveStyleId } from './styles';
 import { loadStyleProfileContent, type StyleProfileContent } from './styleProfileContent';
 import { textHash } from './textHash';
+import {
+  assertDemoTextFits,
+  demoUsageLimits,
+  requireDemoAccess,
+  type CallerClaims,
+} from '../demo/demoGate';
+import { reportSuspiciousInput } from '../security/suspiciousInput';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
 /** Ids of the supported AI providers (the app only shows the one in use). */
@@ -67,7 +74,7 @@ export interface RefineChapterDeps {
   /** Clock, injectable in tests; defaults to Date.now. */
   now?: () => number;
   /** Daily usage caps; defaults to DEFAULT_USAGE_LIMITS. */
-  usageLimits?: Record<UsageAction, UsageLimit>;
+  usageLimits?: Partial<Record<UsageAction, UsageLimit>>;
   /**
    * History check provider per AI provider (two short calls, run in parallel with
    * the refinement). Absent = no history suggestions.
@@ -78,6 +85,8 @@ export interface RefineChapterDeps {
    * or the emulator). Off by default; the trace is never logged or stored.
    */
   debugTrace?: boolean;
+  /** Judges' demo (DEMO_GATE=1): access code, demo caps and text limit (demo/demoGate.ts). */
+  demoGate?: boolean;
 }
 
 /**
@@ -226,7 +235,9 @@ async function generateValidatedSuggestions(
   }
   throw new HttpsError(
     'unavailable',
-    `The model did not produce valid suggestions: ${lastIssue.slice(0, 200)}. Try again.`,
+    // the provider's own message stays in the log above: it may name the AWS
+    // account or resources, never something to send to a client
+    'The model did not produce valid suggestions. Try again.',
   );
 }
 
@@ -247,6 +258,7 @@ export async function runRefineChapter(
   deps: RefineChapterDeps,
   uid: string,
   input: RefineChapterInput,
+  claims?: CallerClaims,
 ): Promise<RefineChapterResponse> {
   const {
     db,
@@ -260,6 +272,10 @@ export async function runRefineChapter(
   if (textHash(input.text) !== input.textHash) {
     throw new HttpsError('invalid-argument', 'textHash does not match the text sent.');
   }
+  // judges' demo: open demo + this phone's code, then the demo's caps and text limit
+  const demo = deps.demoGate === true ? await requireDemoAccess(db, uid, claims, now()) : undefined;
+  if (demo !== undefined) assertDemoTextFits(input.text, demo);
+  const limits = demo !== undefined ? demoUsageLimits(demo) : usageLimits;
   // «Rifinisci la selezione»: the range must sit in the text and hold enough words
   const range = input.range;
   if (range !== undefined) {
@@ -289,9 +305,15 @@ export async function runRefineChapter(
 
   // Anti-abuse cap: counted only here, after the idempotency short-circuit (a
   // network retry consumes no budget) and before touching the model.
-  await enforceUsageLimit({ db, uid, action: 'refineChapter', now, limits: usageLimits });
+  await enforceUsageLimit({ db, uid, action: 'refineChapter', now, limits });
+  // monitoring only, after the cap: free text is data, flagged by kind, never refused
+  reportSuspiciousInput('chapterText', input.text, { requestId: input.requestId });
 
-  const providerId = await readAiProviderId(db, uid, deps.defaultProvider);
+  // in the demo the user's provider choice is ignored: only the deployment's (Nova)
+  const providerId =
+    demo !== undefined
+      ? (deps.defaultProvider ?? 'bedrock')
+      : await readAiProviderId(db, uid, deps.defaultProvider);
   const provider = providers[providerId];
 
   const { book, chapter, chapterRef } = await readContext(db, uid, input);
@@ -494,6 +516,6 @@ export function createRefineChapterHandler(
         'Expected { bookId, chapterId, text, textHash, requestId }.',
       );
     }
-    return runRefineChapter(deps, uid, parsed.data);
+    return runRefineChapter(deps, uid, parsed.data, request.auth?.token);
   };
 }

@@ -168,5 +168,7 @@
     "expectedRange": [0, 4],
     "protected": [],
     "expected": []
-  }
+  },
+  "14-il-biglietto.md": { "expectedRange": [0, 4], "protected": [], "expected": [] },
+  "15-the-note.md": { "expectedRange": [0, 4], "language": "en", "protected": [], "expected": [] }
 }

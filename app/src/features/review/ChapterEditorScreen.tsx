@@ -31,6 +31,8 @@ import { SHOW_FREE_TIER_WARNING } from '../../lib/freeTier';
 import { countWords } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
+import { isExampleSuggestion } from './example';
+import { ExampleLabel } from './ExampleLabel';
 import { HighlightedChapterText } from './HighlightedChapterText';
 import { MIN_SELECTION_WORDS, selectionWords } from './selection';
 import { RefinePanel, type RefineScope } from './RefinePanel';
@@ -456,6 +458,13 @@ export function ChapterEditorScreen({
                 }}
               />
             ) : null}
+          </View>
+        ) : null}
+
+        {controller.suggestions.some((s) => s.state === 'pending' && isExampleSuggestion(s)) ? (
+          // pre-recorded examples (judges' build) are never shown as live AI
+          <View style={{ marginHorizontal: spacing.xl, marginBottom: spacing.sm }}>
+            <ExampleLabel testID="editor-example-label" />
           </View>
         ) : null}
 

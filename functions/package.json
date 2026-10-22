@@ -11,6 +11,7 @@
     "build:watch": "tsc -p tsconfig.build.json --watch",
     "golden": "npm run build && node lib/tools/goldenSetRunner.js",
     "golden:offline": "npm run build && node lib/tools/goldenSetRunner.js --offline",
+    "demo:hash": "npm run build && node scripts/demo-code-hash.mjs",
     "check:test-log": "tsc -p tsconfig.build.json && node lib/tools/checkTestLog.js",
     "typecheck": "tsc --noEmit",
     "test": "jest",

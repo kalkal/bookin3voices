@@ -6,14 +6,18 @@ export type {
   BookDoc,
   BookPatch,
   BookRepository,
+  BookSeeder,
   BookStatus,
   CreateBookInput,
+  SeedChapter,
+  SeedOutcome,
 } from './types';
 export { BOOK_STATUSES, bookDocSchema } from './types';
 export { decodeBookDoc, newBookDoc, toBook, upgradeBookData } from './bookCodec';
 export { FirestoreBookRepository } from './FirestoreBookRepository';
 export type { FirestoreBookRepositoryOptions } from './FirestoreBookRepository';
 export { InMemoryBookRepository } from './InMemoryBookRepository';
+export type { InMemoryBookRepositoryOptions } from './InMemoryBookRepository';
 export {
   LocalDailyProgressRepository,
   localDateKey,

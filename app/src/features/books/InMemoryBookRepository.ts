@@ -1,16 +1,37 @@
 // In-memory book repository for tests and development (like InMemoryChapterRepository).
 
 import { newBookDoc, toBook } from './bookCodec';
-import type { Unsubscribe } from '../chapters';
-import type { Book, BookPatch, BookRepository, CreateBookInput } from './types';
+import type { InMemoryChapterRepository, Unsubscribe } from '../chapters';
+import type {
+  Book,
+  BookDoc,
+  BookPatch,
+  BookRepository,
+  BookSeeder,
+  CreateBookInput,
+  SeedChapter,
+  SeedOutcome,
+} from './types';
 
-export class InMemoryBookRepository implements BookRepository {
+export interface InMemoryBookRepositoryOptions {
+  /** Where createBookIfMissing puts the chapters (the Firestore twin writes both together). */
+  chapters?: InMemoryChapterRepository;
+}
+
+export class InMemoryBookRepository implements BookRepository, BookSeeder {
   private readonly books = new Map<string, Book>();
   private readonly listListeners = new Set<(books: Book[]) => void>();
   private readonly docListeners = new Map<string, Set<(book: Book | null) => void>>();
   private nextId = 1;
   /** Count of requested reconciliations (for assertions in tests). */
   reconcileCalls: string[] = [];
+  /** Count of createBookIfMissing calls that actually wrote (for assertions in tests). */
+  seedWrites = 0;
+  private readonly chapterSink?: InMemoryChapterRepository;
+
+  constructor(options: InMemoryBookRepositoryOptions = {}) {
+    this.chapterSink = options.chapters;
+  }
 
   observeBooks(onChange: (books: Book[]) => void): Unsubscribe {
     this.listListeners.add(onChange);
@@ -35,6 +56,22 @@ export class InMemoryBookRepository implements BookRepository {
     this.books.set(book.id, book);
     this.emit(book.id);
     return book;
+  }
+
+  async createBookIfMissing(
+    bookId: string,
+    book: BookDoc,
+    chapters: readonly SeedChapter[],
+  ): Promise<SeedOutcome> {
+    // check and write with no await in between: atomic, like the transaction
+    if (this.books.has(bookId)) return 'exists';
+    this.books.set(bookId, toBook(bookId, book));
+    for (const chapter of chapters) {
+      this.chapterSink?.seed({ bookId, chapterId: chapter.id }, chapter.doc.rawText, chapter.doc);
+    }
+    this.seedWrites += 1;
+    this.emit(bookId);
+    return 'created';
   }
 
   async updateBook(bookId: string, patch: BookPatch): Promise<void> {

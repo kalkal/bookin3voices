@@ -2,6 +2,7 @@
   "expo": {
     "name": "bookin3voice",
     "slug": "bookvoice",
+    "owner": "kalkalunique",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -56,6 +57,11 @@
           "style": "light"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2428da94-29e9-46b6-9980-6006afcdd7fd"
+      }
+    }
   }
 }

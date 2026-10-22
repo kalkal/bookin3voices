@@ -1,0 +1,166 @@
+{
+  "id": "sample",
+  "title": "Cristallo",
+  "author": "",
+  "description": "Sample book: an invented story to try dictation, the outline and AI refinement.",
+  "synopsis": "Murano, winter of 1608. The Republic of Venice forbids its glassmakers to leave, and the secret of cristallo, the clearest glass in Europe, is guarded like a treasure of state. Lucia Dorin, nineteen, knows the batch better than anyone in her father's workshop, but as a daughter she may never blow glass. When a merchant from Antwerp offers her brother Zuane a furnace of his own abroad, and asks him to bring the sister who knows the measures, Lucia must choose between the life she is offered and the fire that has always been hers.",
+  "genre": "Historical fiction",
+  "styleProfileId": "historical",
+  "language": "en",
+  "chapters": [
+    {
+      "id": "sample-1",
+      "file": "chapters/01-the-sign-of-the-siren.md",
+      "outline": {
+        "summary": "A winter morning at the Dorin furnace; a foreign stranger comes to look at Zuane.",
+        "beats": [
+          "Dawn at the furnace: Lucia knows the batch but may not blow glass",
+          "Zuane distracted, watching the door",
+          "The man with the blue ring at the landing",
+          "Night on the landing: the law against leaving, a foreign coin"
+        ]
+      },
+      "examples": [
+        {
+          "kind": "grammar",
+          "original": "rang before dawn, it was time to wake the furnace",
+          "proposals": ["rang before dawn; it was time to wake the furnace"],
+          "rationale": "Comma splice: two full sentences joined by a comma; a semicolon keeps them apart."
+        },
+        {
+          "kind": "style",
+          "original": "The furnace kept them warm in winter and the furnace kept them poor in summer",
+          "proposals": [
+            "It kept them warm in winter and poor in summer",
+            "The furnace kept them warm in winter and poor in summer"
+          ],
+          "rationale": "«The furnace» three times in two sentences: once is enough, and the contrast gets sharper."
+        },
+        {
+          "kind": "style",
+          "original": "The morning went on and it was cold and nothing happened.",
+          "proposals": [
+            "The morning dragged on, cold and slow, and nothing happened but the hiss of hot glass in the water.",
+            "Nothing happened all morning except the cold, which crept in under the door and stayed."
+          ],
+          "rationale": "A flat sentence that only tells: one concrete detail lets the reader feel the slow, cold morning."
+        },
+        {
+          "kind": "history",
+          "aspect": "period",
+          "original": "a few coins",
+          "proposals": ["a few silver soldi", "a few soldi"],
+          "rationale": "Period detail: Venice counted in lire and soldi; naming the coin places the scene in 1608."
+        },
+        {
+          "kind": "history",
+          "aspect": "anachronism",
+          "original": "struck a match to light the lamp",
+          "proposals": [
+            "lit the lamp from the embers of the hearth",
+            "lit a splinter at the embers and touched it to the lamp"
+          ],
+          "rationale": "Friction matches appeared only in the 1820s: in 1608 a lamp was lit from embers, or with flint and steel."
+        }
+      ]
+    },
+    {
+      "id": "sample-2",
+      "file": "chapters/02-the-man-from-antwerp.md",
+      "outline": {
+        "summary": "Lucia overhears the offer from Antwerp and learns that the stranger wants her too.",
+        "beats": [
+          "Sunday Mass at San Pietro Martire: Zuane follows the stranger",
+          "Behind the warehouse: three hundred ducats and a name over the door",
+          "The law of the Republic and the men brought back in chains",
+          "«Then bring your sister»",
+          "The goblets at the Rialto: I made the light in these"
+        ]
+      },
+      "examples": [
+        {
+          "kind": "style",
+          "original": "She was very careful and very quiet and she kept very close to the wall.",
+          "proposals": [
+            "Careful and quiet, she kept close to the wall.",
+            "She kept close to the wall, quiet as a cat."
+          ],
+          "rationale": "«Very» three times in one sentence: without it the stealth reads sharper."
+        },
+        {
+          "kind": "grammar",
+          "original": "ask were you learned",
+          "proposals": ["ask where you learned"],
+          "rationale": "Dictation slip: «were» was heard instead of «where»."
+        },
+        {
+          "kind": "history",
+          "aspect": "period",
+          "original": "where the boats unloaded wood",
+          "proposals": [
+            "where the peate unloaded wood",
+            "where the peate, the flat cargo barges of the lagoon, unloaded wood"
+          ],
+          "rationale": "Period detail: the flat cargo barges of the lagoon were called peate; the local word brings the quay to life."
+        },
+        {
+          "kind": "pacing",
+          "original": "That afternoon she went with her father to Venice to deliver a crate of goblets to a merchant near the Rialto, and they loaded the crate on a big flat boat with other crates from other furnaces, and the boatman rowed slowly across the lagoon past the island of San Michele, and her father talked about the price of wood and the price of ash and how the bigger shops always got the best orders, and Lucia listened and said yes and no and thought only about Antwerp, which she had never seen and could not even imagine.",
+          "proposals": [
+            "That afternoon she went with her father to Venice to deliver a crate of goblets near the Rialto. The boatman rowed slowly across the lagoon, past the island of San Michele. Her father talked about the price of wood and ash, and about the bigger shops that always got the best orders. Lucia said yes and no, and thought only about Antwerp, which she had never seen and could not even imagine."
+          ],
+          "rationale": "One breathless sentence of almost a hundred words: splitting it lets the crossing breathe and leaves Antwerp as the last word."
+        }
+      ]
+    },
+    {
+      "id": "sample-3",
+      "file": "chapters/03-fog-on-the-lagoon.md",
+      "outline": {
+        "summary": "The night of the departure: Lucia lets Zuane go and keeps the fire.",
+        "beats": [
+          "Three days of work as if nothing had changed",
+          "Fog on the third night: the walk to the Fondamenta",
+          "«To tell you to go»",
+          "The boat leaves; the father's anger",
+          "The blowpipe in Lucia's hands"
+        ]
+      },
+      "examples": [
+        {
+          "kind": "grammar",
+          "original": "pretended not too",
+          "proposals": ["pretended not to"],
+          "rationale": "Dictation slip: «too» instead of «to»."
+        },
+        {
+          "kind": "history",
+          "aspect": "period",
+          "original": "the fog came in from the sea",
+          "proposals": [
+            "the caligo came in from the sea",
+            "the caligo, the thick winter fog of the lagoon, came in from the sea"
+          ],
+          "rationale": "Period detail: Venetians call the dense lagoon fog caligo; the word gives the night its local colour."
+        },
+        {
+          "kind": "style",
+          "original": "\"To tell you to go,\" she said sadly and quietly.",
+          "proposals": [
+            "\"To tell you to go,\" she said.",
+            "\"To tell you to go,\" she said, and her voice did not shake."
+          ],
+          "rationale": "Two adverbs name the feeling; the line is stronger bare, or with a gesture that shows it."
+        },
+        {
+          "kind": "pacing",
+          "original": "Then he got in the boat and the boat went away in the fog and she went home and in the morning she told her father and he was angry and then he was not angry anymore.",
+          "proposals": [
+            "Then he got into the boat, and the boat went away into the fog until even the lantern was gone. She went home. In the morning she told her father. He was angry, and then, slowly, he was not angry anymore."
+          ],
+          "rationale": "The farewell rushes by in one breath: slowing down on the lantern and on the father gives it its weight."
+        }
+      ]
+    }
+  ]
+}

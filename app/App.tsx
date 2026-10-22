@@ -10,13 +10,36 @@
  * fake sign-in, scripted dictation engine and a stack that starts directly on
  * Dictation ("Capitolo I", as the flow expects).
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { BackHandler, useColorScheme } from 'react-native';
+import { BackHandler, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { resolveLanguage, setLanguage, t } from './src/i18n';
 import { useLanguage } from './src/i18n/useLanguage';
 import { StartupScreen } from './src/features/startup/StartupScreen';
+import {
+  AccessCodeGate,
+  AccessCodeModalHost,
+  CallableAccessCodeService,
+  GatedBackupService,
+  GatedBookExportService,
+  GatedOutlineService,
+  GatedSuggestionsProvider,
+  GatedTitleRefineService,
+  isAccessGateEnabled,
+  NO_SAMPLE_BOOK,
+  offlineSampleServices,
+  SampleModeBanner,
+} from './src/features/accessCode';
+import type { AccessCodeService, SampleBookHooks } from './src/features/accessCode';
+import {
+  createOfflineSampleRepositories,
+  ExampleFallbackSuggestionsProvider,
+  isSampleBookEnabled,
+  seedSampleBook,
+} from './src/features/sample';
+import { isAiUnavailable } from './src/lib/callableErrors';
 import { ThemedSystemBars, ThemeProvider, useAppFonts, useTheme } from './src/theme';
 import { createE2EDictationEngine, e2ePreflightChecks, isE2E } from './src/dev/e2eDictation';
 import {
@@ -90,7 +113,7 @@ import {
   resolveThemeMode,
 } from './src/features/settings';
 import type { BackupService, ServedModelSource, SettingsRepository } from './src/features/settings';
-import { ensureSignedIn } from './src/lib/auth';
+import { ensureSignedIn, hasJudgeClaim, refreshIdToken } from './src/lib/auth';
 import { auth, firestore, functions } from './src/lib/firebase';
 import { toRoman } from './src/lib/roman';
 
@@ -122,11 +145,78 @@ export interface AppServices {
   testLog?: TestLogStore;
 }
 
+/**
+ * Judges build (EXPO_PUBLIC_ACCESS_GATE=1): without the `judge` claim the
+ * server refuses everything, so the app starts in offline sample mode and goes
+ * online once the access code is redeemed.
+ */
+export interface AccessModeDeps {
+  /** The ID token carries `judge: true` (a code was redeemed on this account). */
+  hasJudgeClaim: () => Promise<boolean>;
+  /** Forces a fresh ID token after a redeem, so the claim reaches the server calls. */
+  refreshIdToken: () => Promise<void>;
+  accessCodeService: AccessCodeService;
+  /** The bundled sample book: offline repositories, online seeding, example fallback. */
+  sampleBook: SampleBookHooks<AppServices>;
+}
+
 export interface AppProps {
   /** Injectable in tests; default: real Firebase (emulators in development). */
   createServices?: (uid: string) => AppServices;
   signIn?: () => Promise<string>;
+  /** Injectable in tests; default: on only in the judges build. null = off. */
+  accessMode?: AccessModeDeps | null;
 }
+
+// The sample book (features/sample, judges' build): offline without the code,
+// seeded into the user's space once the code is accepted, and its pre-recorded
+// examples standing in when the live AI is unavailable.
+const SAMPLE_BOOK_HOOKS: SampleBookHooks<AppServices> = isSampleBookEnabled
+  ? {
+      createOfflineRepositories: () => createOfflineSampleRepositories(),
+      seedOnline: (services, uid) =>
+        seedSampleBook({
+          bookRepository: services.bookRepository as FirestoreBookRepository,
+          marker: AsyncStorage,
+          uid,
+        }),
+      wrapOnlineProvider: (inner) =>
+        new ExampleFallbackSuggestionsProvider({ inner, isAiUnavailable }),
+    }
+  : (NO_SAMPLE_BOOK as SampleBookHooks<AppServices>);
+
+function defaultAccessMode(): AccessModeDeps | null {
+  if (!isAccessGateEnabled() || isE2E) return null;
+  return {
+    hasJudgeClaim: () => hasJudgeClaim(auth),
+    refreshIdToken: () => refreshIdToken(auth),
+    accessCodeService: new CallableAccessCodeService({ functions }),
+    sampleBook: SAMPLE_BOOK_HOOKS,
+  };
+}
+
+/** Every server call goes through the access code prompt (judges build). */
+function withAccessGate(
+  services: AppServices,
+  gate: AccessCodeGate,
+  wrapProvider: (inner: SuggestionsProvider) => SuggestionsProvider = (inner) => inner,
+): AppServices {
+  return {
+    ...services,
+    suggestionsProvider: wrapProvider(
+      new GatedSuggestionsProvider(services.suggestionsProvider, gate),
+    ),
+    outlineService: new GatedOutlineService(services.outlineService, gate),
+    exportService: new GatedBookExportService(services.exportService, gate),
+    backupService: new GatedBackupService(services.backupService, gate),
+    ...(services.titleService === undefined
+      ? {}
+      : { titleService: new GatedTitleRefineService(services.titleService, gate) }),
+  };
+}
+
+/** 'redeemed': online after a code entered in this session (the sample book still to seed). */
+type AccessState = 'checking' | 'offline' | 'online' | 'redeemed';
 
 function defaultServices(uid: string): AppServices {
   const dailyProgressRepository = new LocalDailyProgressRepository();
@@ -390,9 +480,26 @@ function AppNavigator({ services }: { services: AppServices }) {
   }
 }
 
-export default function App({ createServices, signIn }: AppProps = {}) {
+export default function App({ createServices, signIn, accessMode: accessModeProp }: AppProps = {}) {
   const fontsReady = useAppFonts();
   const [uid, setUid] = useState<string | null>(null);
+  // fixed for the lifetime of the app, like the services factory
+  const [accessMode] = useState(() =>
+    accessModeProp === undefined ? defaultAccessMode() : accessModeProp,
+  );
+  const [access, setAccess] = useState<AccessState>(accessMode ? 'checking' : 'online');
+  const [gate] = useState(() => {
+    if (!accessMode) return null;
+    return new AccessCodeGate({
+      redeem: async (code) => {
+        await accessMode.accessCodeService.redeem(code);
+        // the claim is in the token only after a refresh: before it the server still refuses
+        await accessMode.refreshIdToken();
+        console.info('access-mode', { mode: 'online', via: 'redeem' });
+        setAccess('redeemed');
+      },
+    });
+  });
   const [authError, setAuthError] = useState(false);
   // bumped by the Retry button of the startup screen: opening is tried again
   const [attempt, setAttempt] = useState(0);
@@ -423,12 +530,45 @@ export default function App({ createServices, signIn }: AppProps = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
+  // judges build: the claim decides between offline sample mode and the server
+  useEffect(() => {
+    if (uid === null || !accessMode) return;
+    let cancelled = false;
+    accessMode
+      .hasJudgeClaim()
+      .catch(() => false) // unreadable token (offline, expired): stay off the server
+      .then((judge) => {
+        if (cancelled) return;
+        console.info('access-mode', { mode: judge ? 'online' : 'offline', via: 'startup' });
+        setAccess((current) => (current === 'checking' ? (judge ? 'online' : 'offline') : current));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [uid, accessMode]);
+
   const services = useMemo(() => {
-    if (uid === null) return null;
-    return (createServices ?? (isE2E ? e2eServices : defaultServices))(uid);
+    if (uid === null || access === 'checking') return null;
+    if (access === 'offline' && accessMode && gate) {
+      return withAccessGate(offlineSampleServices(accessMode.sampleBook), gate);
+    }
+    const online = (createServices ?? (isE2E ? e2eServices : defaultServices))(uid);
+    return accessMode && gate
+      ? withAccessGate(online, gate, accessMode.sampleBook.wrapOnlineProvider)
+      : online;
     // the factory is fixed for the lifetime of the app
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uid]);
+  }, [uid, access]);
+
+  // after a redeem: the sample book also in the user's online space (create-if-missing)
+  useEffect(() => {
+    if (access !== 'redeemed' || services === null || uid === null) return;
+    accessMode?.sampleBook.seedOnline(services, uid).catch((error: unknown) => {
+      console.warn('sample-online-seed-failed', {
+        code: error instanceof Error ? error.name : typeof error,
+      });
+    });
+  }, [access, services, uid, accessMode]);
 
   if (!fontsReady || services === null || !minShown) {
     // the opening screen (black, gold mark, slow rays) until fonts and identity are
@@ -449,7 +589,20 @@ export default function App({ createServices, signIn }: AppProps = {}) {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppNavigator services={services} />
+        {gate ? (
+          <View style={{ flex: 1 }}>
+            {access === 'offline' ? (
+              <SampleModeBanner onEnterCode={() => void gate.requestCode()} />
+            ) : null}
+            <View style={{ flex: 1 }}>
+              {/* a new key on going online: every screen remounts on the new services */}
+              <AppNavigator key={access} services={services} />
+            </View>
+            <AccessCodeModalHost gate={gate} />
+          </View>
+        ) : (
+          <AppNavigator services={services} />
+        )}
         <ThemedSystemBars />
       </ThemeProvider>
     </SafeAreaProvider>

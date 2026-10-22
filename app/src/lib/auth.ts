@@ -35,3 +35,22 @@ export function ensureSignedIn(auth: Auth): Promise<string> {
     );
   });
 }
+
+/**
+ * Judges build: true when the signed-in user's ID token carries the `judge`
+ * claim, set by the server once a valid access code is redeemed. Without it
+ * the server refuses every call, so the app stays in offline sample mode.
+ */
+export async function hasJudgeClaim(auth: Auth): Promise<boolean> {
+  const user = auth.currentUser;
+  if (user === null) return false;
+  const token = await user.getIdTokenResult();
+  return token.claims.judge === true;
+}
+
+/** Fetches a fresh ID token, so a claim just set by the server reaches Firestore and Functions. */
+export async function refreshIdToken(auth: Auth): Promise<void> {
+  const user = auth.currentUser;
+  if (user === null) throw new Error('No signed-in user');
+  await user.getIdToken(true);
+}

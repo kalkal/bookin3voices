@@ -5,7 +5,11 @@
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { z } from 'zod';
 
-import { callableErrorMessage, logCallableFailure } from '../../lib/callableErrors';
+import {
+  callableErrorMessage,
+  isAccessCodeRequired,
+  logCallableFailure,
+} from '../../lib/callableErrors';
 
 export interface TitleRefineRequest {
   bookId: string;
@@ -15,7 +19,10 @@ export interface TitleRefineRequest {
   requestId: string;
 }
 
-export type TitleRefineResult = { ok: true; proposals: string[] } | { ok: false; message: string };
+export type TitleRefineResult =
+  | { ok: true; proposals: string[] }
+  /** accessCodeRequired: the judges' demo server asks for the access code first. */
+  | { ok: false; message: string; accessCodeRequired?: boolean };
 
 export interface TitleRefineService {
   suggestTitles(request: TitleRefineRequest): Promise<TitleRefineResult>;
@@ -43,7 +50,11 @@ export class CallableTitleRefineService implements TitleRefineService {
       return { ok: true, proposals: responseSchema.parse(result.data).proposals };
     } catch (error) {
       logCallableFailure('title', request.requestId, error);
-      return { ok: false, message: callableErrorMessage('title', error) };
+      return {
+        ok: false,
+        message: callableErrorMessage('title', error),
+        ...(isAccessCodeRequired(error) ? { accessCodeRequired: true } : {}),
+      };
     }
   }
 }

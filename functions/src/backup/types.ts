@@ -5,6 +5,8 @@
 
 import { z } from 'zod';
 
+import { docIdSchema } from '../docId';
+
 /**
  * Input of the `exportBackup` callable. Without `bookId`, ALL books are
  * exported (the main use case of this callable: take everything home). The
@@ -12,7 +14,7 @@ import { z } from 'zod';
  * `users/{uid}/exports/{requestId}`: characters safe for a Firestore id.
  */
 export const exportBackupInputSchema = z.object({
-  bookId: z.string().min(1).optional(),
+  bookId: docIdSchema.optional(),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
 });
 

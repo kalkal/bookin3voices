@@ -11,11 +11,14 @@ import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 
 import { bookForRefineSchema, chapterForRefineSchema, type RefineModel } from './refineTypes';
+import { demoUsageLimits, requireDemoAccess } from '../demo/demoGate';
+import { docIdSchema } from '../docId';
+import { reportSuspiciousInput } from '../security/suspiciousInput';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
 export const refineTitleInputSchema = z.object({
-  bookId: z.string().min(1),
-  chapterId: z.string().min(1),
+  bookId: docIdSchema,
+  chapterId: docIdSchema,
   /** The title as the user sees it (may be empty: then the model proposes one). */
   title: z.string().max(200),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
@@ -158,8 +161,12 @@ async function loadTitleContext(
 export function createRefineTitleHandler(args: {
   db: Firestore;
   model: RefineModel;
-  usageLimits?: Record<UsageAction, UsageLimit>;
+  usageLimits?: Partial<Record<UsageAction, UsageLimit>>;
+  /** Judges' demo (DEMO_GATE=1): access code, demo caps (demo/demoGate.ts). */
+  demoGate?: boolean;
+  now?: () => number;
 }): (request: CallableRequest<unknown>) => Promise<RefineTitleResponse> {
+  const now = args.now ?? Date.now;
   return async (request) => {
     const uid = request.auth?.uid;
     if (uid === undefined) throw new HttpsError('unauthenticated', 'Sign-in required.');
@@ -167,16 +174,22 @@ export function createRefineTitleHandler(args: {
     if (!parsed.success) {
       throw new HttpsError('invalid-argument', 'Expected { bookId, chapterId, title, requestId }.');
     }
+    // judges' demo: open demo + claim + this phone's current code, then the demo caps
+    const demo =
+      args.demoGate === true
+        ? await requireDemoAccess(args.db, uid, request.auth?.token, now())
+        : undefined;
+    const limits = demo !== undefined ? demoUsageLimits(demo) : args.usageLimits;
     return runRefineTitle(
       {
         loadContext: (u, input) => loadTitleContext(args.db, u, input),
-        enforceLimit: (u) =>
-          enforceUsageLimit({
-            db: args.db,
-            uid: u,
-            action: 'refineTitle',
-            limits: args.usageLimits,
-          }),
+        enforceLimit: async (u) => {
+          await enforceUsageLimit({ db: args.db, uid: u, action: 'refineTitle', now, limits });
+          // monitoring only, after the cap: the title is data, flagged by kind, never refused
+          reportSuspiciousInput('chapterTitle', parsed.data.title, {
+            requestId: parsed.data.requestId,
+          });
+        },
         model: args.model,
         log: (message, data) => logger.info(message, data),
       },

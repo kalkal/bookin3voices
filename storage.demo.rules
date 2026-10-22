@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Judges' demo project: the app stores no files, so Storage is closed to
+// everyone; only the server (admin SDK) could write there.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

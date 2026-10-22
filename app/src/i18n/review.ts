@@ -73,6 +73,9 @@ export const review: Namespace = {
     'review.card.accept': 'Accept',
     'review.history.period': 'Period detail',
     'review.history.anachronism': 'Possible anachronism',
+    'review.example.label': 'Example — pre-recorded, not live AI',
+    'review.example.body':
+      'The AI cannot be reached right now: these suggestions were recorded in advance for this sample chapter.',
     'review.history.toCheck': 'A hint to check on a reliable source, not a certain fact.',
     'review.history.oneByOne': 'History hints are accepted one at a time.',
   },
@@ -151,6 +154,9 @@ export const review: Namespace = {
     'review.card.accept': 'Accetta',
     'review.history.period': 'Dettaglio d’epoca',
     'review.history.anachronism': 'Possibile anacronismo',
+    'review.example.label': 'Esempio — registrato, non AI dal vivo',
+    'review.example.body':
+      'Ora l’AI non è raggiungibile: questi suggerimenti sono stati registrati in anticipo per questo capitolo di esempio.',
     'review.history.toCheck': 'Spunto da verificare su una fonte affidabile, non un fatto certo.',
     'review.history.oneByOne': 'Gli spunti storici si accettano uno alla volta.',
   },

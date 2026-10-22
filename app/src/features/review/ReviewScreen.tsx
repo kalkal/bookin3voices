@@ -24,6 +24,8 @@ import { Card, Chip, Screen, useBottomClearance } from '../../components';
 import type { ChipTone } from '../../components';
 import { t, tn } from '../../i18n';
 import { useTheme } from '../../theme';
+import { isExampleSuggestion } from './example';
+import { ExampleLabel } from './ExampleLabel';
 import { HISTORY_ASPECT_LABELS, KIND_LABELS, SUGGESTION_KINDS } from './types';
 import type { Suggestion, SuggestionKind } from './types';
 import type { ChapterReviewController } from './useChapterReview';
@@ -49,6 +51,8 @@ export function ReviewScreen({
 
   const pending = controller.suggestions.filter((s) => s.state === 'pending');
   const visible = filter === 'all' ? pending : pending.filter((s) => s.kind === filter);
+  // pre-recorded examples (judges' build) are never shown as live AI
+  const showsExamples = pending.some(isExampleSuggestion);
 
   return (
     <Screen testID="review-screen">
@@ -81,6 +85,12 @@ export function ReviewScreen({
           </Text>
         </View>
       </View>
+
+      {showsExamples ? (
+        <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.md }}>
+          <ExampleLabel testID="review-example-label" />
+        </View>
+      ) : null}
 
       {outlinePanel}
 
@@ -311,6 +321,9 @@ function SuggestionCard({
             {t('review.card.line', { line })}
           </Text>
         </View>
+        {isExampleSuggestion(suggestion) ? (
+          <ExampleLabel compact testID={`review-card-example-${suggestion.id}`} />
+        ) : null}
 
         {hasVariants ? (
           <>
