@@ -9,7 +9,7 @@ import {
 
 describe('history prompts', () => {
   it('version', () => {
-    expect(HISTORY_PROMPT_VERSION).toBe(3);
+    expect(HISTORY_PROMPT_VERSION).toBe(4);
   });
 
   it('snapshot: detect step', () => {

@@ -82,9 +82,12 @@ describe('generateOutlineInputSchema', () => {
   });
 
   it('accepts the book style, and still accepts older clients that do not send it', () => {
-    for (const styleId of ['suspense', 'mystery', 'thriller']) {
+    for (const styleId of ['suspense', 'mystery', 'historical']) {
       expect(generateOutlineInputSchema.safeParse({ ...valido, styleId }).success).toBe(true);
     }
+    // an app from before the switch may still send the retired thriller style
+    const legacy = generateOutlineInputSchema.safeParse({ ...valido, styleId: 'thriller' });
+    expect(legacy.success && legacy.data.styleId).toBe('historical');
     expect(generateOutlineInputSchema.safeParse(valido).success).toBe(true);
   });
 

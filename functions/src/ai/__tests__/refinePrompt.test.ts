@@ -13,7 +13,7 @@ import {
 const BASE_INPUT = {
   styleBible: '# Style Bible di prova\nRegola zero: la voce è intoccabile.',
   fewShots: '## Esempio 1\nTesto → suggerimento.',
-  book: { title: 'Il mulino', genre: 'thriller', language: 'it', synopsis: '' },
+  book: { title: 'Il mulino', genre: 'romanzo storico', language: 'it', synopsis: '' },
   chapter: { title: 'La tempesta', outline: null },
   text: 'Elena posò lentamente la tazza sul tavolo.',
 };

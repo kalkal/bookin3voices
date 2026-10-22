@@ -34,13 +34,15 @@ async function renderPicker(styleProfileId: string | null, onChange = jest.fn())
 }
 
 describe('style registry (app mirror)', () => {
-  it('offers suspense, mystery and thriller; unknown ids resolve to the default', () => {
+  it('offers suspense, mystery and historical; unknown ids resolve to the default', () => {
     expect(STYLES.map((s) => s.id)).toEqual([...STYLE_IDS]);
-    expect(STYLE_IDS).toEqual(['suspense', 'mystery', 'thriller']);
+    expect(STYLE_IDS).toEqual(['suspense', 'mystery', 'historical']);
     expect(DEFAULT_STYLE_ID).toBe('suspense');
     expect(resolveStyleId(null)).toBe('suspense');
     expect(resolveStyleId('skynet')).toBe('suspense');
-    expect(resolveStyleId('thriller')).toBe('thriller');
+    expect(resolveStyleId('historical')).toBe('historical');
+    // books saved with the retired thriller style open as historical
+    expect(resolveStyleId('thriller')).toBe('historical');
   });
 });
 
@@ -60,7 +62,14 @@ describe('StylePicker', () => {
 
   it('tapping a style reports its id', async () => {
     const { screen, onChange } = await renderPicker('suspense');
-    await fireEvent.press(screen.getByTestId('style-option-thriller'));
-    expect(onChange).toHaveBeenCalledWith('thriller');
+    await fireEvent.press(screen.getByTestId('style-option-historical'));
+    expect(onChange).toHaveBeenCalledWith('historical');
+  });
+
+  it('a book saved as thriller shows Storico selected, without rewriting it', async () => {
+    const { screen, onChange } = await renderPicker('thriller');
+    expect(screen.getByTestId('style-summary')).toHaveTextContent(/epoca/);
+    expect(screen.queryByTestId('style-option-thriller')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

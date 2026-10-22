@@ -2,7 +2,7 @@
 // the prompt (for any provider, the prompt is provider-neutral) and an unknown
 // style falls back to the default.
 
-import { buildPromptForBook } from '../refineChapter';
+import { buildPromptForBook, historyOptionsForBook } from '../refineChapter';
 import { buildRefinePrompt } from '../refinePrompt';
 import { DEFAULT_STYLE_ID, resolveStyleId, STYLES, STYLE_IDS, type StyleId } from '../styles';
 import { loadStyleProfileContent } from '../styleProfileContent';
@@ -11,7 +11,7 @@ import { loadStyleProfileContent } from '../styleProfileContent';
 const MARKERS: Record<StyleId, string[]> = {
   suspense: ['threat the reader has not yet seen', 'sensory detail', 'show the unease'],
   mystery: ['fair play', 'red herrings', 'clue'],
-  thriller: ['deadline', 'cliffhanger', 'short sentences'],
+  historical: ['period voice', 'info-dump', 'the people of the time'],
 };
 
 /** The "Text" blockquote of every few-shot example. */
@@ -25,9 +25,13 @@ function exampleTexts(fewShots: string): string[] {
 }
 
 describe('style registry', () => {
-  it('has suspense, mystery and thriller with en and it labels', () => {
+  it('has suspense, mystery and historical with en and it labels', () => {
     expect(STYLES.map((s) => s.id)).toEqual([...STYLE_IDS]);
-    expect(STYLE_IDS).toEqual(['suspense', 'mystery', 'thriller']);
+    expect(STYLE_IDS).toEqual(['suspense', 'mystery', 'historical']);
+    expect(STYLES.find((s) => s.id === 'historical')?.label).toEqual({
+      en: 'Historical fiction',
+      it: 'Storico',
+    });
     for (const style of STYLES) {
       expect(style.label.en).not.toBe('');
       expect(style.label.it).not.toBe('');
@@ -51,7 +55,11 @@ describe('style registry', () => {
       expect(resolveStyleId(raw)).toBe('suspense');
     }
     expect(resolveStyleId('mystery')).toBe('mystery');
-    expect(resolveStyleId('thriller')).toBe('thriller');
+    expect(resolveStyleId('historical')).toBe('historical');
+  });
+
+  it('a book saved with the retired thriller style opens as historical', () => {
+    expect(resolveStyleId('thriller')).toBe('historical');
   });
 });
 
@@ -78,7 +86,7 @@ describe('examples differ between styles', () => {
   });
 
   it('the three genre-voice examples are distinct', () => {
-    const voices = [/Elena had not run it/, /stopped at ten past nine/, /Twelve minutes/];
+    const voices = [/Elena had not run it/, /stopped at ten past nine/, /inkwell was dry/];
     const profiles = STYLE_IDS.map((id) => loadStyleProfileContent(id).fewShots);
     voices.forEach((voice, index) => {
       expect(profiles[index]).toMatch(voice);
@@ -105,7 +113,7 @@ describe('the chosen style reaches the prompt', () => {
     const systems = STYLE_IDS.map((id) => build(id).systemInstruction);
     expect(new Set(systems).size).toBe(3);
     expect(systems[1]).toContain('Fair play');
-    expect(systems[2]).toContain('Cliffhanger');
+    expect(systems[2]).toContain('Period voice');
     expect(systems[0]).toContain('threat the reader has not yet seen');
   });
 
@@ -142,5 +150,27 @@ describe('buildPromptForBook (the book choice reaches the loader and the prompt)
   it('null or unknown book style loads the default', () => {
     expect(run(null).requested).toEqual(['suspense']);
     expect(run('not-a-style').requested).toEqual(['suspense']);
+  });
+
+  it('a book saved with the retired thriller style gets the historical instructions', () => {
+    const { requested, prompt } = run('thriller');
+    expect(requested).toEqual(['historical']);
+    expect(prompt.systemInstruction).toContain('Period voice');
+  });
+});
+
+describe('historyOptionsForBook (the «Storico» style checks the period on every chapter)', () => {
+  it('historical, and a book saved as thriller, check every chapter with the synopsis', () => {
+    for (const styleProfileId of ['historical', 'thriller']) {
+      expect(historyOptionsForBook({ styleProfileId, synopsis: 'Naples, 1943.' })).toEqual({
+        everyChapter: { synopsis: 'Naples, 1943.' },
+      });
+    }
+  });
+
+  it('other styles check only chapters that name a period', () => {
+    for (const styleProfileId of ['suspense', 'mystery', null, 'not-a-style']) {
+      expect(historyOptionsForBook({ styleProfileId, synopsis: 'Naples, 1943.' })).toEqual({});
+    }
   });
 });

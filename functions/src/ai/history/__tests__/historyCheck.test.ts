@@ -73,6 +73,149 @@ describe('runHistoryCheck', () => {
     expect(result.calls).toBe(1);
   });
 
+  describe('«Storico» style: every chapter is checked', () => {
+    const CHAPTER =
+      'Elena salì le scale. In cucina la madre aveva lasciato la lavatrice accesa. ' +
+      'Qualcuno correva verso il porto.';
+    const SYNOPSIS = 'Napoli, agosto 1943: una famiglia sotto i bombardamenti.';
+
+    it('takes the period from the synopsis when the chapter names none', async () => {
+      const { provider, requests } = scripted([NO_PERIOD, PERIOD, REPORT]);
+      const result = await runHistoryCheck({
+        provider,
+        text: CHAPTER,
+        language: 'it',
+        everyChapter: { synopsis: SYNOPSIS },
+      });
+      expect(result.calls).toBe(3);
+      expect(result.periodLabel).toBe('Naples, 1943');
+      expect(requests[1]?.userText).toContain(SYNOPSIS);
+      expect(requests[2]?.systemInstruction).toContain(
+        'Evidence in the book synopsis: "Napoli, agosto 1943"',
+      );
+      expect(requests[2]?.userText).toContain(CHAPTER);
+      expect(result.suggestions.map((s) => s.aspect)).toEqual(['anachronism', 'period']);
+    });
+
+    it('without a period anywhere: anachronisms only, never a period detail', async () => {
+      const { provider, requests } = scripted([NO_PERIOD, NO_PERIOD, REPORT]);
+      const result = await runHistoryCheck({
+        provider,
+        text: CHAPTER,
+        language: 'it',
+        everyChapter: { synopsis: 'Una famiglia e la sua casa.' },
+      });
+      expect(result.calls).toBe(3);
+      expect(result.periodLabel).toBeNull();
+      expect(requests[2]?.systemInstruction).toContain('period_details MUST be an empty list');
+      expect(result.suggestions).toEqual([
+        expect.objectContaining({ aspect: 'anachronism', original: 'lavatrice' }),
+      ]);
+      expect(result.dropped).toBe(1);
+    });
+
+    it('an empty synopsis is not asked: straight to the anachronisms', async () => {
+      const { provider, requests } = scripted([NO_PERIOD, REPORT]);
+      const result = await runHistoryCheck({
+        provider,
+        text: CHAPTER,
+        language: 'it',
+        everyChapter: { synopsis: '  ' },
+      });
+      expect(result.calls).toBe(2);
+      expect(requests[1]?.systemInstruction).toContain('Neither the chapter');
+      expect(result.suggestions.map((s) => s.aspect)).toEqual(['anachronism']);
+    });
+
+    it('a period the synopsis does not really contain does not count', async () => {
+      const { provider, requests } = scripted([
+        NO_PERIOD,
+        ok({ period_named: true, quote: 'Roma, 1950', period_label: 'Rome, 1950' }),
+        REPORT,
+      ]);
+      const result = await runHistoryCheck({
+        provider,
+        text: CHAPTER,
+        language: 'it',
+        everyChapter: { synopsis: SYNOPSIS },
+      });
+      expect(result.periodLabel).toBeNull();
+      expect(requests[2]?.systemInstruction).toContain('Neither the chapter');
+    });
+
+    it('a period named in the chapter wins over the synopsis', async () => {
+      const { provider, requests } = scripted([
+        PERIOD,
+        ok({ period_named: true, quote: 'Roma, 1950', period_label: 'Rome, 1950' }),
+        REPORT,
+      ]);
+      const result = await runHistoryCheck({
+        provider,
+        text: NAPOLI,
+        language: 'it',
+        everyChapter: { synopsis: 'Roma, 1950.' },
+      });
+      expect(result.calls).toBe(3);
+      expect(result.periodLabel).toBe('Naples, 1943');
+      expect(requests[2]?.systemInstruction).toContain('Evidence in the passage');
+    });
+
+    it('asks the chapter and the synopsis at the same time: two steps, as without it', async () => {
+      // each call takes 10 s: one after the other the three would need 30 s,
+      // past the check's 25 s deadline; together they need 20 s
+      jest.useFakeTimers();
+      try {
+        const results = [NO_PERIOD, PERIOD, REPORT];
+        let inFlight = 0;
+        let mostInFlight = 0;
+        let next = 0;
+        const provider: AiProvider = {
+          name: 'bedrock',
+          modelName: 'slow-nova',
+          generateJson: async () => {
+            const result = results[next++] as AiResult;
+            inFlight += 1;
+            mostInFlight = Math.max(mostInFlight, inFlight);
+            await new Promise((resolve) => setTimeout(resolve, 10_000));
+            inFlight -= 1;
+            return result;
+          },
+        };
+        const pending = runHistoryCheckWithin({
+          provider,
+          text: CHAPTER,
+          language: 'it',
+          everyChapter: { synopsis: SYNOPSIS },
+        });
+        await jest.advanceTimersByTimeAsync(30_000);
+        const result = await pending;
+        expect(mostInFlight).toBe(2);
+        expect(result.error).toBeUndefined();
+        expect(result.periodLabel).toBe('Naples, 1943');
+        expect(result.suggestions.map((s) => s.aspect)).toEqual(['anachronism', 'period']);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('a failed synopsis call means no history, never a failed refinement', async () => {
+      const failed: AiResult = {
+        ok: false,
+        error: aiError('unavailable', 'down'),
+      };
+      const { provider } = scripted([NO_PERIOD, failed]);
+      const result = await runHistoryCheck({
+        provider,
+        text: CHAPTER,
+        language: 'it',
+        everyChapter: { synopsis: SYNOPSIS },
+      });
+      expect(result.suggestions).toEqual([]);
+      expect(result.calls).toBe(2);
+      expect(result.error?.kind).toBe('unavailable');
+    });
+  });
+
   it('returns a period detail and an anachronism, each a hint to check', async () => {
     const { provider, requests } = scripted([PERIOD, REPORT]);
     const result = await runHistoryCheck({ provider, text: NAPOLI, language: 'it' });

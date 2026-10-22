@@ -132,7 +132,7 @@ describe('buildRefineDebugTrace', () => {
     const t = buildRefineDebugTrace({
       promptVersion: 3,
       model: 'm',
-      book: { genre: '', language: 'it', synopsis: '', styleProfileId: 'thriller' },
+      book: { genre: '', language: 'it', synopsis: '', styleProfileId: 'historical' },
       chapter: { title: '', outline: null },
       text: long,
       textHash: textHash(long),
@@ -143,7 +143,7 @@ describe('buildRefineDebugTrace', () => {
       normalized: normalizeSuggestions({ suggestions: [] }, long, textHash(long), 'r'),
     });
     expect(t.context.textSnippet).toHaveLength(TRACE_SNIPPET_CHARS);
-    expect(t.context.style).toBe('thriller');
+    expect(t.context.style).toBe('historical');
     expect(t.history).toBeNull();
   });
 });

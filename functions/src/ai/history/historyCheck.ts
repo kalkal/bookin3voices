@@ -6,6 +6,9 @@
 // anachronisms; every rationale starts with "Da verificare:" / "To check:".
 // Failures are values: a failed call means no history suggestions, never a
 // failed refinement.
+// With the «Storico» style the check runs on every chapter: a chapter that does
+// not name its period takes it from the book's synopsis (same evidence rule);
+// when neither names one, only anachronisms are reported, never period details.
 
 import { z } from 'zod';
 
@@ -16,6 +19,7 @@ import {
   HISTORY_CATEGORIES,
   buildDetectPeriodPrompt,
   buildReportHistoryPrompt,
+  type PeriodEvidence,
 } from './historyPrompt';
 
 type ModelSuggestion = ModelOutput['suggestions'][number];
@@ -28,9 +32,9 @@ const REPORT_MAX_TOKENS = 1200;
 export interface HistoryCheckResult {
   /** `history` suggestions, not yet located (normalizeSuggestions does that). */
   suggestions: ModelSuggestion[];
-  /** Model calls made (1 without a period, 2 with one). */
+  /** Model calls made: 1 per text asked for the period (chapter, synopsis) + 1 report. */
   calls: number;
-  /** The period found in the text, or null. */
+  /** The period found in the text or in the synopsis, or null. */
   periodLabel: string | null;
   /** Items from the model dropped by the checks (diagnostics). */
   dropped: number;
@@ -126,37 +130,75 @@ export async function runHistoryCheck(args: {
   provider: AiProvider;
   text: string;
   language: string;
+  /**
+   * «Storico» style: check every chapter. The synopsis is asked for the period
+   * together with the chapter and counts only when the chapter names none;
+   * without one anywhere, only anachronisms are reported.
+   */
+  everyChapter?: { synopsis: string };
 }): Promise<HistoryCheckResult> {
-  const { provider, text, language } = args;
+  const { provider, text, language, everyChapter } = args;
 
-  const detected = await provider.generateJson({
-    ...buildDetectPeriodPrompt(text),
-    temperature: 0,
-    maxOutputTokens: DETECT_MAX_TOKENS,
-  });
-  if (!detected.ok)
-    return { suggestions: [], calls: 1, periodLabel: null, dropped: 0, error: detected.error };
-  const period = detectSchema.safeParse(detected.value);
-  if (!period.success) {
-    return { suggestions: [], calls: 1, periodLabel: null, dropped: 0, error: invalidReply() };
-  }
-  const quote = period.data.quote.trim();
-  // the code checks the evidence: a period the text does not name does not exist
-  if (!period.data.period_named || quote === '' || !text.includes(quote)) {
-    return { suggestions: [], calls: 1, periodLabel: null, dropped: 0 };
-  }
-  const periodLabel = period.data.period_label.trim() || quote;
+  let calls = 0;
+  const detect = async (
+    source: string,
+  ): Promise<{ label: string; quote: string } | AiError | null> => {
+    calls += 1;
+    const detected = await provider.generateJson({
+      ...buildDetectPeriodPrompt(source),
+      temperature: 0,
+      maxOutputTokens: DETECT_MAX_TOKENS,
+    });
+    if (!detected.ok) return detected.error;
+    const period = detectSchema.safeParse(detected.value);
+    if (!period.success) return invalidReply();
+    const quote = period.data.quote.trim();
+    // the code checks the evidence: a period the source does not name does not exist
+    if (!period.data.period_named || quote === '' || !source.includes(quote)) return null;
+    return { label: period.data.period_label.trim() || quote, quote };
+  };
+  const isError = (found: unknown): found is AiError =>
+    typeof found === 'object' && found !== null && 'kind' in found;
 
+  // the chapter and the synopsis are asked AT THE SAME TIME: two steps in a row
+  // (locate, report), as without the synopsis, so the check fits its deadline
+  const synopsis = everyChapter?.synopsis.trim() ?? '';
+  const [inChapter, inSynopsis] = await Promise.all([
+    detect(text),
+    synopsis === '' ? Promise.resolve(null) : detect(synopsis),
+  ]);
+  if (isError(inChapter))
+    return { suggestions: [], calls, periodLabel: null, dropped: 0, error: inChapter };
+  let found = inChapter;
+  let evidence: PeriodEvidence = 'passage';
+  if (found === null) {
+    if (everyChapter === undefined)
+      return { suggestions: [], calls, periodLabel: null, dropped: 0 };
+    if (isError(inSynopsis)) {
+      return { suggestions: [], calls, periodLabel: null, dropped: 0, error: inSynopsis };
+    }
+    found = inSynopsis;
+    evidence = found === null ? 'none' : 'synopsis';
+  }
+  const periodLabel = found?.label ?? null;
+
+  calls += 1;
   const reported = await provider.generateJson({
-    ...buildReportHistoryPrompt({ text, periodLabel, quote, language }),
+    ...buildReportHistoryPrompt({
+      text,
+      periodLabel: found?.label ?? '',
+      quote: found?.quote ?? '',
+      evidence,
+      language,
+    }),
     temperature: 0,
     maxOutputTokens: REPORT_MAX_TOKENS,
   });
   if (!reported.ok)
-    return { suggestions: [], calls: 2, periodLabel, dropped: 0, error: reported.error };
+    return { suggestions: [], calls, periodLabel, dropped: 0, error: reported.error };
   const report = reportSchema.safeParse(reported.value);
   if (!report.success) {
-    return { suggestions: [], calls: 2, periodLabel, dropped: 0, error: invalidReply() };
+    return { suggestions: [], calls, periodLabel, dropped: 0, error: invalidReply() };
   }
 
   const suggestions: ModelSuggestion[] = [];
@@ -203,7 +245,8 @@ export async function runHistoryCheck(args: {
   const anachronismTexts = suggestions.map((sug) => sug.original);
 
   let details = 0;
-  for (const raw of report.data.period_details) {
+  // without a named period a "detail of the time" would be a guess: none
+  for (const raw of evidence === 'none' ? [] : report.data.period_details) {
     const item = detailSchema.safeParse(raw);
     if (
       !item.success ||
@@ -233,7 +276,8 @@ export async function runHistoryCheck(args: {
     if (kept) details += 1;
   }
 
-  return { suggestions, calls: 2, periodLabel, dropped };
+  if (evidence === 'none') dropped += report.data.period_details.length;
+  return { suggestions, calls, periodLabel, dropped };
 }
 
 type Range = { from: number; to: number };

@@ -7,7 +7,7 @@
 import { z } from 'zod';
 
 import type { OutlinePrompt } from './outlinePrompt';
-import { STYLE_IDS } from './styles';
+import { resolveStyleId, RETIRED_STYLE_IDS, STYLE_IDS } from './styles';
 
 /**
  * A chapter proposed by the outline: title, summary and main beats.
@@ -39,8 +39,14 @@ export const generateOutlineInputSchema = z.object({
   bookId: z.string().min(1),
   synopsis: z.string().trim().min(1).max(20_000),
   requestId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
-  /** The book's style as the app sees it; optional for older clients (the book's is used). */
-  styleId: z.enum(STYLE_IDS).optional(),
+  /**
+   * The book's style as the app sees it; optional for older clients (the book's
+   * is used). A retired id from an older app (thriller) maps to its successor.
+   */
+  styleId: z
+    .enum([...STYLE_IDS, ...(Object.keys(RETIRED_STYLE_IDS) as [string, ...string[]])])
+    .transform((id) => resolveStyleId(id))
+    .optional(),
 });
 
 export type GenerateOutlineInput = z.infer<typeof generateOutlineInputSchema>;

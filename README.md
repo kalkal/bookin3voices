@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/images/header.png" alt="bookin3voice: suspense, mystery, thriller" width="720"></p>
+<p align="center"><img src="docs/images/header.png" alt="bookin3voice: suspense, mystery, historical" width="720"></p>
 
 <p align="center"><a href="https://github.com/kalkal"><img src="docs/brand/kalkal-mark.svg" alt="kalkal" height="56"></a></p>
 
@@ -29,7 +29,7 @@ tells you what Amazon would reject before you upload.
   names a past period: period details that bring the scene to life and possible anachronisms,
   always as hints to check. You accept or reject each one. The AI never
   rewrites the chapter. Pick the style per book: **Suspense / Horror**, **Mystery (whodunit)**
-  or **Thriller**.
+  or **Historical fiction** (*Storico*).
 - **Outline generator**: from a synopsis to a chapter-by-chapter outline you confirm.
 - **KDP preflight check** before export: title and author, description length, empty chapters,
   blank table-of-contents entries, minimum length, and cover size and format when cover
@@ -44,7 +44,7 @@ tells you what Amazon would reject before you upload.
   forces one), and a new book is created in the interface language, which the AI uses.
 
 <p>
-  <img src="docs/images/book-styles.jpg" alt="Book screen with the style picker: Suspense / Horror, Mystery, Thriller" width="240">
+  <img src="docs/images/book-styles.jpg" alt="Book screen with the style picker" width="240">
   <img src="docs/images/editor-suggestions.jpg" alt="Chapter editor with the passages Amazon Nova flagged highlighted" width="240">
   <img src="docs/images/review-suggestions.jpg" alt="Suggestion cards with a reason and up to three proposals to accept or reject" width="240">
 </p>
@@ -154,13 +154,15 @@ prompt or text is ever logged).
 Defined in one place: `functions/src/ai/styles.ts` (ids and labels in English and Italian);
 the instructions and the invented example sentences of each style are in
 `content/style-profiles/<id>/`. The choice is stored per book (`styleProfileId`); an unknown
-or missing value falls back to Suspense / Horror. No style imitates a real author.
+or missing value falls back to Suspense / Horror; books saved with the retired `thriller`
+style open as Historical fiction (`RETIRED_STYLE_IDS`, the stored value is not rewritten).
+No style imitates a real author.
 
 | Style | What the suggestions look for |
 | --- | --- |
 | Suspense / Horror | tension from a threat not yet seen, sensory detail, body before mind |
 | Mystery (whodunit) | camouflaged clues, red herrings, fair play, reveals that come too early |
-| Thriller | concrete danger and a deadline, short sentences, cuts, cliffhangers |
+| Historical fiction (Storico) | period voice without modern idioms, history told through the scene not as a lesson, no hindsight; period facts are left to the History check |
 
 To add a style: add a folder under `content/style-profiles/`, an entry in
 `functions/src/ai/styles.ts` and in `app/src/features/books/styles.ts`; the tests check that

@@ -1,0 +1,61 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run (the period-check items are folded into the same reply).",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "pacing",
+        "original": "The turnpike trust had been set up by an act of Parliament some thirty years before, and its trustees, local landowners mostly, let the tolls to the highest bidder each spring at an auction held in the coaching inn.",
+        "proposals": [
+          "Since an act of Parliament some thirty years before, the trustees, local landowners mostly, let the tolls to the highest bidder each spring at the coaching inn."
+        ],
+        "rationale": "history lesson inside the scene"
+      },
+      {
+        "kind": "history",
+        "original": "checked his phone for the time",
+        "proposals": [
+          "checked the inn clock for the time"
+        ],
+        "rationale": "To check: there were no telephones in 1824; a pocket watch or a clock.",
+        "aspect": "anachronism"
+      },
+      {
+        "kind": "history",
+        "original": "lifted the bar",
+        "proposals": [
+          "lifted the toll bar"
+        ],
+        "rationale": "To check: turnpike gates were often called toll bars.",
+        "aspect": "period"
+      },
+      {
+        "kind": "grammar",
+        "original": "so the cart has two wheels this week as well he said.",
+        "proposals": [
+          "\"So the cart has two wheels this week as well,\" he said."
+        ],
+        "rationale": "dictation punctuation"
+      },
+      {
+        "kind": "style",
+        "original": "\"Okay,\" Ettore said",
+        "proposals": [
+          "\"Very well,\" Ettore said",
+          "\"All right,\" Ettore said"
+        ],
+        "rationale": "\"Okay\" belongs to a later time: in 1824 Ettore would say it another way"
+      },
+      {
+        "kind": "style",
+        "original": "and the frost was white on the gate and white on the farmer's beard and white on the mule's ears",
+        "proposals": [
+          "and the frost was white"
+        ],
+        "rationale": "repetition"
+      }
+    ]
+  },
+  "mustDrop": [
+    "and the frost was white on the gate and white on the farmer's beard and white on the mule's ears"
+  ]
+}

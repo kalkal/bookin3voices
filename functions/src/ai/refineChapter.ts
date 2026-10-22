@@ -105,6 +105,19 @@ export async function readAiProviderId(
 }
 
 /**
+ * «Storico»: the period check runs on every chapter, even one that does not
+ * name its period (the synopsis is asked then). Other styles: only chapters
+ * that name a period. Pure, so the style wiring is unit-tested.
+ */
+export function historyOptionsForBook(book: { styleProfileId: string | null; synopsis: string }): {
+  everyChapter?: { synopsis: string };
+} {
+  return resolveStyleId(book.styleProfileId) === 'historical'
+    ? { everyChapter: { synopsis: book.synopsis } }
+    : {};
+}
+
+/**
  * Builds the refine prompt for a book: the style is the book's own choice
  * (`styleProfileId`); anything unknown or unset falls back to the default.
  * Pure, so the style-to-prompt wiring is unit-tested without Firestore.
@@ -323,6 +336,7 @@ export async function runRefineChapter(
           provider: historyProvider(),
           text: scopeText,
           language: book.language,
+          ...historyOptionsForBook(book),
         }),
   ]);
   if (history?.error !== undefined) {

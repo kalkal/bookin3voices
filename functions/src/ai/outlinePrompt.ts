@@ -8,9 +8,9 @@
 // from where the book has got to. The real additive merge still belongs to the
 // app: the prompt is the first line of defense, not the guarantee.
 //
-// The book's writing style (Suspense / Mystery / Thriller, styles.ts) shapes the
+// The book's writing style (Suspense / Mystery / Storico, styles.ts) shapes the
 // structure: the same synopsis gives a different outline for a whodunit and for
-// a thriller.
+// a historical novel.
 
 import { resolveStyleId, STYLES, type StyleId } from './styles';
 
@@ -92,8 +92,8 @@ const STYLE_STRUCTURE: Record<StyleId, string> = {
     'la minaccia si sente prima di vederla: crescendo lento che accelera, ogni capitolo chiude su un’inquietudine nuova, la rivelazione arriva tardi.',
   mystery:
     'una domanda centrale (chi, come, perché) aperta presto; indizi distribuiti con fair play tra i capitoli, false piste, e un finale che riordina gli indizi già visti.',
-  thriller:
-    'pericolo concreto e una scadenza fin dall’inizio; capitoli brevi e serrati, colpi di scena, finali sospesi che spingono al capitolo dopo.',
+  historical:
+    'un’epoca precisa e coerente fin dal primo capitolo; la grande storia preme sulle scelte dei personaggi senza diventare lezione; ogni capitolo ancorato a un momento e a un luogo del tempo, i finali legano il destino personale agli eventi.',
 };
 
 /**

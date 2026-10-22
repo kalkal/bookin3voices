@@ -1,0 +1,68 @@
+{
+  "note": "Hand-written Nova-like answer for the offline golden run (the period-check items are folded into the same reply).",
+  "output": {
+    "suggestions": [
+      {
+        "kind": "style",
+        "original": "viveva in modalità sopravvivenza da settimane",
+        "proposals": [
+          "tirava avanti a denti stretti da settimane"
+        ],
+        "rationale": "modo di dire di oggi"
+      },
+      {
+        "kind": "pacing",
+        "original": "La legge sul lavoro delle donne e dei fanciulli approvata pochi anni prima stabiliva un massimo di ore che nessuno in valle faceva rispettare e gli ispettori del Regno arrivavano una volta l'anno avvisando per lettera.",
+        "proposals": [
+          "La legge stabiliva un massimo di ore per le donne e i fanciulli che nessuno in valle faceva rispettare, e gli ispettori del Regno arrivavano una volta l'anno avvisando per lettera."
+        ],
+        "rationale": "lezione di storia dentro la scena"
+      },
+      {
+        "kind": "history",
+        "original": "la radio gracchiava una canzone d'operetta",
+        "proposals": [
+          "il grammofono gracchiava una canzone d'operetta"
+        ],
+        "rationale": "Da verificare: nel 1898 la radio non esisteva; un grammofono era possibile.",
+        "aspect": "anachronism"
+      },
+      {
+        "kind": "history",
+        "original": "cercò il capo del filo con la spazzola di saggina",
+        "proposals": [
+          "cercò il capo del filo battendo i bozzoli con la spazzola di saggina"
+        ],
+        "rationale": "Da verificare: nelle filande il capo del filo si trovava di solito battendo i bozzoli nell'acqua calda.",
+        "aspect": "period"
+      },
+      {
+        "kind": "style",
+        "original": "Molti anni dopo qualcuno avrebbe scritto che in quelle filande era cominciato il Novecento.",
+        "proposals": [
+          "Qualcuno in paese diceva già che in quelle filande era cominciato il Novecento."
+        ],
+        "rationale": "senno di poi del narratore: lo dica una voce del tempo"
+      },
+      {
+        "kind": "grammar",
+        "original": "a mezzogiorno la sirena fischiò due volte",
+        "proposals": [
+          "A mezzogiorno la sirena fischiò due volte"
+        ],
+        "rationale": "maiuscola mancante dalla dettatura"
+      },
+      {
+        "kind": "style",
+        "original": "e qualcuna si sedette sul muretto al sole, e qualcuna rimase in piedi perché sedersi voleva dire non rialzarsi più fino a sera",
+        "proposals": [
+          "e qualcuna si sedette."
+        ],
+        "rationale": "frase lunga"
+      }
+    ]
+  },
+  "mustDrop": [
+    "e qualcuna si sedette sul muretto al sole, e qualcuna rimase in piedi perché sedersi voleva dire non rialzarsi più fino a sera"
+  ]
+}

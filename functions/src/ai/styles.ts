@@ -7,7 +7,7 @@
 //
 // No style names a real author: they describe a craft.
 
-export const STYLE_IDS = ['suspense', 'mystery', 'thriller'] as const;
+export const STYLE_IDS = ['suspense', 'mystery', 'historical'] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 
 export const DEFAULT_STYLE_ID: StyleId = 'suspense';
@@ -36,16 +36,25 @@ export const STYLES: readonly StyleInfo[] = [
     },
   },
   {
-    id: 'thriller',
-    label: { en: 'Thriller', it: 'Thriller' },
+    id: 'historical',
+    label: { en: 'Historical fiction', it: 'Storico' },
     summary: {
-      en: 'Concrete danger and a deadline; short sentences, cuts, cliffhangers.',
-      it: 'Pericolo concreto e scadenza; frasi brevi, tagli, finali sospesi.',
+      en: 'A precise era brought to life; period voice, history pressing on choices, no anachronisms.',
+      it: 'Un’epoca precisa resa viva; voce del tempo, la storia che pesa sulle scelte, niente anacronismi.',
     },
   },
 ];
 
+/**
+ * Retired style ids still stored on older books, and the style they open as.
+ * The stored value is not rewritten: the book changes only if the user picks a style.
+ */
+export const RETIRED_STYLE_IDS: Readonly<Record<string, StyleId>> = { thriller: 'historical' };
+
 /** Known style id, or the default for anything else (null, typos, old data). */
 export function resolveStyleId(raw: unknown): StyleId {
+  if (typeof raw === 'string' && Object.hasOwn(RETIRED_STYLE_IDS, raw)) {
+    return RETIRED_STYLE_IDS[raw] as StyleId;
+  }
   return (STYLE_IDS as readonly unknown[]).includes(raw) ? (raw as StyleId) : DEFAULT_STYLE_ID;
 }

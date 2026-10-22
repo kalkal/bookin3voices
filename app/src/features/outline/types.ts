@@ -37,7 +37,7 @@ export interface GenerateOutlineRequest {
   bookId: string;
   synopsis: string;
   requestId: string;
-  /** The book's writing style: the outline follows it (Suspense, Mystery, Thriller). */
+  /** The book's writing style: the outline follows it (Suspense, Mystery, Storico). */
   styleId?: StyleId;
 }
 

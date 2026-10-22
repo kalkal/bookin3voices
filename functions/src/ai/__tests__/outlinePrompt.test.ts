@@ -68,7 +68,7 @@ describe('buildOutlinePrompt', () => {
   it.each([
     ['suspense', 'Suspense / Horror', /minaccia/],
     ['mystery', 'Mystery (giallo)', /indizi/],
-    ['thriller', 'Thriller', /scadenza/],
+    ['historical', 'Storico', /epoca/],
   ] as const)('the %s style of the book shapes the outline', (style, label, craft) => {
     const prompt = buildOutlinePrompt({ ...base, style });
     expect(prompt.userText).toContain(`Stile del libro: ${label}`);
@@ -78,18 +78,19 @@ describe('buildOutlinePrompt', () => {
 
   it('a different style gives a different prompt (the style is not ignored)', () => {
     const mystery = buildOutlinePrompt({ ...base, style: 'mystery' });
-    const thriller = buildOutlinePrompt({ ...base, style: 'thriller' });
-    expect(mystery.userText).not.toBe(thriller.userText);
+    const historical = buildOutlinePrompt({ ...base, style: 'historical' });
+    expect(mystery.userText).not.toBe(historical.userText);
   });
 });
 
 describe('outlineStyleOf', () => {
   it('the style sent by the app wins (the user may have just changed it)', () => {
-    expect(outlineStyleOf('thriller', 'mystery')).toBe('thriller');
+    expect(outlineStyleOf('historical', 'mystery')).toBe('historical');
   });
 
   it('without one, the style saved on the book', () => {
     expect(outlineStyleOf(undefined, 'mystery')).toBe('mystery');
+    expect(outlineStyleOf(undefined, 'thriller')).toBe('historical');
   });
 
   it('nothing known → the default style', () => {

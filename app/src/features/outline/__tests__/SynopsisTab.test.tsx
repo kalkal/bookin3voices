@@ -285,7 +285,7 @@ describe('SynopsisTab', () => {
 });
 
 describe('SynopsisTab and the book style', () => {
-  it.each(['mystery', 'thriller'] as const)(
+  it.each(['mystery', 'historical'] as const)(
     'the outline is asked in the style of the book (%s)',
     async (style) => {
       const { result, outlineService } = setup({ styleProfileId: style });
@@ -296,6 +296,15 @@ describe('SynopsisTab and the book style', () => {
       await screen.unmount();
     },
   );
+
+  it('a book saved as thriller asks for the historical outline', async () => {
+    const { result, outlineService } = setup({ styleProfileId: 'thriller' });
+    const screen = await result;
+    await fireEvent.press(await screen.findByTestId('synopsis-generate'));
+    await screen.findByTestId('outline-card-0');
+    expect(outlineService.requests[0]).toMatchObject({ styleId: 'historical' });
+    await screen.unmount();
+  });
 
   it('a book with no style chosen asks for the default one', async () => {
     const { result, outlineService } = setup();

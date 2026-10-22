@@ -1,0 +1,36 @@
+{
+  "_readme": "Verifiche MECCANICHE del golden-set runner per il profilo Storico (stesso formato di suspense/golden-set/checks.json). Le citazioni devono comparire VERBATIM nel «## Brano».",
+  "01-la-filanda.md": {
+    "expectedRange": [4, 6],
+    "period": true,
+    "protected": [
+      { "quote": "Ste mani le g'ha da durà fin a sera", "note": "dialetto nelle virgolette" },
+      { "quote": "Il vapore saliva il vapore saliva sempre", "note": "ripetizione voluta" },
+      { "quote": "con il pane sotto il grembiule" },
+      { "quote": "perché sedersi voleva dire non rialzarsi più fino a sera", "note": "la chiusa" }
+    ],
+    "expected": [
+      { "label": "voce d'epoca: modalità sopravvivenza", "quote": "in modalità sopravvivenza" },
+      { "label": "lezione di storia: la legge", "quote": "La legge sul lavoro delle donne e dei fanciulli" },
+      { "label": "senno di poi", "quote": "Molti anni dopo qualcuno avrebbe scritto" },
+      { "label": "grammar: minuscola", "quote": "a mezzogiorno la sirena fischiò" },
+      { "label": "anacronismo: la radio", "quote": "la radio gracchiava" }
+    ]
+  },
+  "02-the-toll-house.md": {
+    "expectedRange": [4, 5],
+    "period": true,
+    "language": "en",
+    "protected": [
+      { "quote": "the frost was white on the gate and white on the farmer's beard and white on the mule's ears", "note": "refrain" },
+      { "quote": "\"Two wheels,\" said the farmer, \"and two more following behind.\"", "note": "dialogue" },
+      { "quote": "because the coach was coming and the coach paid in silver", "note": "the close" }
+    ],
+    "expected": [
+      { "label": "history lesson: the turnpike trust", "quote": "The turnpike trust had been set up" },
+      { "label": "grammar: dialogue punctuation", "quote": "so the cart has two wheels this week as well he said" },
+      { "label": "period voice: a later word in the dialogue", "quote": "\"Okay,\" Ettore said" },
+      { "label": "anachronism: phone", "quote": "checked his phone" }
+    ]
+  }
+}

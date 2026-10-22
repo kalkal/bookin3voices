@@ -1,5 +1,5 @@
 /**
- * Picker for the book's writing style (suspense/horror, mystery, thriller).
+ * Picker for the book's writing style (suspense/horror, mystery, historical).
  * The choice is saved on the book (`styleProfileId`) and the server uses it to
  * build the AI prompt for the suggestions.
  */

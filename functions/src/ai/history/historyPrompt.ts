@@ -8,7 +8,7 @@
 // versioned and locked by snapshot tests; replay the golden set on any change.
 
 /** Bump on EVERY change to the text or the schemas of either step. */
-export const HISTORY_PROMPT_VERSION = 3;
+export const HISTORY_PROMPT_VERSION = 4;
 
 /** Closed list: anything else from the model is dropped by the code. */
 export const HISTORY_CATEGORIES = [
@@ -82,12 +82,43 @@ export function buildDetectPeriodPrompt(text: string): HistoryPrompt {
 
 const LANGUAGE_NAMES: Record<string, string> = { it: 'Italian', en: 'English' };
 
-function reportSystem(periodLabel: string, quote: string, language: string): string {
+/** Where the period comes from: this passage, the book's synopsis, or nowhere. */
+export type PeriodEvidence = 'passage' | 'synopsis' | 'none';
+
+function periodLines(periodLabel: string, quote: string, evidence: PeriodEvidence): string[] {
+  if (evidence === 'passage') {
+    return [
+      'You check one historical setting for a fiction writer. The period is GIVEN: do not',
+      'question it.',
+      `Period: ${periodLabel}. Evidence in the passage: "${quote}".`,
+    ];
+  }
+  if (evidence === 'synopsis') {
+    return [
+      'You check one historical setting for a fiction writer. The period is GIVEN: do not',
+      'question it. This chapter does not repeat it; the book synopsis names it.',
+      `Period: ${periodLabel}. Evidence in the book synopsis: "${quote}".`,
+    ];
+  }
+  return [
+    'You check a chapter of a historical novel for a fiction writer. Neither the chapter',
+    'nor the synopsis names the period. "That place and time" below means the era the',
+    'passage itself shows (its objects, transport, money, work).',
+    '- Report ONLY anachronisms that are clearly modern for that era, e.g. a phone in a',
+    '  scene of coaches and oil lamps. When the era is unclear, report nothing.',
+    '- period_details MUST be an empty list: without a named period they would be guesses.',
+  ];
+}
+
+function reportSystem(
+  periodLabel: string,
+  quote: string,
+  evidence: PeriodEvidence,
+  language: string,
+): string {
   const languageName = LANGUAGE_NAMES[language] ?? 'Italian';
   return [
-    'You check one historical setting for a fiction writer. The period is GIVEN: do not',
-    'question it.',
-    `Period: ${periodLabel}. Evidence in the passage: "${quote}".`,
+    ...periodLines(periodLabel, quote, evidence),
     '',
     '## Task',
     '1. anachronisms FIRST: read the passage sentence by sentence and list the named',
@@ -170,10 +201,17 @@ export function buildReportHistoryPrompt(args: {
   text: string;
   periodLabel: string;
   quote: string;
+  /** Default `passage`: the period was found in the text being checked. */
+  evidence?: PeriodEvidence;
   language: string;
 }): HistoryPrompt {
   return {
-    systemInstruction: reportSystem(args.periodLabel, args.quote, args.language),
+    systemInstruction: reportSystem(
+      args.periodLabel,
+      args.quote,
+      args.evidence ?? 'passage',
+      args.language,
+    ),
     userText: passageBlock(
       args.text,
       'List the period details and the anachronisms for the given period. Use the tool.',

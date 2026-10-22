@@ -174,8 +174,8 @@ describe('generateOutline (Firestore emulator, fake model)', () => {
     await run(model, uid, input(bookId, 'req-stile-1'));
     expect(model.prompts[0]?.userText).toContain('Stile del libro: Mystery (giallo)');
 
-    await run(model, uid, { ...input(bookId, 'req-stile-2'), styleId: 'thriller' });
-    expect(model.prompts[1]?.userText).toContain('Stile del libro: Thriller');
+    await run(model, uid, { ...input(bookId, 'req-stile-2'), styleId: 'historical' });
+    expect(model.prompts[1]?.userText).toContain('Stile del libro: Storico');
   });
 
   it('idempotency: retry with the same requestId → same response, ONE model call', async () => {

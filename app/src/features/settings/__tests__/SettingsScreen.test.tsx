@@ -237,25 +237,26 @@ describe('SettingsScreen', () => {
     await screen.unmount();
   });
 
-  it('style profiles list suspense, mystery and thriller (suspense is the default)', async () => {
+  it('style profiles list suspense, mystery and historical (suspense is the default)', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
     expect(await screen.findByTestId('style-profile-suspense')).toHaveTextContent(/Predefinito/);
     expect(await screen.findByTestId('style-profile-mystery')).toHaveTextContent(/Mystery/);
-    expect(await screen.findByTestId('style-profile-thriller')).toHaveTextContent(/Thriller/);
+    expect(await screen.findByTestId('style-profile-historical')).toHaveTextContent(/Storico/);
+    expect(screen.queryByTestId('style-profile-thriller')).toBeNull();
     await screen.unmount();
   });
 
   it('with room after the last section the arches stand there, after the content', async () => {
     const { storage } = memoryStorage();
     const screen = await renderScreen(storage);
-    await screen.findByTestId('style-profile-thriller');
+    await screen.findByTestId('style-profile-historical');
     await layoutRoom(screen.getByTestId('arches-room'), 412, 240);
     expect(
       screen.getByTestId('cathedral-arches', { includeHiddenElements: true }),
     ).toBeOnTheScreen();
     expect(
-      comesAfter(screen.getByTestId('settings-screen'), 'style-profile-thriller', 'arches-room'),
+      comesAfter(screen.getByTestId('settings-screen'), 'style-profile-historical', 'arches-room'),
     ).toBe(true);
     await screen.unmount();
   });

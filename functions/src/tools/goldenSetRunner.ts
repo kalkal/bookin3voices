@@ -1,6 +1,7 @@
 // Golden-set runner — the prompt regression brake.
 //
-// Runs ALL the passages in content/style-profiles/suspense/golden-set/
+// Runs ALL the passages in content/style-profiles/<profile>/golden-set/ (suspense
+// by default, --profile for another style)
 // against the current prompt (buildRefinePrompt = Style Bible + few-shot +
 // format rules) and MECHANICALLY verifies whatever can be verified
 // (quality priorities):
@@ -17,7 +18,8 @@
 // The final quality judgment stays human: the runner only blocks
 // mechanical regressions.
 //
-// Usage: npm run golden -- [--model X] [--fallback Y] [--only 04] [--out report.md] [--offline]
+// Usage: npm run golden -- [--profile historical] [--model X] [--fallback Y] [--only 04]
+//   [--out report.md] [--offline]
 // --offline (npm run golden:offline, and the goldenSetOffline jest test): replays the
 // hand-written answers in golden-set/recorded/ through the same factory with a fake
 // Bedrock client. No network and no real model call: it checks the code side
@@ -36,8 +38,10 @@ import { createProvider, selectProviderName, type ModelRole } from '../ai/provid
 import { ProviderModel } from '../ai/provider/ProviderModel';
 import { AiProviderError, isRetryableAiError } from '../ai/provider/types';
 import { buildRefinePrompt, REFINE_TEMPERATURE } from '../ai/refinePrompt';
+import { historyOptionsForBook } from '../ai/refineChapter';
 import { modelOutputSchema, type ModelOutput, type Suggestion } from '../ai/refineTypes';
 import { loadStyleProfileContent } from '../ai/styleProfileContent';
+import { DEFAULT_STYLE_ID, STYLE_IDS, type StyleId } from '../ai/styles';
 import { mergeWithHistory, runHistoryCheckWithin } from '../ai/history/historyCheck';
 import { textHash } from '../ai/textHash';
 
@@ -383,17 +387,20 @@ function renderReport(reports: BranoReport[], startedAt: Date): string {
 
 // ---------- offline replay ----------
 
-const GOLDEN_DIR = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'content',
-  'style-profiles',
-  'suspense',
-  'golden-set',
-);
-const RECORDED_DIR = path.join(GOLDEN_DIR, 'recorded');
+/** content/style-profiles/<profile>/golden-set: each style can carry its own set. */
+function goldenDir(profile: StyleId): string {
+  return path.resolve(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'content',
+    'style-profiles',
+    profile,
+    'golden-set',
+  );
+}
+const recordedDir = (profile: StyleId) => path.join(goldenDir(profile), 'recorded');
 
 interface Recording {
   /** The model answer, exactly as the tool_use input Nova would return. */
@@ -403,9 +410,9 @@ interface Recording {
 }
 
 /** Passages with a recorded answer (file names of the .md passages). */
-export function listRecordings(): string[] {
-  if (!existsSync(RECORDED_DIR)) return [];
-  return readdirSync(RECORDED_DIR)
+export function listRecordings(profile: StyleId = DEFAULT_STYLE_ID): string[] {
+  if (!existsSync(recordedDir(profile))) return [];
+  return readdirSync(recordedDir(profile))
     .filter((f) => /^\d\d-.*\.json$/.test(f))
     .map((f) => f.replace(/\.json$/, '.md'))
     .sort();
@@ -418,16 +425,16 @@ export function listRecordings(): string[] {
  */
 export async function runOfflinePassage(
   file: string,
+  profile: StyleId = DEFAULT_STYLE_ID,
 ): Promise<{ report: BranoReport; mustDrop: string[]; sent: number }> {
-  const checksFile = JSON.parse(
-    readFileSync(path.join(GOLDEN_DIR, 'checks.json'), 'utf8'),
-  ) as ChecksFile;
+  const dir = goldenDir(profile);
+  const checksFile = JSON.parse(readFileSync(path.join(dir, 'checks.json'), 'utf8')) as ChecksFile;
   const checks = checksFile[file];
   if (checks === undefined) throw new Error(`${file}: entry missing from checks.json`);
   const recording = JSON.parse(
-    readFileSync(path.join(RECORDED_DIR, file.replace(/\.md$/, '.json')), 'utf8'),
+    readFileSync(path.join(recordedDir(profile), file.replace(/\.md$/, '.json')), 'utf8'),
   ) as Recording;
-  const text = extractBrano(readFileSync(path.join(GOLDEN_DIR, file), 'utf8'), file);
+  const text = extractBrano(readFileSync(path.join(dir, file), 'utf8'), file);
 
   let sent = 0;
   const client = {
@@ -454,10 +461,10 @@ export async function runOfflinePassage(
     createBedrockClient: () => client,
   };
   const model = new ProviderModel(() => createProvider(deps, 'primary'), REFINE_TEMPERATURE);
-  const profile = loadStyleProfileContent('suspense');
+  const content = loadStyleProfileContent(profile);
   const prompt = buildRefinePrompt({
-    styleBible: profile.styleBible,
-    fewShots: profile.fewShots,
+    styleBible: content.styleBible,
+    fewShots: content.fewShots,
     book: { title: 'Golden set', genre: '', language: checks.language ?? 'it', synopsis: '' },
     chapter: { title: file.replace(/\.md$/, ''), outline: null },
     text,
@@ -467,14 +474,14 @@ export async function runOfflinePassage(
   return { report, mustDrop: recording.mustDrop ?? [], sent };
 }
 
-async function runOffline(only: string | undefined): Promise<void> {
-  const files = listRecordings().filter((f) =>
+async function runOffline(only: string | undefined, profile: StyleId): Promise<void> {
+  const files = listRecordings(profile).filter((f) =>
     only === undefined ? true : only.split(',').some((o) => f.includes(o)),
   );
   if (files.length === 0) throw new Error('no recorded passage selected');
   let failed = false;
   for (const file of files) {
-    const { report, mustDrop } = await runOfflinePassage(file);
+    const { report, mustDrop } = await runOfflinePassage(file, profile);
     const survivors = mustDrop.filter((o) => report.suggestions.some((s) => s.original === o));
     console.log(
       `▶ ${file}: ${report.count}/${report.rawCount} kept, ${report.discarded} discarded, MUST ${report.coverage.covered.length}/${report.coverage.covered.length + report.coverage.missed.length}`,
@@ -494,9 +501,22 @@ function argValue(name: string): string | undefined {
   return index !== -1 ? process.argv[index + 1] : undefined;
 }
 
+/**
+ * --profile historical: the set of another style (default suspense). A typo
+ * must stop the run, not replay the default set and report green.
+ */
+export function profileFromArg(raw: string | undefined): StyleId {
+  if (raw === undefined) return DEFAULT_STYLE_ID;
+  if (!(STYLE_IDS as readonly string[]).includes(raw)) {
+    throw new Error(`unknown --profile "${raw}": use one of ${STYLE_IDS.join(', ')}`);
+  }
+  return raw as StyleId;
+}
+
 async function main(): Promise<void> {
+  const profile = profileFromArg(argValue('profile'));
   if (process.argv.includes('--offline')) {
-    await runOffline(argValue('only'));
+    await runOffline(argValue('only'), profile);
     return;
   }
   const startedAt = new Date();
@@ -538,12 +558,12 @@ async function main(): Promise<void> {
   }
   console.log(`Provider ${providerName}: ${models.map((m) => m.modelName).join(' → fallback ')}`);
 
-  const goldenDir = GOLDEN_DIR;
-  const checksPath = path.join(goldenDir, 'checks.json');
+  const dir = goldenDir(profile);
+  const checksPath = path.join(dir, 'checks.json');
   const checksFile = JSON.parse(readFileSync(checksPath, 'utf8')) as ChecksFile;
-  const profile = loadStyleProfileContent('suspense');
+  const content = loadStyleProfileContent(profile);
 
-  const files = readdirSync(goldenDir)
+  const files = readdirSync(dir)
     .filter((f) => /^\d\d-.*\.md$/.test(f))
     .filter((f) => (only === undefined ? true : only.split(',').some((o) => f.includes(o))))
     .sort();
@@ -553,7 +573,7 @@ async function main(): Promise<void> {
   for (const file of files) {
     const checks = checksFile[file];
     if (checks === undefined) throw new Error(`${file}: entry missing from checks.json`);
-    const markdown = readFileSync(path.join(goldenDir, file), 'utf8');
+    const markdown = readFileSync(path.join(dir, file), 'utf8');
     const text = extractBrano(markdown, file);
 
     console.log(`\n▶ ${file} (${countWords(text)} words)…`);
@@ -565,8 +585,8 @@ async function main(): Promise<void> {
       continue;
     }
     const prompt = buildRefinePrompt({
-      styleBible: profile.styleBible,
-      fewShots: profile.fewShots,
+      styleBible: content.styleBible,
+      fewShots: content.fewShots,
       book: { title: 'Golden set', genre: '', language: checks.language ?? 'it', synopsis: '' },
       chapter: { title: file.replace(/\.md$/, ''), outline: null },
       text,
@@ -577,6 +597,8 @@ async function main(): Promise<void> {
       provider: createProvider(deps, 'primary'),
       text,
       language: checks.language ?? 'it',
+      // «Storico» checks every passage, as refineChapter does for every chapter
+      ...historyOptionsForBook({ styleProfileId: profile, synopsis: '' }),
     });
     calls += history.calls;
     console.log(
