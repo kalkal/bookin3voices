@@ -1,7 +1,11 @@
 # The judges' demo
 
-The contest judges install an APK that talks to a **separate, empty Firebase project**, new
-for the demo (never a project that held real books), on the same billing account.
+> **Status, 22 Oct 2026: not deployed for this contest.** The owner decided that the
+> judges get no APK (the video and the public repo instead). Everything below is kept
+> as ready configuration for a later demo; nothing has been published.
+
+In this design the contest judges install an APK that talks to the owner's Firebase project
+`<demo project id>`, with the demo rules and the gate on.
 Each phone signs in anonymously on its own and sees only its own data. **Without the
 access code nothing reaches the server**: the app shows only the bundled sample book,
 offline on the phone, with pre-recorded example suggestions. With the code from the
@@ -80,7 +84,10 @@ From the lightest to the strongest, each one immediate on the next call:
 3. **Fewer calls**: lower any cap; a cap at `0` stops that call for everyone.
 4. **Hard stop on the AWS side**: deactivate the demo's dedicated AWS access key (IAM →
    user → Security credentials → Make inactive). Nova calls then fail at once.
-5. **After judging**: deactivate the AWS key, then delete the Firebase project.
+5. **After judging**: deactivate the demo's AWS key, deploy the normal `firestore.rules`
+   and `storage.rules` again, set `DEMO_GATE=0` (or remove `functions/.env.<demo project id>`)
+   and redeploy the functions. **Keep the project and its data**: it is the owner's
+   existing project, never to be deleted.
 
 There is no Lambda in front of Nova (the functions call Bedrock directly), so the
 "reserved concurrency 0" switch does not apply; the switches above take its place.
@@ -157,7 +164,7 @@ lags hours behind, so it is not the brake).
 
 ## Build and deploy
 
-- **Functions**: `functions/.env.judges.example` → `functions/.env.<demo project id>`.
+- **Functions**: `functions/.env.<demo project id>` (from `functions/.env.judges.example`).
   Secrets: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of a dedicated IAM user that
   may only `bedrock:InvokeModel` the chosen Nova model in us-east-1.
 - **Rules**: `firestore.demo.rules` and `storage.demo.rules` (Storage fully closed: the
@@ -176,6 +183,9 @@ lags hours behind, so it is not the brake).
   linked from the Devpost testing instructions.
 
 ## Devpost testing instructions (template)
+
+Only for a demo with an APK. For this contest no APK is distributed: the testing
+instructions point to the video and to the public repo instead.
 
 > **Android app (APK).** Download: <GitHub Release link>. On the phone, allow your
 > browser to install unknown apps when asked; Play Protect may ask for a scan, choose
