@@ -66,8 +66,12 @@ class FakeDb {
   doc(path: string): FakeDoc {
     return new FakeDoc(this.store, path);
   }
+  // transactions one after the other, as Firestore guarantees for the same documents
+  private queue: Promise<unknown> = Promise.resolve();
   async runTransaction<T>(fn: (tx: FakeTx) => Promise<T>): Promise<T> {
-    return fn(new FakeTx(this.store));
+    const run = this.queue.then(() => fn(new FakeTx(this.store)));
+    this.queue = run.catch(() => undefined);
+    return run;
   }
 }
 
@@ -442,5 +446,84 @@ describe('refineTitle in the demo', () => {
 
   it('the title has its own caps in config/demo', () => {
     expect(demoUsageLimits(config()).refineTitle).toEqual(PROPOSED_DEMO_LIMITS.refineTitle);
+  });
+});
+
+describe('follow-ups of #38', () => {
+  const deps = (db: Firestore) => ({
+    db,
+    gateEnabled: true,
+    setJudgeClaim: jest.fn(async (uid: string) => void uid),
+    now: () => NOW,
+  });
+
+  it('right codes never use up the phone allowance; wrong ones do', async () => {
+    const { db } = makeDb(config());
+    for (let i = 0; i < 15; i++) {
+      await expect(runRedeemAccessCode(deps(db), 'phone-1', CODE)).resolves.toEqual({ ok: true });
+    }
+    for (let i = 0; i < 10; i++) {
+      await expect(runRedeemAccessCode(deps(db), 'phone-2', 'wrong code')).rejects.toMatchObject({
+        details: { reason: 'wrong-code' },
+      });
+    }
+    // used up: refused before comparing, even with the right code
+    await expect(runRedeemAccessCode(deps(db), 'phone-2', CODE)).rejects.toMatchObject({
+      details: { reason: 'too-many-attempts' },
+    });
+  });
+
+  it('IPv4-mapped IPv6 addresses count as their IPv4 address', async () => {
+    const { ipCounterKey, ipv4FromMapped, ipv6Network64 } = await import('../redeemAccessCode');
+    expect(ipv4FromMapped('::ffff:203.0.113.7')).toBe('203.0.113.7');
+    expect(ipv4FromMapped('::ffff:cb00:7107')).toBe('203.0.113.7');
+    expect(ipv4FromMapped('2001:db8::1')).toBeUndefined();
+    expect(ipv6Network64('::ffff:203.0.113.7')).toBeUndefined();
+    expect(ipCounterKey('::ffff:203.0.113.7')).toBe(ipCounterKey('203.0.113.7'));
+    expect(ipCounterKey('::FFFF:CB00:7107')).toBe(ipCounterKey('203.0.113.7'));
+    // two IPv4 clients never share a key through the mapping
+    expect(ipCounterKey('::ffff:203.0.113.8')).not.toBe(ipCounterKey('203.0.113.7'));
+  });
+});
+
+describe('parallel attempts (review of #42)', () => {
+  it('a phone one wrong code from its cap cannot try 20 codes at once', async () => {
+    const { db, store } = makeDb(config());
+    const day = new Date(NOW).toISOString().slice(0, 10);
+    store.set(`usageDaily/${day}__redeemAccessCode/users/phone-1`, { count: 9 });
+    const deps = {
+      db,
+      gateEnabled: true,
+      setJudgeClaim: jest.fn(async (uid: string) => void uid),
+      now: () => NOW,
+    };
+    const codes = [...Array.from({ length: 19 }, (_, i) => `wrong code ${i}`), CODE];
+    const outcomes = await Promise.all(
+      codes.map((code) =>
+        runRedeemAccessCode(deps, 'phone-1', code).then(
+          () => 'ok',
+          (e: { details?: { reason?: string } }) => e.details?.reason,
+        ),
+      ),
+    );
+    expect(outcomes.filter((o) => o === 'wrong-code')).toHaveLength(1);
+    expect(outcomes.filter((o) => o === 'too-many-attempts')).toHaveLength(19);
+    expect(outcomes).not.toContain('ok');
+    expect(deps.setJudgeClaim).not.toHaveBeenCalled();
+  });
+
+  it('a right code gives its reserved slot back', async () => {
+    const { db, store } = makeDb(config());
+    const day = new Date(NOW).toISOString().slice(0, 10);
+    const deps = {
+      db,
+      gateEnabled: true,
+      setJudgeClaim: jest.fn(async (uid: string) => void uid),
+      now: () => NOW,
+    };
+    await runRedeemAccessCode(deps, 'phone-1', CODE);
+    expect(store.get(`usageDaily/${day}__redeemAccessCode/users/phone-1`)).toMatchObject({
+      count: 0,
+    });
   });
 });

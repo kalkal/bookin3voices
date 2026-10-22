@@ -57,7 +57,7 @@ export const DEFAULT_USAGE_LIMITS: Record<UsageAction, UsageLimit> = {
   generateOutline: { perUserPerDay: 15, globalPerDay: 25 },
   // a short call (title + excerpt), but still a model call
   refineTitle: { perUserPerDay: 100, globalPerDay: 200 },
-  // access-code attempts (judges' demo only), per phone: every attempt counts.
+  // access-code attempts (judges' demo only), per phone: only wrong codes count.
   // No real overall cap: a flood of throwaway accounts must not lock the real
   // judges out (the wrong codes raise a log alarm instead)
   redeemAccessCode: { perUserPerDay: 10, globalPerDay: Number.MAX_SAFE_INTEGER },

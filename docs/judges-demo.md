@@ -14,7 +14,7 @@ Firestore (with a copy of the sample book) and the AI features, within hard caps
 |---|---|---|
 | Gate switch | `DEMO_GATE=1` in `functions/.env.<demo project id>` | Only the demo deployment has a gate; the emulators and any other project never do. |
 | Live settings | Firestore `config/demo` (server only) | Kill switch, code hash, end date, caps, text limit. Read on every gated call: a change applies to the next call, with no redeploy. |
-| Access code | callable `redeemAccessCode({ code })` | Compares the normalized code with `config/demo.codeSha256` in constant time; marks the phone in `demoAccess/{uid}` (server only) and puts the custom claim `judge: true` on its account. 10 attempts per phone per day; 30 WRONG codes per network address (hashed, IPv6 by /64) per day; no overall cap that could lock real judges out: every 50 wrong codes in a day log `access-code-guessing-alarm`. A right code is never stopped by the address or by other phones. |
+| Access code | callable `redeemAccessCode({ code })` | Compares the normalized code with `config/demo.codeSha256` in constant time; marks the phone in `demoAccess/{uid}` (server only) and puts the custom claim `judge: true` on its account. 10 WRONG codes per phone and 30 per network address (hashed, IPv6 by /64) per day; no overall cap that could lock real judges out: every 50 wrong codes in a day log `access-code-guessing-alarm`. A right code is never stopped by the address or by other phones. |
 | Rules | `firestore.demo.rules` (generated from `firestore.rules` by `scripts/build-demo-rules.mjs`), `storage.demo.rules` | The same per-user rules, where the owner must also carry the `judge` claim and `config/demo` must be enabled and not expired. Deployed with `firebase deploy --config firebase.demo.json`, so the emulators keep the normal rules. |
 | Gated calls | every callable: `refineChapter`, `generateOutline`, `refineTitle`, `exportBook`, `exportBackup` (only `ping` and `redeemAccessCode` itself are open; `everyCallableGated.test.ts` fails if a new callable skips the gate) | Before any work: demo open, the `judge` claim on the token and the current code on record for this phone. Refine and outline then apply the demo caps and the text limit; the user's AI provider setting is ignored: Nova only. |
 | Caps | `usage/rateLimit.ts` | Per phone per day, overall per day, and a total over the whole demo (`usageTotal/{action}`), in one transaction, before the model call. |
@@ -53,6 +53,16 @@ Create it in the Firebase console (Firestore, collection `config`, document `dem
 ```
 
 - `expiresAt` 1795219200000 = 21 Nov 2026 00:00 UTC, the day after judging ends.
+- **The code must be strong on its own.** Anonymous accounts are free, so the per-phone
+  cap (10 wrong codes a day, reserved in a transaction before the comparison, given back
+  by a right code) only slows one account; and the per-address cap counts only wrong
+  codes so that a right code always passes, which means it changes the error label of a
+  wrong guess, not the outcome of a right one. What actually stops guessing is the size
+  of the code: draw it at random, never by hand, at least **40 bits**: for example three
+  words picked at random from a list of 2,048 or more words plus four random digits
+  (about 46 bits; with the 7,776-word diceware list about 52), within the 32 characters
+  the code may have. With `maxInstances: 3`
+  that is far beyond what can be tried before the end of judging.
 - The hash: from `functions/`, `npm run demo:hash`, then type the code (read from
   standard input, never printed back). Case, spaces and
   `- _ .` separators do not matter («Tide-Lamp 4417» = «tide lamp 4417»). Only the hash
