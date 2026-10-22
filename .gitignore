@@ -8,4 +8,9 @@ ui-debug.log*
 emulator-data/
 
 .env
+# every .env.* file stays local (it may hold a project id or keys); only the
+# templates are shared
+.env.*
+!.env.example
+!.env.*.example
 .secret.local
