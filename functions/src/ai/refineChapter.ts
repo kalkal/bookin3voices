@@ -31,6 +31,7 @@ import { emptyReasonOf, normalizeSuggestions } from './normalizeSuggestions';
 import { buildRefinePrompt, REFINE_PROMPT_VERSION } from './refinePrompt';
 import {
   bookForRefineSchema,
+  mainKindsOf,
   chapterForRefineSchema,
   modelOutputSchema,
   parseModelOutput,
@@ -41,6 +42,7 @@ import {
   type RefineChapterResponse,
   type RefineModel,
   type RefineRegistryDoc,
+  type SuggestionKind,
 } from './refineTypes';
 import { pendingToReplace, selectionProblem } from './refineSelection';
 import { resolveStyleId } from './styles';
@@ -119,9 +121,10 @@ export function buildPromptForBook(args: {
   text: string;
   /** «Rifinisci la selezione»: the part to refine; `text` is then context. */
   selection?: string;
+  kinds?: readonly SuggestionKind[];
   loadStyleProfile: (profileId: string) => StyleProfileContent;
 }): ReturnType<typeof buildRefinePrompt> {
-  const { book, chapter, text, selection, loadStyleProfile } = args;
+  const { book, chapter, text, selection, kinds, loadStyleProfile } = args;
   const profile = loadStyleProfile(resolveStyleId(book.styleProfileId));
   return buildRefinePrompt({
     styleBible: profile.styleBible,
@@ -135,6 +138,7 @@ export function buildPromptForBook(args: {
     chapter: { title: chapter.title, outline: chapter.outline },
     text,
     ...(selection === undefined ? {} : { selection }),
+    ...(kinds === undefined ? {} : { kinds }),
   });
 }
 
@@ -283,6 +287,7 @@ export async function runRefineChapter(
     chapter,
     text: input.text,
     ...(range === undefined ? {} : { selection: scopeText }),
+    ...(input.kinds === undefined ? {} : { kinds: input.kinds }),
     loadStyleProfile,
   });
   if (range !== undefined) {
@@ -296,9 +301,22 @@ export async function runRefineChapter(
 
   // the history check runs in parallel: it adds no latency, and a failure only
   // means no history suggestions (degraded mode), never a failed refinement
-  const historyProvider = deps.history?.[providerId];
+  // only the kinds the user chose: no main call without style/grammar/pacing,
+  // no history check without «period»
+  const mainKinds = mainKindsOf(input.kinds);
+  const wantsHistory = input.kinds === undefined || input.kinds.includes('history');
+  if (input.kinds !== undefined) {
+    logger.info('refineChapter: kinds', { requestId: input.requestId, kinds: input.kinds });
+  }
+  const historyProvider = wantsHistory ? deps.history?.[providerId] : undefined;
   const [{ output, dropped, modelName }, history] = await Promise.all([
-    generateValidatedSuggestions(provider.primary, provider.fallback, prompt),
+    mainKinds.length === 0
+      ? Promise.resolve({
+          output: { suggestions: [] },
+          dropped: 0,
+          modelName: provider.primary.modelName,
+        })
+      : generateValidatedSuggestions(provider.primary, provider.fallback, prompt),
     historyProvider === undefined
       ? Promise.resolve(null)
       : runHistoryCheckWithin({
@@ -320,6 +338,7 @@ export async function runRefineChapter(
   const normalized = normalizeSuggestions(merged, input.text, input.textHash, input.requestId, {
     rejected: new Set(input.rejected ?? []),
     ...(range === undefined ? {} : { range }),
+    ...(input.kinds === undefined ? {} : { kinds: input.kinds }),
   });
   if (normalized.alreadyRejected > 0) {
     logger.info('refineChapter: already rejected proposals dropped', {
@@ -389,9 +408,14 @@ export async function runRefineChapter(
     const replace = new Set(
       pendingToReplace(
         pendingSnap.docs.map((d) => {
-          const data = d.data() as { span?: { from?: unknown; to?: unknown }; textHash?: unknown };
+          const data = d.data() as {
+            kind?: unknown;
+            span?: { from?: unknown; to?: unknown };
+            textHash?: unknown;
+          };
           return {
             id: d.id,
+            ...(typeof data.kind === 'string' ? { kind: data.kind } : {}),
             span: {
               from: typeof data.span?.from === 'number' ? data.span.from : 0,
               to: typeof data.span?.to === 'number' ? data.span.to : Number.MAX_SAFE_INTEGER,
@@ -401,6 +425,7 @@ export async function runRefineChapter(
         }),
         input.textHash,
         range,
+        input.kinds,
       ),
     );
     for (const pending of pendingSnap.docs) if (replace.has(pending.id)) tx.delete(pending.ref);

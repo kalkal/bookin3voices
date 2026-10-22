@@ -542,6 +542,68 @@ describe('refineChapter with the history check (Firestore emulator, fake models)
     expect(stored.find((s) => s.kind === 'history')).toMatchObject({ aspect: 'anachronism' });
   });
 
+  it('kinds: only «period» → no main model call; no «period» → no history check', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid);
+    const main = new FakeRefineModel([MAIN_STORICO]);
+    let historyCalls = 0;
+    const counting: AiProvider = {
+      name: 'gemini',
+      modelName: 'fake-history',
+      generateJson: async () => {
+        historyCalls += 1;
+        return { ok: true, value: { period_named: false, quote: '', period_label: '' } };
+      },
+    };
+    const deps = {
+      ...makeDeps(main),
+      history: { gemini: () => counting, bedrock: () => counting },
+    };
+
+    await run(deps, uid, {
+      ...input(bookId, chapterId, 'req-kinds-1', TESTO_STORICO),
+      kinds: ['history'],
+    });
+    expect(main.prompts).toHaveLength(0);
+    expect(historyCalls).toBeGreaterThan(0);
+
+    historyCalls = 0;
+    const response = await run(deps, uid, {
+      ...input(bookId, chapterId, 'req-kinds-2', TESTO_STORICO),
+      kinds: ['style'],
+    });
+    expect(historyCalls).toBe(0);
+    expect(main.prompts).toHaveLength(1);
+    expect(response.suggestions.every((s) => s.kind === 'style')).toBe(true);
+  });
+
+  it('kinds: undecided suggestions of a kind turned off are kept', async () => {
+    const uid = freshUid();
+    const { bookId, chapterId } = await seed(uid);
+    const hash = textHash(TESTO_STORICO);
+    const suggestionsRef = db.collection(
+      `users/${uid}/books/${bookId}/chapters/${chapterId}/suggestions`,
+    );
+    await suggestionsRef.doc('pacing-pending').set({
+      schemaVersion: 1,
+      kind: 'pacing',
+      span: { from: 0, to: 5 },
+      original: 'Elena',
+      proposals: ['Lei'],
+      rationale: 'previous run',
+      state: 'pending',
+      textHash: hash,
+      requestId: 'req-prima',
+      createdAt: NOW - 1000,
+    });
+    await run(makeDeps(new FakeRefineModel([MAIN_STORICO])), uid, {
+      ...input(bookId, chapterId, 'req-kinds-3', TESTO_STORICO),
+      kinds: ['style'],
+    });
+    const ids = (await listSuggestions(uid, bookId, chapterId)).map((s) => s.id);
+    expect(ids).toContain('pacing-pending');
+  });
+
   it('degraded mode: a failing history check leaves the refinement intact and logs a warning', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);

@@ -33,6 +33,8 @@ import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import { HighlightedChapterText } from './HighlightedChapterText';
 import { MIN_SELECTION_WORDS, selectionWords } from './selection';
+import { RefinePanel, type RefineScope } from './RefinePanel';
+import { SUGGESTION_KINDS, type SuggestionKind } from './types';
 import type { ChapterReviewController } from './useChapterReview';
 import type { TitleRefineController } from './useTitleRefine';
 
@@ -105,7 +107,10 @@ export function ChapterEditorScreen({
   };
   // shown only after tapping Refine with a too-short selection; cleared on any change
   const [selectionHint, setSelectionHint] = useState('');
-  const refineSelection = async (range: { from: number; to: number }) => {
+  const refineSelection = async (
+    range: { from: number; to: number },
+    kinds: readonly SuggestionKind[] | undefined,
+  ) => {
     // too short: stay in the editor with the selection; the hint is a line in the
     // toolbar above the keyboard, never a banner taking the text's room
     if (selectionWords(draft, range) < MIN_SELECTION_WORDS) {
@@ -118,7 +123,51 @@ export function ChapterEditorScreen({
     setEditing(false);
     setSelection(null);
     await controller.applyManualEdit(draft);
-    await controller.refine(range);
+    await controller.refine(range, kinds);
+  };
+
+  // the refine panel: what is refined (scope) and which kinds are checked
+  const [panelScope, setPanelScope] = useState<RefineScope | null>(null);
+  const [kindsOn, setKindsOn] = useState<readonly SuggestionKind[]>(SUGGESTION_KINDS);
+  const toggleKind = (kind: SuggestionKind) =>
+    setKindsOn((current) =>
+      current.includes(kind)
+        ? current.filter((k) => k !== kind)
+        : SUGGESTION_KINDS.filter((k) => k === kind || current.includes(k)),
+    );
+  const openPanel = () => {
+    if (editing && selection !== null) {
+      // a too-short selection: the hint at once, no panel
+      if (selectionWords(draft, selection) < MIN_SELECTION_WORDS) {
+        setSelectionHint(t('review.editor.selectionTooShort', { count: MIN_SELECTION_WORDS }));
+        return;
+      }
+      // the panel and the result must not hide behind the keyboard
+      Keyboard.dismiss();
+      setPanelScope({ kind: 'selection', range: selection });
+    } else if (paragraph !== null) setPanelScope({ kind: 'paragraph', range: paragraph });
+    else setPanelScope({ kind: 'chapter' });
+  };
+  const startRefine = () => {
+    const scope = panelScope;
+    setPanelScope(null);
+    if (scope === null) return;
+    // all four on = the usual request
+    const kinds = kindsOn.length === SUGGESTION_KINDS.length ? undefined : kindsOn;
+    if (scope.kind === 'selection') {
+      void refineSelection(scope.range, kinds);
+      return;
+    }
+    if (scope.kind === 'paragraph') {
+      // too short: the paragraph stays chosen, the message says why
+      if (!controller.checkSelection(controller.text, scope.range)) return;
+      setParagraph(null);
+      flushDraft();
+      void controller.refine(scope.range, kinds);
+      return;
+    }
+    flushDraft();
+    void controller.refine(undefined, kinds);
   };
 
   const words = countWords(controller.text);
@@ -460,6 +509,16 @@ export function ChapterEditorScreen({
               {selectionHint}
             </Text>
           ) : null}
+          {panelScope !== null ? (
+            // in the toolbar, like the hint: the text keeps its room above the keyboard
+            <RefinePanel
+              scope={panelScope.kind}
+              kindsOn={kindsOn}
+              onToggle={toggleKind}
+              onStart={startRefine}
+              onCancel={() => setPanelScope(null)}
+            />
+          ) : null}
           {controller.refining ? (
             <Text
               testID="editor-refine-status"
@@ -508,22 +567,7 @@ export function ChapterEditorScreen({
                   controller.loadState !== 'ready' ||
                   (controller.text === '' && !editing)
                 }
-                onPress={() => {
-                  if (editing && selection !== null) {
-                    void refineSelection(selection);
-                    return;
-                  }
-                  if (paragraph !== null) {
-                    // too short: the paragraph stays chosen, the message says why
-                    if (!controller.checkSelection(controller.text, paragraph)) return;
-                    setParagraph(null);
-                    flushDraft();
-                    void controller.refine(paragraph);
-                    return;
-                  }
-                  flushDraft();
-                  void controller.refine();
-                }}
+                onPress={openPanel}
                 icon={
                   controller.refining ? (
                     <ActivityIndicator size="small" color={colors.onPrimary} />

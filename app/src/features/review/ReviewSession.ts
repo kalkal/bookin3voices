@@ -124,7 +124,7 @@ export class ReviewSession {
    * batch is born stale; in any case every pending is verified
    * against the current text (slice === original), never blind trust.
    */
-  ingest(result: RefineResult, range?: Span): IngestOutcome {
+  ingest(result: RefineResult, range?: Span, kinds?: readonly SuggestionKind[]): IngestOutcome {
     const currentHash = textHash(this.currentText);
     const bornStale = result.textHash !== currentHash;
     const incoming = result.suggestions.map((sug) =>
@@ -132,13 +132,16 @@ export class ReviewSession {
     );
     // a selection refine replaces only the pendings it touched (as the server does);
     // decided ones stay as history, pendings elsewhere stay pending
+    // ...and the undecided ones of a kind turned off (the server keeps them too)
     const kept =
-      range === undefined
+      range === undefined && kinds === undefined
         ? []
         : this.items.filter(
             (s) =>
               s.state !== 'pending' ||
-              Math.max(s.span.from, range.from) >= Math.min(s.span.to, range.to),
+              (kinds !== undefined && !kinds.includes(s.kind)) ||
+              (range !== undefined &&
+                Math.max(s.span.from, range.from) >= Math.min(s.span.to, range.to)),
           );
     this.items = [...kept, ...incoming].sort((a, b) => a.span.from - b.span.from);
     this.revalidatePending();

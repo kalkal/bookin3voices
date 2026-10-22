@@ -40,6 +40,7 @@ async function setup() {
   if (!elision) throw new Error('elision suggestion missing');
   await screen.findByTestId('editor-text-p0');
   await fireEvent.press(await screen.findByTestId('editor-refine'));
+  await fireEvent.press(await screen.findByTestId('refine-start'));
   await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
   return { screen, chapterRepository, elision };
 }

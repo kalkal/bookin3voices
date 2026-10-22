@@ -115,6 +115,8 @@ describe('ChapterReviewFlow — the key beats of the chapter', () => {
     expect(screen.getByTestId('outline-track')).toHaveTextContent(/Traccia · VII/);
 
     await fireEvent.press(screen.getByTestId('editor-refine'));
+
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     expect(await screen.findByTestId('review-screen')).toBeOnTheScreen();
     expect(await screen.findByTestId('outline-beat-1')).toHaveTextContent(/La tazza/);
@@ -141,6 +143,7 @@ describe('ChapterReviewFlow — AI unreachable', () => {
     const { screen } = await setup(BRANO, provider);
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
 
     const banner = await screen.findByTestId('editor-refine-error');
     expect(banner).toHaveTextContent(/I suggerimenti non sono arrivati\. Riprova tra poco\./);
@@ -202,6 +205,7 @@ describe('ChapterReviewFlow — accept never deletes text silently', () => {
     const { screen, chapterRepository } = await setup(BRANO, provider);
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     const accept = await screen.findByTestId(/^review-accept-ref-.*-1$/);
     await fireEvent.press(accept);
@@ -232,6 +236,7 @@ describe('ChapterReviewFlow — rejections unreadable', () => {
     jest.spyOn(revisionRepository, 'list').mockRejectedValue(new Error('disk'));
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     expect(await screen.findByTestId('editor-suggestions-chip')).toBeOnTheScreen();
     expect(warn).toHaveBeenCalledWith(
       'rejections-unavailable',
@@ -258,10 +263,12 @@ describe('ChapterReviewFlow — rejected suggestions are not proposed again', ()
 
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId(`review-reject-${elision.id}`));
     await fireEvent.press(await screen.findByTestId('review-back'));
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
 
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(requests[0]?.rejected ?? []).toEqual([]);
@@ -299,6 +306,7 @@ describe('ChapterReviewFlow — refine the selection', () => {
     expect(button).toHaveTextContent(/Rifinisci la selezione/);
     expect(button).not.toBeDisabled();
     await fireEvent.press(button);
+    await fireEvent.press(await screen.findByTestId('refine-start'));
 
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]?.range).toEqual({ from, to });
@@ -312,6 +320,7 @@ describe('ChapterReviewFlow — refine the selection', () => {
     await screen.findByTestId('editor-text-p0');
     expect(screen.getByTestId('editor-refine')).toHaveTextContent(/Rifinisci con AI/);
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]?.range).toBeUndefined();
     await screen.unmount();
@@ -340,6 +349,7 @@ describe('ChapterReviewFlow — refine the selection', () => {
       nativeEvent: { selection: { start: from, end: BRANO.length } },
     });
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await screen.findByTestId('editor-refine-error');
 
     // the user edits the text: the old offsets now point elsewhere
@@ -417,6 +427,7 @@ describe('ChapterReviewFlow — refine a paragraph from the reading view', () =>
     const button = screen.getByTestId('editor-refine');
     expect(button).toHaveTextContent(/Rifinisci il paragrafo/);
     await fireEvent.press(button);
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await waitFor(() => expect(requests).toHaveLength(1));
     const from = TWO.indexOf(BRANO);
     expect(requests[0]?.range).toEqual({ from, to: from + BRANO.length });
@@ -430,6 +441,7 @@ describe('ChapterReviewFlow — refine a paragraph from the reading view', () =>
     await fireEvent.press(screen.getByTestId('editor-text-p1'));
     expect(screen.getByTestId('editor-refine')).toHaveTextContent(/Rifinisci con AI/);
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]?.range).toBeUndefined();
     await screen.unmount();
@@ -440,6 +452,7 @@ describe('ChapterReviewFlow — refine a paragraph from the reading view', () =>
     const { screen } = await setupWith(TWO, provider);
     await fireEvent.press(await screen.findByTestId('editor-text-p0'));
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(/almeno 5 parole/);
     expect(requests).toHaveLength(0);
     await screen.unmount();
@@ -546,6 +559,123 @@ describe('ChapterReviewFlow — refine the title from the reading view', () => {
   });
 });
 
+describe('ChapterReviewFlow — the refine panel: scope and kinds', () => {
+  function recording() {
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    const provider: SuggestionsProvider = {
+      refine: (request) => {
+        requests.push(request);
+        return fake.refine(request);
+      },
+    };
+    return { provider, requests };
+  }
+
+  it('Rifinisci first opens the panel: scope «Tutto il capitolo», the 4 kinds all on', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(requests).toHaveLength(0);
+    expect(screen.getByTestId('refine-scope')).toHaveTextContent(/Tutto il capitolo/);
+    for (const kind of ['style', 'grammar', 'pacing', 'history']) {
+      const toggle = screen.getByTestId(`refine-kind-${kind}`);
+      expect(toggle).toHaveProp('accessibilityRole', 'switch');
+      expect(toggle).toHaveProp('accessibilityState', { checked: true });
+      expect(toggle.props.accessibilityLabel).toBeTruthy();
+    }
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    // all four on: the request is the usual one
+    expect(requests[0]?.kinds).toBeUndefined();
+    await screen.unmount();
+  });
+
+  it('turning kinds off sends only the chosen ones', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(screen.getByTestId('refine-kind-style'));
+    await fireEvent.press(screen.getByTestId('refine-kind-pacing'));
+    expect(screen.getByTestId('refine-kind-style')).toHaveProp('accessibilityState', {
+      checked: false,
+    });
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.kinds).toEqual(['grammar', 'history']);
+    await screen.unmount();
+  });
+
+  it('with every kind off there is nothing to check: Avvia is disabled', async () => {
+    const { provider } = recording();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    for (const kind of ['style', 'grammar', 'pacing', 'history']) {
+      await fireEvent.press(screen.getByTestId(`refine-kind-${kind}`));
+    }
+    const start = screen.getByTestId('refine-start');
+    expect(start).toBeDisabled();
+    // announced as disabled, not just without a handler
+    expect(start.props.accessibilityState).toMatchObject({ disabled: true });
+    await screen.unmount();
+  });
+
+  it('the scope follows what was chosen: a paragraph', async () => {
+    const { provider, requests } = recording();
+    const TWO = `Prima riga del capitolo con abbastanza parole.\n${BRANO}`;
+    const { screen } = await setupWith(TWO, provider);
+    await fireEvent.press(await screen.findByTestId('editor-text-p1'));
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(screen.getByTestId('refine-scope')).toHaveTextContent(/Paragrafo/);
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.range).toEqual({ from: TWO.indexOf(BRANO), to: TWO.length });
+    await screen.unmount();
+  });
+
+  it('Retry after a failure reuses the same kinds', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    let failNext = true;
+    const provider: SuggestionsProvider = {
+      refine: async (request) => {
+        requests.push(request);
+        if (failNext) {
+          failNext = false;
+          throw new Error('unreachable');
+        }
+        return fake.refine(request);
+      },
+    };
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(screen.getByTestId('refine-kind-style'));
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    await fireEvent.press(await screen.findByTestId('editor-refine-retry'));
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests[0]?.kinds).toEqual(['grammar', 'pacing', 'history']);
+    expect(requests[1]?.kinds).toEqual(['grammar', 'pacing', 'history']);
+    jest.restoreAllMocks();
+    await screen.unmount();
+  });
+
+  it('Annulla closes the panel without refining', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(screen.getByTestId('refine-cancel'));
+    expect(screen.queryByTestId('refine-panel')).toBeNull();
+    expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+});
+
 describe('ChapterReviewFlow — refine never looks silent', () => {
   afterEach(() => jest.restoreAllMocks());
 
@@ -560,6 +690,7 @@ describe('ChapterReviewFlow — refine never looks silent', () => {
     const { screen } = await setup(BRANO, provider);
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     expect(await screen.findByTestId('editor-refine-status')).toHaveTextContent(/in corso/);
 
     await act(async () =>
@@ -587,6 +718,7 @@ describe('ChapterReviewFlow — refine never looks silent', () => {
     const { screen } = await setup(BRANO, provider);
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     expect(await screen.findByTestId('editor-refine-empty')).toHaveTextContent(pattern);
     await screen.unmount();
   });
@@ -614,6 +746,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
 
     const chip = await screen.findByTestId('editor-suggestions-chip');
     expect(chip).toHaveTextContent(`${preview.suggestions.length} suggerimenti`);
@@ -634,6 +767,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
 
     await fireEvent.press(await screen.findByTestId(`review-accept-${elision.id}`));
@@ -666,6 +800,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId(`review-reject-${elision.id}`));
 
@@ -686,6 +821,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
 
     await fireEvent.press(await screen.findByTestId(`review-variant-${adverb.id}-1`));
@@ -701,6 +837,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId('review-filter-grammar'));
     await fireEvent.press(await screen.findByTestId('review-accept-all'));
@@ -728,6 +865,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
 
     const filter = await screen.findByTestId('review-filter-history');
@@ -766,6 +904,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0');
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await fireEvent.press(await screen.findByTestId('editor-suggestions-chip'));
     await fireEvent.press(await screen.findByTestId('review-filter-history'));
 
@@ -784,6 +923,7 @@ describe('ChapterReviewFlow (editor + review)', () => {
 
     await screen.findByTestId('editor-text-p0'); // chapter loaded: button enabled
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
 
     // the user hand-corrects exactly there: 'un altra' → 'una nuova'
     await fireEvent.press(await screen.findByTestId('editor-edit-toggle'));

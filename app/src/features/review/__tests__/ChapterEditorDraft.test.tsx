@@ -78,6 +78,7 @@ describe('chapter editor — hand-typed text is never lost', () => {
   it('opening the suggestions without ✓ keeps the text', async () => {
     const { screen, chapterRepository } = await setup(undefined, LONG);
     await fireEvent.press(await screen.findByTestId('editor-refine'));
+    await fireEvent.press(await screen.findByTestId('refine-start'));
     await screen.findByTestId('editor-suggestions-chip');
     await typeByHand(screen, LONG + ' Nora salì le scale.');
     await fireEvent.press(screen.getByTestId('editor-suggestions-chip'));

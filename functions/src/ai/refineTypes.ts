@@ -19,6 +19,15 @@ import type { RefineDebugTrace } from './debugTrace';
 export const SUGGESTION_KINDS = ['style', 'grammar', 'pacing', 'history'] as const;
 export type SuggestionKind = (typeof SUGGESTION_KINDS)[number];
 
+/** Kinds the main refinement call checks; history has its own check. */
+export const MAIN_KINDS = ['style', 'grammar', 'pacing'] as const;
+export type MainKind = (typeof MAIN_KINDS)[number];
+
+/** The main kinds a refinement asks for (all of them when the user chose none). */
+export function mainKindsOf(kinds: readonly SuggestionKind[] | undefined): MainKind[] {
+  return MAIN_KINDS.filter((kind) => kinds === undefined || kinds.includes(kind));
+}
+
 export const HISTORY_ASPECTS = ['period', 'anachronism'] as const;
 export type HistoryAspect = (typeof HISTORY_ASPECTS)[number];
 
@@ -132,6 +141,8 @@ export const refineChapterInputSchema = z.object({
     .array(z.string().regex(/^v1-[0-9a-f]{16}$/))
     .max(500)
     .optional(),
+  /** Kinds the user wants checked (style, grammar, pacing, history); absent = all. */
+  kinds: z.array(z.enum(SUGGESTION_KINDS)).min(1).max(4).optional(),
   /** «Rifinisci la selezione»: refine only [from, to) of `text`; absent = the whole chapter. */
   range: z.object({ from: z.number().int().min(0), to: z.number().int().min(0) }).optional(),
   /** Dev builds ask for a debug trace; honoured only where the deployment allows it. */

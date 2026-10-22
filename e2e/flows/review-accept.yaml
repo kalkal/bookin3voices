@@ -37,6 +37,9 @@ name: Review — accept a variant, reject a suggestion
 # (style: «posò lentamente»; grammar: «un altra»).
 - tapOn:
     id: "editor-refine"
+# the refine panel: whole chapter, all kinds on
+- tapOn:
+    id: "refine-start"
 - extendedWaitUntil:
     visible:
       id: "editor-suggestions-chip"

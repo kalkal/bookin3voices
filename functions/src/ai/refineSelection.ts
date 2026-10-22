@@ -24,18 +24,24 @@ export function selectionProblem(text: string, range: SelectionRange): Selection
   return words < MIN_SELECTION_WORDS ? 'too-short' : null;
 }
 
-/** Ids of the pending suggestions a refinement replaces (all of them without a range). */
+/**
+ * Ids of the pending suggestions a refinement replaces: the ones it looked at
+ * (inside the range, of a chosen kind), plus any left on an older text. A
+ * kind turned off keeps its undecided suggestions.
+ */
 export function pendingToReplace(
-  pendings: readonly { id: string; span: SelectionRange; textHash: string }[],
+  pendings: readonly { id: string; kind?: string; span: SelectionRange; textHash: string }[],
   textHash: string,
   range: SelectionRange | undefined,
+  kinds?: readonly string[],
 ): string[] {
-  if (range === undefined) return pendings.map((p) => p.id);
   return pendings
-    .filter(
-      (p) =>
-        p.textHash !== textHash ||
-        Math.max(p.span.from, range.from) < Math.min(p.span.to, range.to),
-    )
+    .filter((p) => {
+      if (p.textHash !== textHash) return true;
+      if (kinds !== undefined && (p.kind === undefined || !kinds.includes(p.kind))) return false;
+      return (
+        range === undefined || Math.max(p.span.from, range.from) < Math.min(p.span.to, range.to)
+      );
+    })
     .map((p) => p.id);
 }

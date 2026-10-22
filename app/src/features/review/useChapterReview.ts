@@ -56,7 +56,7 @@ export interface ChapterReviewController {
   /** Plain message when an Accept was not applied (text left intact); '' otherwise. */
   acceptNotice: string;
   /** Refines the whole chapter, or only `range` («Rifinisci la selezione»). */
-  refine(range?: Span): Promise<void>;
+  refine(range?: Span, kinds?: readonly SuggestionKind[]): Promise<void>;
   /** Repeats the last refine; after an edit of the text, on the whole chapter (the Retry button). */
   retryRefine(): Promise<void>;
   /**
@@ -160,13 +160,14 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
 
   // the range of the last refine, with the text it referred to: offsets are
   // meaningless on another text, so Retry then refines the whole chapter
-  const lastRangeRef = useRef<{ range: Span; textHash: string } | undefined>(undefined);
+  const lastRangeRef = useRef<
+    { range?: Span; textHash: string; kinds?: readonly SuggestionKind[] } | undefined
+  >(undefined);
   const refine = useCallback(
-    async (range?: Span) => {
+    async (range?: Span, kinds?: readonly SuggestionKind[]) => {
       const session = sessionRef.current;
       if (!session || session.text === '') return;
-      lastRangeRef.current =
-        range === undefined ? undefined : { range, textHash: textHash(session.text) };
+      lastRangeRef.current = { range, textHash: textHash(session.text), kinds };
       if (
         range !== undefined &&
         (range.to > session.text.length ||
@@ -201,11 +202,12 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
           requestId,
           rejected,
           ...(range === undefined ? {} : { range }),
+          ...(kinds === undefined ? {} : { kinds: [...kinds] }),
         });
         // provider output validated at the boundary, even when the
         // provider is the fake: the contract is the same as the refineChapter callable's
         const result = refineResultSchema.parse(raw);
-        const outcome = session.ingest(result, range);
+        const outcome = session.ingest(result, range, kinds);
         if (result.suggestions.length === 0) {
           // never silent: an empty answer says why
           setRefineEmptyMessage(
@@ -229,7 +231,11 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const retryRefine = useCallback(() => {
     const last = lastRangeRef.current;
     const text = sessionRef.current?.text ?? '';
-    return refine(last !== undefined && last.textHash === textHash(text) ? last.range : undefined);
+    // offsets hold only on the text they were taken on; the kinds always hold
+    return refine(
+      last !== undefined && last.textHash === textHash(text) ? last.range : undefined,
+      last?.kinds,
+    );
   }, [refine]);
   const checkSelection = useCallback((text: string, range: Span) => {
     if (range.to <= text.length && selectionWords(text, range) >= MIN_SELECTION_WORDS) return true;

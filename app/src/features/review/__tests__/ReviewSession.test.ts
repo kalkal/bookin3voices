@@ -350,3 +350,12 @@ describe('ingest of a selection refine (range)', () => {
     expect(session.pending.map((s) => s.id)).toEqual(['s-avverbio', 'n-2']);
   });
 });
+
+describe('ingest with only some kinds on', () => {
+  it('keeps the undecided suggestions of the kinds turned off', () => {
+    const session = newSession([STYLE_ADVERB(), GRAMMAR_LOWER()]);
+    const fresh = sug('n-g', 'grammar', 'un altra', ["un'altra"]);
+    session.ingest(freshResult([fresh]), undefined, ['grammar']);
+    expect(session.pending.map((s) => s.id)).toEqual(['s-avverbio', 'n-g']);
+  });
+});

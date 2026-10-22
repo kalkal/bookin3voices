@@ -36,7 +36,9 @@ export type DropReason =
   /** every proposal was already rejected by the user on this original */
   | 'already-rejected'
   | 'overlap'
-  | 'density-cap';
+  | 'density-cap'
+  /** the user turned this kind off for the refinement */
+  | 'kind-off';
 
 /** A single proposal removed before the suggestion was kept or dropped. */
 export interface DroppedProposal {
@@ -78,6 +80,8 @@ export interface NormalizeOptions {
    * to the whole text.
    */
   range?: { from: number; to: number };
+  /** Kinds the user chose; suggestions of other kinds are dropped ('kind-off'). */
+  kinds?: readonly Suggestion['kind'][];
 }
 
 export const MAX_SUGGESTIONS = 30;
@@ -120,6 +124,10 @@ export function normalizeSuggestions(
     droppedItems.push({ kind: sug.kind, original: sug.original, proposals: sug.proposals, reason });
 
   for (const rawSuggestion of output.suggestions) {
+    if (options.kinds !== undefined && !options.kinds.includes(rawSuggestion.kind)) {
+      drop(rawSuggestion, 'kind-off');
+      continue;
+    }
     // models often add stray leading/trailing whitespace when copying a span:
     // retry with the trimmed span before giving up (still exactly-one match)
     let raw = rawSuggestion;

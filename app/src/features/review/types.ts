@@ -117,6 +117,8 @@ export interface RefineRequest {
   debug?: boolean;
   /** «Rifinisci la selezione»: refine only [from, to) of `text`; absent = whole chapter. */
   range?: Span;
+  /** Kinds the user wants checked; absent = all of them. */
+  kinds?: SuggestionKind[];
 }
 
 /** Refinement response, validated at the boundary with Zod. */

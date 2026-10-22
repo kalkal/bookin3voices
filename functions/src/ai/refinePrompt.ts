@@ -9,6 +9,8 @@
 // material that changes (book/chapter context and text) is in the user text,
 // at the end.
 
+import { MAIN_KINDS, mainKindsOf, type SuggestionKind } from './refineTypes';
+
 /**
  * Prompt version: bump on EVERY change to the text or the schema. 3 = the v1 text
  * again: the `history` rules of v2 moved to their own short calls (history/).
@@ -39,6 +41,8 @@ export interface RefinePromptInput {
   text: string;
   /** «Rifinisci la selezione»: the part to refine; `text` is then context only. */
   selection?: string;
+  /** Kinds the user chose; absent or all three main kinds = the usual prompt. */
+  kinds?: readonly SuggestionKind[];
 }
 
 export interface RefinePrompt {
@@ -178,10 +182,16 @@ export function buildRefinePrompt(input: RefinePromptInput): RefinePrompt {
           '>>>',
         ]
   ).join('\n');
+  const wanted = mainKindsOf(input.kinds);
+  const skipped = MAIN_KINDS.filter((kind) => !wanted.includes(kind));
+  const kindsNote =
+    skipped.length === 0 || wanted.length === 0
+      ? ''
+      : `\n\nControlla SOLO: ${wanted.join(', ')}. Non proporre suggerimenti ${skipped.join(' né ')}.`;
 
   return {
     systemInstruction,
-    userText,
+    userText: userText + kindsNote,
     responseSchema: REFINE_RESPONSE_SCHEMA,
   };
 }
