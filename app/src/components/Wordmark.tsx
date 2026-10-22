@@ -1,9 +1,8 @@
 /**
- * The wordmark «book ⌿ in ⌿ 3 ⌿ voices»: the same artwork as the README header
- * (docs/images/wordmark.svg, cut from the approved header, with the redrawn
- * legible k), rendered once to a white PNG and tinted with the theme gold, so
- * the black/gold and Paper themes each use their own token. Screen readers hear
- * one label.
+ * The wordmark «book ⌿ in ⌿ 3 ⌿ voices»: drawn once (docs/images/wordmark.svg,
+ * with the redrawn legible k), rendered to a white PNG and tinted with the
+ * theme gold, so the black/gold and Paper themes each use their own token.
+ * Screen readers hear one label.
  */
 
 import { Image, View } from 'react-native';
