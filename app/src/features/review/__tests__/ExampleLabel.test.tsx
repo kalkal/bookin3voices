@@ -32,7 +32,9 @@ async function setup(text: string, provider: SuggestionsProvider) {
       />
     </ThemeProvider>,
   );
+  // «Rifinisci» opens the refine panel first (#36); «Avvia» sends the request
   await fireEvent.press(await screen.findByTestId('editor-refine'));
+  await fireEvent.press(await screen.findByTestId('refine-start'));
   await screen.findByTestId('editor-suggestions-chip');
   return screen;
 }
