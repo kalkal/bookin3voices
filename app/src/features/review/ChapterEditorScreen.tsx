@@ -34,6 +34,7 @@ import { useTheme } from '../../theme';
 import { HighlightedChapterText } from './HighlightedChapterText';
 import { MIN_SELECTION_WORDS, selectionWords } from './selection';
 import type { ChapterReviewController } from './useChapterReview';
+import type { TitleRefineController } from './useTitleRefine';
 
 /** Tallest the open beats panel may be while the keyboard is up (it scrolls inside). */
 export const EDITOR_OUTLINE_MAX_WITH_KEYBOARD = 132;
@@ -48,6 +49,8 @@ export interface ChapterEditorScreenProps {
   onBack?: () => void;
   /** The chapter's key beats (OutlineTrack), under the header. */
   outlinePanel?: ReactNode;
+  /** «Rifinisci il titolo»: tap the title in the reading view. */
+  title?: TitleRefineController;
 }
 
 export function ChapterEditorScreen({
@@ -56,8 +59,24 @@ export function ChapterEditorScreen({
   chapterTitle,
   onOpenReview,
   onBack,
+  title,
 }: ChapterEditorScreenProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
+  // «Rifinisci il paragrafo»: the paragraph tapped in the reading view, if any
+  const [chosen, setChosen] = useState<{
+    range: { from: number; to: number };
+    text: string;
+  } | null>(null);
+  // a changed text moves the paragraphs: the choice holds only on the text it was made on
+  const paragraph = chosen !== null && chosen.text === controller.text ? chosen.range : null;
+  const setParagraph = (range: { from: number; to: number } | null) =>
+    setChosen(range === null ? null : { range, text: controller.text });
+  // the header shows «VII · <name>»: keep the numeral, follow a renamed title
+  const numeral = chapterTitle?.includes('·') ? chapterTitle.split('·')[0]?.trim() : undefined;
+  const shownTitle =
+    title !== undefined && title.name !== '' && numeral !== undefined
+      ? `${numeral} · ${title.name}`
+      : chapterTitle;
   const bottomClearance = useBottomClearance(spacing.xl);
   // with the keyboard open the body ends above it (edge-to-edge: Android no
   // longer shrinks the window) and the navigation bar is behind the keyboard
@@ -73,6 +92,8 @@ export function ChapterEditorScreen({
   useEffect(() => flushDraft, [flushDraft]);
 
   const startEditing = () => {
+    setParagraph(null);
+    title?.close();
     setDraft(controller.text);
     setSelection(null);
     setEditing(true);
@@ -130,6 +151,10 @@ export function ChapterEditorScreen({
         )}
         <View style={styles.headerText}>
           <Text
+            testID="editor-title"
+            onPress={title?.available && !editing ? title.toggle : undefined}
+            accessibilityRole={title?.available ? 'button' : undefined}
+            accessibilityHint={title?.available ? t('review.title.hint') : undefined}
             style={{
               color: colors.text,
               fontFamily: fonts.display,
@@ -137,7 +162,7 @@ export function ChapterEditorScreen({
             }}
             numberOfLines={1}
           >
-            {chapterTitle ?? t('review.editor.chapterFallback')}
+            {shownTitle ?? t('review.editor.chapterFallback')}
           </Text>
           <Text
             testID="editor-subtitle"
@@ -171,6 +196,56 @@ export function ChapterEditorScreen({
           </Pressable>
         ) : null}
       </View>
+
+      {title !== undefined && title.state !== 'closed' ? (
+        <View
+          testID="editor-title-panel"
+          style={[
+            styles.titlePanel,
+            { marginHorizontal: spacing.xl, marginBottom: spacing.sm, gap: spacing.sm },
+          ]}
+        >
+          {title.state === 'loading' ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : null}
+          {title.state === 'open' || title.state === 'error' ? (
+            <Chip
+              label={t('review.title.refine')}
+              tone="green"
+              testID="editor-title-refine"
+              onPress={() => void title.request()}
+            />
+          ) : null}
+          {title.state === 'proposals'
+            ? title.proposals.map((proposal, index) => (
+                <Chip
+                  key={proposal}
+                  label={proposal}
+                  testID={`editor-title-proposal-${index}`}
+                  onPress={() => void title.choose(proposal)}
+                />
+              ))
+            : null}
+          {title.state === 'error' ? (
+            <Text
+              testID="editor-title-error"
+              accessibilityRole="alert"
+              style={{
+                color: colors.accentText,
+                fontFamily: fonts.body,
+                fontSize: typeScale.caption,
+              }}
+            >
+              {title.message}
+            </Text>
+          ) : null}
+          <Chip
+            label={t('review.title.cancel')}
+            testID="editor-title-cancel"
+            onPress={title.close}
+          />
+        </View>
+      ) : null}
 
       <OrnamentDivider style={{ marginHorizontal: spacing.xl, marginBottom: spacing.sm }} />
 
@@ -255,6 +330,12 @@ export function ChapterEditorScreen({
                 text={controller.text}
                 suggestions={controller.suggestions}
                 onPressSuggestion={() => onOpenReview()}
+                onPressParagraph={(range) =>
+                  setParagraph(
+                    paragraph?.from === range.from && paragraph.to === range.to ? null : range,
+                  )
+                }
+                selectedRange={paragraph}
               />
             )}
             {controller.refineBornStale ? (
@@ -417,7 +498,9 @@ export function ChapterEditorScreen({
                     ? t('review.editor.refining')
                     : selection !== null
                       ? t('review.editor.refineSelection')
-                      : t('review.editor.refine')
+                      : paragraph !== null && !editing
+                        ? t('review.editor.refineParagraph')
+                        : t('review.editor.refine')
                 }
                 disabled={
                   controller.refining ||
@@ -428,6 +511,14 @@ export function ChapterEditorScreen({
                 onPress={() => {
                   if (editing && selection !== null) {
                     void refineSelection(selection);
+                    return;
+                  }
+                  if (paragraph !== null) {
+                    // too short: the paragraph stays chosen, the message says why
+                    if (!controller.checkSelection(controller.text, paragraph)) return;
+                    setParagraph(null);
+                    flushDraft();
+                    void controller.refine(paragraph);
                     return;
                   }
                   flushDraft();
@@ -488,6 +579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refineButton: { flex: 1 },
+  titlePanel: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
   errorBanner: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8 },
   roundButton: {
     width: 48,

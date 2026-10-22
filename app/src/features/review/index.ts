@@ -57,3 +57,5 @@ export { ReviewScreen } from './ReviewScreen';
 export type { ReviewScreenProps } from './ReviewScreen';
 export { ChapterReviewFlow } from './ChapterReviewFlow';
 export type { ChapterReviewFlowProps } from './ChapterReviewFlow';
+export { CallableTitleRefineService, FakeTitleRefineService } from './titles';
+export type { TitleRefineRequest, TitleRefineResult, TitleRefineService } from './titles';

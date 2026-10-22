@@ -6,12 +6,13 @@
 import { logTestEvent } from '../features/testLog';
 import { t } from '../i18n';
 
-export type CallableAction = 'refine' | 'outline' | 'export';
+export type CallableAction = 'refine' | 'outline' | 'export' | 'title';
 
 const UNREACHABLE_KEYS: Record<CallableAction, string> = {
   refine: 'common.callable.refine.unreachable',
   outline: 'common.callable.outline.unreachable',
   export: 'common.callable.export.unreachable',
+  title: 'common.callable.title.unreachable',
 };
 
 /** Callable error code without the 'functions/' prefix, or undefined for a plain error. */

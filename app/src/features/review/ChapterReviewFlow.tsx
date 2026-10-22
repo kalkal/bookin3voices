@@ -7,12 +7,14 @@
  */
 import { useState } from 'react';
 
-import type { ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
+import type { ChapterPatch, ChapterRef, ChapterTextRepository, KeyValueStorage } from '../chapters';
 import { OutlineTrack, type OutlineTrackRepository } from '../dictation/OutlineTrack';
 import { ChapterEditorScreen } from './ChapterEditorScreen';
 import { ReviewScreen } from './ReviewScreen';
 import type { RevisionRepository } from './revisions';
+import type { TitleRefineService } from './titles';
 import type { SuggestionsProvider } from './types';
+import { useTitleRefine } from './useTitleRefine';
 import { useChapterReview } from './useChapterReview';
 
 export interface ChapterReviewFlowProps {
@@ -28,6 +30,12 @@ export interface ChapterReviewFlowProps {
   outlineRepository?: OutlineTrackRepository;
   /** Storage of the beats panel's open/closed choice (tests); default AsyncStorage. */
   outlineStateStorage?: KeyValueStorage;
+  /** The chapter's own title (without the numeral), for «Rifinisci il titolo». */
+  chapterName?: string;
+  /** refineTitle callable; absent = the title cannot be refined. */
+  titleService?: TitleRefineService;
+  /** Where a chosen title is saved. */
+  titleRepository?: { updateChapter(ref: ChapterRef, patch: ChapterPatch): Promise<void> };
 }
 
 export function ChapterReviewFlow({
@@ -39,7 +47,16 @@ export function ChapterReviewFlow({
   onBack,
   outlineRepository,
   outlineStateStorage,
+  chapterName,
+  titleService,
+  titleRepository,
 }: ChapterReviewFlowProps) {
+  const title = useTitleRefine({
+    chapter,
+    name: chapterName ?? '',
+    service: titleService,
+    repository: titleRepository,
+  });
   const controller = useChapterReview({
     chapter,
     chapterRepository,
@@ -73,6 +90,7 @@ export function ChapterReviewFlow({
     <ChapterEditorScreen
       controller={controller}
       chapterTitle={chapterTitle}
+      title={title}
       onOpenReview={() => setScreen('review')}
       onBack={onBack}
       outlinePanel={outlinePanel}

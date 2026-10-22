@@ -40,6 +40,13 @@ export const review: Namespace = {
       'the AI’s proposals would have changed the text too much, so I dropped them. Try again or pick another part.',
     'review.empty.alreadyRejected': 'you had already rejected those proposals.',
     'review.empty.nothingUsable': 'the AI’s answers were not usable on this text. Try again.',
+    'review.editor.refineParagraph': 'Refine the paragraph',
+    'review.editor.paragraphHint': 'Choose this paragraph to refine just it',
+    'review.title.hint': 'Shows «Refine the title»',
+    'review.title.refine': 'Refine the title',
+    'review.title.cancel': 'Cancel',
+    'review.title.none': 'No better title came up: the current one stays.',
+    'review.title.saveFailed': 'The new title was not saved: try again.',
     'review.editor.selectionTooShort':
       'Select at least {count} words to refine, or clear the selection to refine the whole chapter.',
 
@@ -101,6 +108,13 @@ export const review: Namespace = {
     'review.empty.alreadyRejected': 'avevi già rifiutato quelle proposte.',
     'review.empty.nothingUsable':
       'le risposte dell’AI non erano utilizzabili su questo testo. Riprova.',
+    'review.editor.refineParagraph': 'Rifinisci il paragrafo',
+    'review.editor.paragraphHint': 'Sceglie questo paragrafo per rifinire solo lui',
+    'review.title.hint': 'Mostra «Rifinisci il titolo»',
+    'review.title.refine': 'Rifinisci il titolo',
+    'review.title.cancel': 'Annulla',
+    'review.title.none': 'Nessun titolo migliore: resta quello attuale.',
+    'review.title.saveFailed': 'Il nuovo titolo non è stato salvato: riprova.',
     'review.editor.selectionTooShort':
       'Seleziona almeno {count} parole da rifinire, oppure togli la selezione per rifinire tutto il capitolo.',
 

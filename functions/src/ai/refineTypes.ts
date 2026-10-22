@@ -188,6 +188,8 @@ export const bookForRefineSchema = z.object({
 /** Subset of the chapter document: title and outline. */
 export const chapterForRefineSchema = z.object({
   title: z.string().catch(''),
+  /** Stored text: context for refineTitle (refineChapter uses the client's text). */
+  rawText: z.string().catch(''),
   outline: z
     .object({
       summary: z.string().catch(''),

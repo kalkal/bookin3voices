@@ -21,7 +21,7 @@ import { z } from 'zod';
 
 /** Actions with a cap. Separate counters per action: a limit on refine (flash,
  *  frequent) must not eat into the outline budget (Pro, expensive but rare). */
-export const USAGE_ACTIONS = ['refineChapter', 'generateOutline'] as const;
+export const USAGE_ACTIONS = ['refineChapter', 'generateOutline', 'refineTitle'] as const;
 export type UsageAction = (typeof USAGE_ACTIONS)[number];
 
 export interface UsageLimit {
@@ -41,6 +41,8 @@ export interface UsageLimit {
 export const DEFAULT_USAGE_LIMITS: Record<UsageAction, UsageLimit> = {
   refineChapter: { perUserPerDay: 200, globalPerDay: 300 },
   generateOutline: { perUserPerDay: 15, globalPerDay: 25 },
+  // a short call (title + excerpt), but still a model call
+  refineTitle: { perUserPerDay: 100, globalPerDay: 200 },
 };
 
 // The counter is internal data, but it is re-read with Zod at the boundary.

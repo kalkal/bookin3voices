@@ -10,6 +10,7 @@
 import { Text } from 'react-native';
 import type { TextStyle } from 'react-native';
 
+import { t } from '../../i18n';
 import { useTheme } from '../../theme';
 import type { Suggestion, SuggestionKind } from './types';
 
@@ -18,6 +19,10 @@ interface HighlightedChapterTextProps {
   suggestions: readonly Suggestion[];
   /** Tap on a highlight (to jump to the Review). */
   onPressSuggestion?: (suggestionId: string) => void;
+  /** Tap on a paragraph (outside a highlight): its range in the whole text. */
+  onPressParagraph?: (range: { from: number; to: number }) => void;
+  /** The paragraph currently chosen for «Rifinisci il paragrafo», if any. */
+  selectedRange?: { from: number; to: number } | null;
   testID?: string;
 }
 
@@ -30,6 +35,8 @@ export function HighlightedChapterText({
   text,
   suggestions,
   onPressSuggestion,
+  onPressParagraph,
+  selectedRange,
   testID,
 }: HighlightedChapterTextProps) {
   const { colors, fonts, spacing, typeScale } = useTheme();
@@ -75,11 +82,20 @@ export function HighlightedChapterText({
           paragraph.start + capLength,
           pending,
         );
+        const range = { from: paragraph.start, to: paragraph.start + paragraph.text.length };
+        const selected =
+          selectedRange != null &&
+          selectedRange.from === range.from &&
+          selectedRange.to === range.to;
         return (
           <Text
             key={paragraph.start}
             testID={testID ? `${testID}-p${index}` : undefined}
+            onPress={onPressParagraph ? () => onPressParagraph(range) : undefined}
+            accessibilityState={onPressParagraph ? { selected } : undefined}
+            accessibilityHint={onPressParagraph ? t('review.editor.paragraphHint') : undefined}
             style={{
+              backgroundColor: selected ? colors.selectedTint : undefined,
               color: colors.text,
               fontFamily: fonts.body,
               fontSize: typeScale.bodyLarge,

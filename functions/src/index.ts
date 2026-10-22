@@ -12,6 +12,7 @@ import type { AiProviderName } from './ai/provider/types';
 import { REFINE_TEMPERATURE } from './ai/refinePrompt';
 import { modelForTier, OUTLINE_TIER, refineFallbackModelName, refineModelName } from './ai/models';
 import { createRefineChapterHandler } from './ai/refineChapter';
+import { createRefineTitleHandler } from './ai/refineTitle';
 import { createExportBackupHandler } from './backup/exportBackup';
 import { createExportBookHandler } from './export/exportBook';
 
@@ -103,6 +104,16 @@ export const refineChapter = onCall(
     },
     // dev-only debug trace for the app's test log: off unless DEBUG_TRACE=1 or emulator
     debugTrace: debugTraceEnabled(process.env),
+  }),
+);
+
+// «Rifinisci il titolo»: up to 3 alternative chapter titles (the title is not in
+// rawText, so it has its own small path). Nothing is stored server-side.
+export const refineTitle = onCall(
+  { secrets: aiSecrets, timeoutSeconds: 120 },
+  createRefineTitleHandler({
+    db: getFirestore(),
+    model: modelFor('primary', 0.7),
   }),
 );
 

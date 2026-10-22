@@ -3,12 +3,15 @@ import { Keyboard } from 'react-native';
 
 import { ThemeProvider } from '../../../theme';
 import { InMemoryChapterRepository } from '../../chapters';
-import { ChapterReviewFlow } from '../ChapterReviewFlow';
+import { ChapterReviewFlow, type ChapterReviewFlowProps } from '../ChapterReviewFlow';
+import type { TitleRefineService } from '../titles';
 import { FakeSuggestionsProvider } from '../FakeSuggestionsProvider';
 import { InMemoryRevisionRepository } from '../revisions';
 import { textHash } from '../textHash';
 import { FirebaseError } from 'firebase/app';
 
+import { captureTestLog } from '../../../testing/testLog';
+import { uninstallTestLog } from '../../testLog';
 import { rejectionKey } from '../rejections';
 import type { RefineRequest, RefineResult, SuggestionsProvider } from '../types';
 
@@ -26,6 +29,31 @@ async function previewSuggestions(): Promise<RefineResult> {
     textHash: textHash(BRANO),
     requestId: 'preview',
   });
+}
+
+async function setupWith(
+  initialText: string,
+  provider: SuggestionsProvider,
+  extra: Partial<ChapterReviewFlowProps> = {},
+) {
+  const chapterRepository = new InMemoryChapterRepository();
+  chapterRepository.seed(CHAPTER, initialText, { title: 'La piena' });
+  const revisionRepository = new InMemoryRevisionRepository();
+  const screen = await render(
+    <ThemeProvider>
+      <ChapterReviewFlow
+        chapter={CHAPTER}
+        chapterTitle="VII · La piena"
+        chapterName="La piena"
+        chapterRepository={chapterRepository}
+        revisionRepository={revisionRepository}
+        provider={provider}
+        titleRepository={extra.titleService ? chapterRepository : undefined}
+        {...extra}
+      />
+    </ThemeProvider>,
+  );
+  return { screen, chapterRepository, revisionRepository };
 }
 
 async function setup(
@@ -362,6 +390,158 @@ describe('ChapterReviewFlow — refine the selection', () => {
     // retrying the same selection would say the same: no Retry button
     expect(screen.queryByTestId('editor-refine-retry')).toBeNull();
     expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — refine a paragraph from the reading view', () => {
+  const TWO = `Breve riga di apertura.\n${BRANO}`;
+  function recording() {
+    const fake = new FakeSuggestionsProvider();
+    const requests: RefineRequest[] = [];
+    const provider: SuggestionsProvider = {
+      refine: (request) => {
+        requests.push(request);
+        return fake.refine(request);
+      },
+    };
+    return { provider, requests };
+  }
+
+  it('tapping a paragraph offers «Rifinisci il paragrafo» and sends just that range', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setupWith(TWO, provider);
+    const paragraph = await screen.findByTestId('editor-text-p1');
+    await fireEvent.press(paragraph);
+    expect(paragraph).toHaveProp('accessibilityState', { selected: true });
+    const button = screen.getByTestId('editor-refine');
+    expect(button).toHaveTextContent(/Rifinisci il paragrafo/);
+    await fireEvent.press(button);
+    await waitFor(() => expect(requests).toHaveLength(1));
+    const from = TWO.indexOf(BRANO);
+    expect(requests[0]?.range).toEqual({ from, to: from + BRANO.length });
+    await screen.unmount();
+  });
+
+  it('tapping the same paragraph again goes back to the whole chapter', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setupWith(TWO, provider);
+    await fireEvent.press(await screen.findByTestId('editor-text-p1'));
+    await fireEvent.press(screen.getByTestId('editor-text-p1'));
+    expect(screen.getByTestId('editor-refine')).toHaveTextContent(/Rifinisci con AI/);
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.range).toBeUndefined();
+    await screen.unmount();
+  });
+
+  it('a paragraph under 5 words: the plain message, nothing sent', async () => {
+    const { provider, requests } = recording();
+    const { screen } = await setupWith(TWO, provider);
+    await fireEvent.press(await screen.findByTestId('editor-text-p0'));
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(/almeno 5 parole/);
+    expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — refine the title from the reading view', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  function titles(result: Awaited<ReturnType<TitleRefineService['suggestTitles']>>) {
+    const calls: Parameters<TitleRefineService['suggestTitles']>[0][] = [];
+    const service: TitleRefineService = {
+      suggestTitles: async (request) => {
+        calls.push(request);
+        return result;
+      },
+    };
+    return { service, calls };
+  }
+
+  it('tapping the title offers «Rifinisci il titolo»; picking a proposal saves it', async () => {
+    const { service, calls } = titles({
+      ok: true,
+      proposals: ['La notte della piena', 'Acqua alta'],
+    });
+    const { screen, chapterRepository } = await setupWith(BRANO, new FakeSuggestionsProvider(), {
+      titleService: service,
+    });
+    await fireEvent.press(await screen.findByTestId('editor-title'));
+    await fireEvent.press(screen.getByTestId('editor-title-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-title-proposal-1'));
+
+    expect(calls[0]).toMatchObject({ bookId: 'libro', chapterId: 'cap-1', title: 'La piena' });
+    expect(calls[0]?.requestId).toMatch(/^tit-/);
+    await waitFor(() =>
+      expect(screen.getByTestId('editor-title')).toHaveTextContent('VII · Acqua alta'),
+    );
+    expect((await chapterRepository.getChapter(CHAPTER))?.title).toBe('Acqua alta');
+    await screen.unmount();
+  });
+
+  it('no proposals or a failure: a plain message, the title unchanged', async () => {
+    const { service } = titles({
+      ok: false,
+      message: 'I titoli non sono arrivati. Riprova tra poco.',
+    });
+    const { screen } = await setupWith(BRANO, new FakeSuggestionsProvider(), {
+      titleService: service,
+    });
+    await fireEvent.press(await screen.findByTestId('editor-title'));
+    await fireEvent.press(screen.getByTestId('editor-title-refine'));
+    expect(await screen.findByTestId('editor-title-error')).toHaveTextContent(
+      'I titoli non sono arrivati. Riprova tra poco.',
+    );
+    expect(screen.getByTestId('editor-title')).toHaveTextContent('VII · La piena');
+    await screen.unmount();
+  });
+
+  it('starting to edit closes the title panel', async () => {
+    const { service } = titles({ ok: true, proposals: ['Acqua alta'] });
+    const { screen } = await setupWith(BRANO, new FakeSuggestionsProvider(), {
+      titleService: service,
+    });
+    await fireEvent.press(await screen.findByTestId('editor-title'));
+    expect(screen.getByTestId('editor-title-panel')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    expect(screen.queryByTestId('editor-title-panel')).toBeNull();
+    await screen.unmount();
+  });
+
+  it('a title that cannot be saved: plain message, old title, a structured log with the chapterId', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = captureTestLog();
+    const { service } = titles({ ok: true, proposals: ['Acqua alta'] });
+    const failing = {
+      updateChapter: async () => {
+        throw new Error('offline');
+      },
+    };
+    const { screen } = await setupWith(BRANO, new FakeSuggestionsProvider(), {
+      titleService: service,
+      titleRepository: failing,
+    });
+    await fireEvent.press(await screen.findByTestId('editor-title'));
+    await fireEvent.press(screen.getByTestId('editor-title-refine'));
+    await fireEvent.press(await screen.findByTestId('editor-title-proposal-0'));
+    expect(await screen.findByTestId('editor-title-error')).toHaveTextContent(
+      /non è stato salvato/,
+    );
+    expect(screen.getByTestId('editor-title')).toHaveTextContent('VII · La piena');
+    expect(log.events('ui.error')[0]).toEqual(
+      expect.objectContaining({ where: 'title-save', chapterId: 'cap-1' }),
+    );
+    expect(JSON.stringify(log.events('ui.error'))).not.toMatch(/Acqua|piena/);
+    uninstallTestLog();
+    await screen.unmount();
+  });
+
+  it('without a title service the title is plain text', async () => {
+    const { screen } = await setupWith(BRANO, new FakeSuggestionsProvider());
+    await fireEvent.press(await screen.findByTestId('editor-title'));
+    expect(screen.queryByTestId('editor-title-refine')).toBeNull();
     await screen.unmount();
   });
 });

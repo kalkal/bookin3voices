@@ -71,10 +71,16 @@ import {
   ChapterReviewFlow,
   CallableSuggestionsProvider,
   FakeSuggestionsProvider,
+  FakeTitleRefineService,
+  CallableTitleRefineService,
   InMemoryRevisionRepository,
   LocalRevisionRepository,
 } from './src/features/review';
-import type { RevisionRepository, SuggestionsProvider } from './src/features/review';
+import type {
+  RevisionRepository,
+  SuggestionsProvider,
+  TitleRefineService,
+} from './src/features/review';
 import {
   CallableBackupService,
   InMemoryBackupService,
@@ -100,6 +106,8 @@ export interface AppServices {
   dailyProgressRepository: DailyProgressRepository;
   revisionRepository: RevisionRepository;
   suggestionsProvider: SuggestionsProvider;
+  /** «Rifinisci il titolo» (refineTitle callable); absent = titles cannot be refined. */
+  titleService?: TitleRefineService;
   /** Model the server answered with last time (Settings); absent = server default. */
   servedModel?: ServedModelSource;
   exportService: BookExportService;
@@ -143,6 +151,7 @@ function defaultServices(uid: string): AppServices {
     dailyProgressRepository,
     revisionRepository: new LocalRevisionRepository(),
     // real refinement: refineChapter callable behind the same interface
+    titleService: new CallableTitleRefineService({ functions }),
     suggestionsProvider: new CallableSuggestionsProvider({
       functions,
       onServedModel: (model) => {
@@ -199,6 +208,7 @@ function e2eServices(): AppServices {
     dailyProgressRepository: new LocalDailyProgressRepository(memoryStorage()),
     revisionRepository: new InMemoryRevisionRepository(),
     suggestionsProvider: new FakeSuggestionsProvider(),
+    titleService: new FakeTitleRefineService(),
     exportService: new InMemoryBookExportService(),
     // 2 fixed pending suggestions: they make the Export tab warning appear
     // (export-epub flow); the real per-book count comes from the Firestore repository.
@@ -215,7 +225,7 @@ type Route =
   | { name: 'library' }
   | { name: 'book'; bookId: string }
   | { name: 'dictation'; chapter: ChapterRef; title: string }
-  | { name: 'editor'; chapter: ChapterRef; title: string }
+  | { name: 'editor'; chapter: ChapterRef; title: string; chapterName?: string }
   | { name: 'notes'; bookId: string; bookTitle: string }
   | { name: 'progress' }
   | { name: 'settings' };
@@ -291,6 +301,7 @@ function AppNavigator({ services }: { services: AppServices }) {
                 name: 'editor',
                 chapter: { bookId: chapter.bookId, chapterId: chapter.id },
                 title: `${toRoman(position)} · ${chapter.title}`,
+                chapterName: chapter.title,
               })
             }
             onDictateChapter={(chapter, position) =>
@@ -328,6 +339,9 @@ function AppNavigator({ services }: { services: AppServices }) {
             revisionRepository={services.revisionRepository}
             provider={services.suggestionsProvider}
             outlineRepository={services.chapterRepository}
+            chapterName={route.chapterName}
+            titleService={services.titleService}
+            titleRepository={services.chapterRepository}
             onBack={pop}
           />
         );

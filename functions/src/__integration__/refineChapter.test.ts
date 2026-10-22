@@ -407,6 +407,7 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
       usageLimits: {
         refineChapter: { perUserPerDay: 1, globalPerDay: 1000 },
         generateOutline: { perUserPerDay: 1, globalPerDay: 1000 },
+        refineTitle: { perUserPerDay: 1, globalPerDay: 1000 },
       },
     };
 
