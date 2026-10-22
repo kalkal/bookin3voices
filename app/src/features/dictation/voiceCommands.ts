@@ -11,7 +11,9 @@ import type { CommandLanguage } from './dictationLanguage';
 
 type PunctuationCommand = { kind: 'punctuation'; char: string; endsSentence: boolean };
 type BreakCommand = { kind: 'break'; text: string };
-export type VoiceCommand = PunctuationCommand | BreakCommand;
+/** Pauses the microphone, like a tap on it; writes nothing. */
+type StopCommand = { kind: 'stop' };
+export type VoiceCommand = PunctuationCommand | BreakCommand | StopCommand;
 
 type CommandPhrase = { phrase: string; command: VoiceCommand };
 
@@ -40,6 +42,8 @@ const COMMAND_PHRASES: Record<CommandLanguage, readonly CommandPhrase[]> = {
       command: { kind: 'punctuation', char: '!', endsSentence: true },
     },
     { phrase: 'due punti', command: { kind: 'punctuation', char: ':', endsSentence: false } },
+    // two words nobody dictates by chance, unlike «pausa» (owner, 22 Oct)
+    { phrase: 'ferma dettatura', command: { kind: 'stop' } },
   ],
   en: [
     { phrase: 'period', command: { kind: 'punctuation', char: '.', endsSentence: true } },
@@ -61,8 +65,19 @@ const COMMAND_PHRASES: Record<CommandLanguage, readonly CommandPhrase[]> = {
       phrase: 'exclamation point',
       command: { kind: 'punctuation', char: '!', endsSentence: true },
     },
+    { phrase: 'stop dictation', command: { kind: 'stop' } },
   ],
 };
+
+/** The phrase that pauses the microphone, shown as the last command button. */
+const STOP_PHRASE: Record<CommandLanguage, string> = {
+  it: 'ferma dettatura',
+  en: 'stop dictation',
+};
+
+export function stopCommandPhrase(language: CommandLanguage): string {
+  return STOP_PHRASE[language];
+}
 
 const LOCALE: Record<CommandLanguage, string> = { it: 'it-IT', en: 'en-US' };
 
@@ -77,12 +92,21 @@ const VOICE_COMMANDS: Record<CommandLanguage, ReturnType<typeof byLongestPhrase>
   en: byLongestPhrase(COMMAND_PHRASES.en),
 };
 
-/** The commands the screen shows to the author, in guillemets. */
+/** The commands the screen shows to the author, as buttons: the first four, then the stop. */
+export function voiceCommandPhrases(language: CommandLanguage): string[] {
+  return [...COMMAND_PHRASES[language].slice(0, 4).map((c) => c.phrase), STOP_PHRASE[language]];
+}
+
+/** The same commands in guillemets, as the screen labels them. */
 export function voiceCommandHints(language: CommandLanguage): string[] {
-  return COMMAND_PHRASES[language].slice(0, 4).map((c) => `«${c.phrase}»`);
+  return voiceCommandPhrases(language).map((phrase) => `«${phrase}»`);
 }
 
 const endsWithWordChar = (s: string) => /[^\s\n]$/.test(s);
+
+/** A capital comes next unless the text ends mid-sentence (after a word or a comma). */
+const sentenceStartsAfter = (text: string) =>
+  !(endsWithWordChar(text) && !/[.!?]["»']?\s*$/.test(text));
 
 // punctuation a recognizer may glue to a spoken command word («virgola.»)
 const GLUED_PUNCTUATION = /^[.,;:!?…«»"']+|[.,;:!?…«»"']+$/g;
@@ -97,14 +121,13 @@ const GLUED_PUNCTUATION = /^[.,;:!?…«»"']+|[.,;:!?…«»"']+$/g;
 export class TranscriptComposer {
   private text: string;
   private capitalizeNext = true;
+  private stopRequested = false;
   private readonly language: CommandLanguage;
 
   constructor(initialText = '', language: CommandLanguage = 'it') {
     this.language = language;
     this.text = initialText;
-    if (endsWithWordChar(initialText) && !/[.!?]\s*$/.test(initialText)) {
-      this.capitalizeNext = false;
-    }
+    this.capitalizeNext = sentenceStartsAfter(initialText);
   }
 
   get value(): string {
@@ -135,9 +158,10 @@ export class TranscriptComposer {
     return this.text;
   }
 
-  reset(): void {
+  /** Empties the buffer; `context` is the text it continues (for the next capital). */
+  reset(context = ''): void {
     this.text = '';
-    this.capitalizeNext = true;
+    this.capitalizeNext = sentenceStartsAfter(context);
   }
 
   private matchCommand(
@@ -157,8 +181,17 @@ export class TranscriptComposer {
     return undefined;
   }
 
+  /** true once after a «ferma dettatura» was applied (the session then pauses). */
+  takeStopRequest(): boolean {
+    const requested = this.stopRequested;
+    this.stopRequested = false;
+    return requested;
+  }
+
   private applyCommand(command: VoiceCommand): void {
-    if (command.kind === 'punctuation') {
+    if (command.kind === 'stop') {
+      this.stopRequested = true;
+    } else if (command.kind === 'punctuation') {
       // punctuation with no word before it (start of text/line): discard it
       if (!endsWithWordChar(this.text)) return;
       this.text = this.text.replace(/\s+$/, '') + command.char;

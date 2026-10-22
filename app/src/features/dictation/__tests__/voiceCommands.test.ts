@@ -145,13 +145,35 @@ describe('voiceCommandHints — what the screen shows', () => {
       '«virgola»',
       '«a capo»',
       '«nuovo paragrafo»',
+      '«ferma dettatura»',
     ]);
     expect(voiceCommandHints('en')).toEqual([
       '«period»',
       '«comma»',
       '«new line»',
       '«new paragraph»',
+      '«stop dictation»',
     ]);
+  });
+});
+
+describe('TranscriptComposer — sentence context and the stop command', () => {
+  it('reset with a context: no capital after a word or comma, one after a full stop', () => {
+    const c = new TranscriptComposer();
+    c.reset('Il prologo finiva qui,');
+    c.append('anzi no');
+    expect(c.value).toBe('anzi no');
+    c.reset('Fine del prologo.');
+    c.append('il giorno dopo');
+    expect(c.value).toBe('Il giorno dopo');
+  });
+
+  it('«ferma dettatura» writes nothing and is reported once', () => {
+    const c = new TranscriptComposer();
+    c.append('ultima frase punto Ferma dettatura');
+    expect(c.value).toBe('Ultima frase.');
+    expect(c.takeStopRequest()).toBe(true);
+    expect(c.takeStopRequest()).toBe(false);
   });
 });
 
@@ -188,5 +210,17 @@ describe('TranscriptComposer with a recognizer that formats its own text (Galaxy
     composer.append('The cat sleeps comma.');
     composer.append('I wake up');
     expect(composer.value).toBe('The cat sleeps, I wake up');
+  });
+});
+
+describe('TranscriptComposer — a closing quote after the full stop (review of #31)', () => {
+  it('reset after «Basta.» or a quoted sentence starts with a capital, as appendWord does', () => {
+    const c = new TranscriptComposer();
+    c.reset('Disse: «Basta.»');
+    c.append('poi uscì');
+    expect(c.value).toBe('Poi uscì');
+    c.reset('"Fermo!"');
+    c.append('gridò');
+    expect(c.value).toBe('Gridò');
   });
 });

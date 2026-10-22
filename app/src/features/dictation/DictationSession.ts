@@ -52,6 +52,8 @@ export interface DictationSessionOptions {
   onTextChange?: (text: string) => void;
   /** Lifecycle events for logging/UI diagnostics. */
   onEvent?: (event: DictationSessionEvent) => void;
+  /** The text already in the chapter before this session's buffer (sentence context). */
+  contextText?: () => string;
 }
 
 // more than MAX_RESTARTS restarts within RESTART_WINDOW_MS = broken engine (e.g.
@@ -89,6 +91,8 @@ export class DictationSession {
   private isReconnecting = false;
   /** The latest interim result not yet confirmed by a final (kept if the session dies). */
   private pendingPartial = '';
+  /** Commands tapped while words were still interim: applied after their final. */
+  private queuedCommands: string[] = [];
 
   constructor(options: DictationSessionOptions) {
     this.options = options;
@@ -145,6 +149,30 @@ export class DictationSession {
     this.dispatch('RESET');
   }
 
+  /**
+   * A command tapped on screen instead of spoken («virgola», «a capo»…), applied
+   * to the buffer like a dictated one. Returns false when there is no buffer to
+   * apply it to (nothing dictated yet, or closing): the caller then applies it
+   * to the text before the session and calls continueAfter.
+   */
+  insertCommand(phrase: string): boolean {
+    if (this.currentState === 'committing' || this.currentState === 'error') return false;
+    if (this.pendingPartial.trim() !== '') {
+      // words already spoken but not confirmed yet: the sign goes AFTER them
+      this.queuedCommands.push(phrase);
+      return true;
+    }
+    if (this.composer.value === '') return false;
+    const text = this.composer.append(phrase);
+    this.options.onTextChange?.(text);
+    return true;
+  }
+
+  /** The text before the (still empty) buffer changed: the next capital follows its end. */
+  continueAfter(context: string): void {
+    if (this.composer.value === '') this.composer.reset(context);
+  }
+
   /** Explicit flush (e.g. moving to background): persists the current text. */
   flush(): void {
     this.options.onFlush(this.composer.value);
@@ -169,8 +197,9 @@ export class DictationSession {
   private runEffect(effect: SessionEffect): void {
     switch (effect) {
       case 'resetTranscript':
-        this.composer.reset();
+        this.composer.reset(this.options.contextText?.() ?? '');
         this.pendingPartial = '';
+        this.queuedCommands = [];
         this.restarts = 0;
         this.restartTimestamps = [];
         this.lastError = undefined;
@@ -319,13 +348,21 @@ export class DictationSession {
     // finalize the last block AFTER the stop, and it must never be lost
     if (this.currentState === 'idle' || this.currentState === 'error') return;
     this.pendingPartial = '';
-    if (!raw.trim()) return;
-    if (this.currentState === 'listening') this.heardSpeech();
-    const text =
-      this.options.voiceCommands === false
+    const queued = this.queuedCommands.splice(0);
+    if (!raw.trim() && queued.length === 0) return;
+    if (raw.trim() && this.currentState === 'listening') this.heardSpeech();
+    let text = !raw.trim()
+      ? this.composer.value
+      : this.options.voiceCommands === false
         ? this.composer.appendVerbatim(raw)
         : this.composer.append(raw);
+    for (const phrase of queued) text = this.composer.append(phrase);
     this.options.onTextChange?.(text);
+    // «ferma dettatura»: the same pause as a tap on the microphone (it flushes)
+    if (this.composer.takeStopRequest() && this.currentState === 'listening') {
+      this.pause();
+      return;
+    }
     if (this.currentState !== 'listening') {
       // the pause/stop flush has already run: persist this late arrival too
       this.flush();

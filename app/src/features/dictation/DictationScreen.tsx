@@ -25,7 +25,7 @@ import type { AutoPauseReason } from './DictationSession';
 import type { DictationEngine, DictationError } from './types';
 import { useDictationController } from './useDictationController';
 import type { SaveStatus } from './autosave';
-import { voiceCommandHints } from './voiceCommands';
+import { stopCommandPhrase, voiceCommandPhrases } from './voiceCommands';
 
 export interface DictationScreenProps {
   chapter: ChapterRef;
@@ -273,9 +273,24 @@ export function DictationScreen({
         </View>
 
         <View style={[styles.chipsRow, { gap: spacing.sm }]}>
-          {voiceCommandHints(commandLanguage(locale)).map((hint) => (
-            <Chip key={hint} label={hint} italic />
-          ))}
+          {/* the commands, also tappable: the sign goes in as if dictated */}
+          {voiceCommandPhrases(commandLanguage(locale)).map((phrase) => {
+            // «ferma dettatura» only acts while the microphone listens
+            const isStop = phrase === stopCommandPhrase(commandLanguage(locale));
+            const enabled = isStop
+              ? controller.sessionState === 'listening'
+              : controller.canInsertCommand;
+            return (
+              <Chip
+                key={phrase}
+                label={`«${phrase}»`}
+                italic
+                disabled={!enabled}
+                onPress={() => controller.insertCommand(phrase)}
+                testID={`dictation-command-${phrase.replace(/ /g, '-')}`}
+              />
+            );
+          })}
         </View>
 
         <MicControl

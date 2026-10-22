@@ -18,6 +18,8 @@ import { appendText, countWords } from '../../lib/text';
 import { logTestEvent } from '../testLog';
 import { DebouncedSaver, type SaveStatus } from './autosave';
 import { DictationSession, type AutoPauseReason } from './DictationSession';
+import { commandLanguage } from './dictationLanguage';
+import { stopCommandPhrase, TranscriptComposer } from './voiceCommands';
 import type { DictationEngine, DictationError } from './types';
 import type { SessionState } from './sessionMachine';
 import {
@@ -63,6 +65,10 @@ export interface DictationController {
   preflightRunning: boolean;
   micDisabled: boolean;
   toggleMic: () => void;
+  /** Applies a voice command tapped on screen («virgola», «a capo»…). */
+  insertCommand: (phrase: string) => void;
+  /** false while the text is loading or a session is closing. */
+  canInsertCommand: boolean;
   rerunPreflight: () => void;
 }
 
@@ -116,6 +122,7 @@ export function useDictationController(options: DictationControllerOptions): Dic
         engine,
         lang: options.lang,
         onFlush: (text) => saver.flushNow(appendText(baseTextRef.current, text)),
+        contextText: () => baseTextRef.current,
         onPartial: (raw) => {
           if (!unmountedRef.current) setPartial(raw);
         },
@@ -291,6 +298,32 @@ export function useDictationController(options: DictationControllerOptions): Dic
     }
   }, [holder]);
 
+  const canInsertCommand =
+    loadState === 'ready' && sessionState !== 'committing' && sessionState !== 'error';
+
+  const insertCommand = useCallback(
+    (phrase: string) => {
+      const current = holder.session;
+      if (!current || !canInsertCommand) return;
+      haptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+      if (phrase === stopCommandPhrase(commandLanguage(current.locale))) {
+        // the button does what the microphone tap does, only from listening
+        if (current.state === 'listening') current.pause();
+        return;
+      }
+      if (current.insertCommand(phrase)) return;
+      // nothing dictated in this session yet: the command closes the chapter's text
+      const before = baseTextRef.current;
+      const next = new TranscriptComposer(before, commandLanguage(current.locale)).append(phrase);
+      if (next === before) return;
+      baseTextRef.current = next;
+      setBaseText(next);
+      saver.schedule(next);
+      current.continueAfter(next);
+    },
+    [holder, saver, canInsertCommand],
+  );
+
   const fullText = appendText(baseText, sessionText);
   const sessionWords = Math.max(0, countWords(fullText) - initialWordsRef.current);
   const micDisabled =
@@ -311,6 +344,8 @@ export function useDictationController(options: DictationControllerOptions): Dic
     preflightRunning,
     micDisabled,
     toggleMic,
+    insertCommand,
+    canInsertCommand,
     rerunPreflight,
   };
 }

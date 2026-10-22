@@ -334,7 +334,7 @@ describe('DictationScreen — background and interruptions', () => {
     await fireEvent.press(getByTestId('dictation-mic')); // reset + new start
     expect(getByTestId('dictation-caption')).toHaveTextContent(/Sto ascoltando/);
     await act(async () => engine.emitFinal('e questo dopo'));
-    expect(getByTestId('dictation-live-text')).toHaveTextContent('Salva questo E questo dopo');
+    expect(getByTestId('dictation-live-text')).toHaveTextContent('Salva questo e questo dopo');
   });
 
   it('on screen close the text is flushed', async () => {
@@ -416,5 +416,98 @@ describe('DictationScreen — chapter track', () => {
   it('chapter without outline: no panel (no regressions on the existing flow)', async () => {
     const { queryByTestId } = await renderScreen({ initialText: 'Testo senza traccia.' });
     expect(queryByTestId('outline-track')).toBeNull();
+  });
+});
+
+describe('DictationScreen — tappable voice commands (owner, 22 Oct)', () => {
+  it('a tapped command goes into the dictated text like a spoken one', async () => {
+    const { engine, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('il vento soffiava'));
+    await fireEvent.press(getByTestId('dictation-command-virgola'));
+    await act(async () => engine.emitFinal('forte'));
+    await fireEvent.press(getByTestId('dictation-command-nuovo-paragrafo'));
+    await act(async () => engine.emitFinal('poi tacque'));
+    expect(getByTestId('dictation-live-text')).toHaveTextContent(
+      /^Il vento soffiava, forte\.\s+Poi tacque$/,
+    );
+  });
+
+  it('before any dictation it closes the saved text, and the next word follows it', async () => {
+    const { engine, repository, getByTestId } = await renderScreen({
+      initialText: 'Il prologo finiva qui',
+      debounceMs: 0,
+    });
+    await fireEvent.press(getByTestId('dictation-command-virgola'));
+    await act(async () => {});
+    expect(repository.savedTexts).toContain('Il prologo finiva qui,');
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('anzi no'));
+    expect(getByTestId('dictation-live-text')).toHaveTextContent('Il prologo finiva qui, anzi no');
+  });
+
+  it('works while paused, and the text is saved', async () => {
+    const { engine, repository, getByTestId } = await renderScreen({ debounceMs: 0 });
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('una frase'));
+    await fireEvent.press(getByTestId('dictation-mic')); // pause
+    await fireEvent.press(getByTestId('dictation-command-punto'));
+    await act(async () => {});
+    expect(getByTestId('dictation-live-text')).toHaveTextContent('Una frase.');
+    expect(repository.savedTexts).toContain('Una frase.');
+  });
+});
+
+describe('DictationScreen — «ferma dettatura» (owner, 22 Oct)', () => {
+  it('spoken, it pauses the microphone and writes nothing', async () => {
+    const { engine, repository, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('ultima frase punto ferma dettatura'));
+    await act(async () => {});
+    expect(getByTestId('dictation-caption')).toHaveTextContent('In pausa — tocca per riprendere');
+    expect(getByTestId('dictation-live-text')).toHaveTextContent(/^Ultima frase\.$/);
+    expect(repository.savedTexts).toContain('Ultima frase.');
+  });
+
+  it('tapped, it pauses like the microphone; it is a button among the commands', async () => {
+    const { engine, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('una frase'));
+    await fireEvent.press(getByTestId('dictation-command-ferma-dettatura'));
+    expect(getByTestId('dictation-caption')).toHaveTextContent('In pausa — tocca per riprendere');
+    expect(getByTestId('dictation-live-text')).toHaveTextContent(/^Una frase$/);
+  });
+});
+
+describe('DictationScreen — tapped commands and words still being recognized (review of #31)', () => {
+  it('a tap during an interim result goes after those words, once they are confirmed', async () => {
+    const { engine, getByTestId } = await renderScreen();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitFinal('ciao'));
+    await act(async () => engine.emitPartial('come stai'));
+    await fireEvent.press(getByTestId('dictation-command-punto'));
+    await act(async () => engine.emitFinal('come stai'));
+    expect(getByTestId('dictation-live-text')).toHaveTextContent(/^Ciao come stai\.$/);
+  });
+
+  it('the same holds for the very first words of a session', async () => {
+    const { engine, getByTestId } = await renderScreen({ initialText: 'Prima.' });
+    await fireEvent.press(getByTestId('dictation-mic'));
+    await act(async () => engine.emitPartial('eccomi'));
+    await fireEvent.press(getByTestId('dictation-command-virgola'));
+    await act(async () => engine.emitFinal('eccomi'));
+    expect(getByTestId('dictation-live-text')).toHaveTextContent(/^Prima\. Eccomi,$/);
+  });
+
+  it('«ferma dettatura» is faded and inert unless the microphone listens', async () => {
+    const { engine, getByTestId } = await renderScreen();
+    const stop = () => getByTestId('dictation-command-ferma-dettatura');
+    expect(stop()).toBeDisabled();
+    await fireEvent.press(getByTestId('dictation-mic'));
+    expect(stop()).toBeEnabled();
+    await act(async () => engine.emitFinal('una frase'));
+    await fireEvent.press(getByTestId('dictation-mic')); // pause
+    expect(stop()).toBeDisabled();
+    expect(getByTestId('dictation-command-punto')).toBeEnabled();
   });
 });
