@@ -56,7 +56,6 @@ import {
 import { reportSuspiciousInput } from '../security/suspiciousInput';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
-/** Ids of the supported AI providers (the app only shows the one in use). */
 /** Amazon Nova on Bedrock is the only provider. */
 export const AI_PROVIDER_IDS = ['bedrock'] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
