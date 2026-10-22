@@ -19,7 +19,7 @@ import { textHash } from './textHash';
 import { rejectedKeys } from './rejections';
 import { MIN_SELECTION_WORDS, selectionWords } from './selection';
 import { refineResultSchema } from './types';
-import type { Span, Suggestion, SuggestionKind, SuggestionsProvider } from './types';
+import type { EmptyReason, Span, Suggestion, SuggestionKind, SuggestionsProvider } from './types';
 
 export type ReviewLoadState = 'loading' | 'ready' | 'load-error';
 export type ReviewSaveStatus = 'saved' | 'saving' | 'error';
@@ -48,6 +48,8 @@ export interface ChapterReviewController {
   refineErrorMessage: string;
   /** false when retrying the same request cannot help (e.g. a too-short selection). */
   refineErrorRetryable: boolean;
+  /** The last refine ended with no suggestions: a plain sentence saying why ('' otherwise). */
+  refineEmptyMessage: string;
   /** The last batch was born stale: the text changed during refinement. */
   refineBornStale: boolean;
   saveStatus: ReviewSaveStatus;
@@ -72,6 +74,13 @@ export interface ChapterReviewController {
   /** Saves the pending hand-typed text right now (leaving the editor, refining). */
   flushDraft(): void;
 }
+
+const EMPTY_REASON_KEYS: Record<EmptyReason, string> = {
+  'nothing-to-fix': 'review.empty.nothingToFix',
+  'unsafe-dropped': 'review.empty.unsafeDropped',
+  'already-rejected': 'review.empty.alreadyRejected',
+  'nothing-usable': 'review.empty.nothingUsable',
+};
 
 /** Plain message for an Accept that was not applied; '' when it was not about the text. */
 export function acceptNoticeFor(reason: AcceptFailure): string {
@@ -101,6 +110,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
   const [refining, setRefining] = useState(false);
   const [refineErrorMessage, setRefineErrorMessage] = useState('');
   const [refineErrorRetryable, setRefineErrorRetryable] = useState(true);
+  const [refineEmptyMessage, setRefineEmptyMessage] = useState('');
   const [refineBornStale, setRefineBornStale] = useState(false);
   const [saveStatus, setSaveStatus] = useState<ReviewSaveStatus>('saved');
   const [acceptNotice, setAcceptNotice] = useState('');
@@ -169,6 +179,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         return;
       }
       setRefining(true);
+      setRefineEmptyMessage('');
       setRefineErrorRetryable(true);
       setRefineErrorMessage('');
       setAcceptNotice('');
@@ -195,6 +206,14 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
         // provider is the fake: the contract is the same as the refineChapter callable's
         const result = refineResultSchema.parse(raw);
         const outcome = session.ingest(result, range);
+        if (result.suggestions.length === 0) {
+          // never silent: an empty answer says why
+          setRefineEmptyMessage(
+            t('review.empty.message', {
+              reason: t(EMPTY_REASON_KEYS[result.emptyReason ?? 'nothing-to-fix']),
+            }),
+          );
+        }
         setRefineBornStale(outcome.bornStale);
         syncFromSession();
       } catch (error) {
@@ -383,6 +402,7 @@ export function useChapterReview(options: ChapterReviewOptions): ChapterReviewCo
     refineFailed: refineErrorMessage !== '',
     refineErrorMessage,
     refineErrorRetryable,
+    refineEmptyMessage,
     refineBornStale,
     saveStatus,
     acceptNotice,

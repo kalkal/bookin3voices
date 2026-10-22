@@ -150,6 +150,8 @@ export interface RefineChapterResponse {
   /** Model suggestions discarded by the server (non-matching or ambiguous
    *  original, or empty proposals): diagnostics only, the app may ignore it. */
   discarded: number;
+  /** Set when `suggestions` is empty: why (the app says it in plain words). */
+  emptyReason?: 'nothing-to-fix' | 'unsafe-dropped' | 'already-rejected' | 'nothing-usable';
   /** Dev-only trace (see debugTrace.ts): absent unless enabled and asked for. */
   debugTrace?: RefineDebugTrace;
 }
@@ -164,6 +166,10 @@ export const refineRegistryDocSchema = z.object({
   promptVersion: z.number().int().min(1),
   suggestions: z.array(suggestionSchema),
   discarded: z.number().int().min(0),
+  /** Additive: registry docs written before it have none. */
+  emptyReason: z
+    .enum(['nothing-to-fix', 'unsafe-dropped', 'already-rejected', 'nothing-usable'])
+    .optional(),
   createdAt: z.number(),
 });
 

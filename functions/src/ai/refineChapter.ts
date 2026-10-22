@@ -27,7 +27,7 @@ import { z } from 'zod';
 import { buildRefineDebugTrace } from './debugTrace';
 import { mergeWithHistory, runHistoryCheckWithin } from './history/historyCheck';
 import { isRetryableAiError, type AiProvider } from './provider/types';
-import { normalizeSuggestions } from './normalizeSuggestions';
+import { emptyReasonOf, normalizeSuggestions } from './normalizeSuggestions';
 import { buildRefinePrompt, REFINE_PROMPT_VERSION } from './refinePrompt';
 import {
   bookForRefineSchema,
@@ -221,6 +221,7 @@ function toResponse(requestId: string, doc: RefineRegistryDoc): RefineChapterRes
     promptVersion: doc.promptVersion,
     suggestions: doc.suggestions,
     discarded: doc.discarded,
+    ...(doc.emptyReason === undefined ? {} : { emptyReason: doc.emptyReason }),
   };
 }
 
@@ -328,6 +329,10 @@ export async function runRefineChapter(
   }
   const traceRequested = deps.debugTrace === true && input.debug === true;
   const { suggestions } = normalized;
+  const emptyReason = emptyReasonOf(normalized);
+  if (emptyReason !== undefined) {
+    logger.info('refineChapter: no suggestions', { requestId: input.requestId, emptyReason });
+  }
   const discarded = normalized.discarded + dropped + (history?.dropped ?? 0);
   if (normalized.unsafe > 0) {
     // proposals that would have deleted or replaced text: counts only, never the text
@@ -376,6 +381,7 @@ export async function runRefineChapter(
       promptVersion: REFINE_PROMPT_VERSION,
       suggestions,
       discarded,
+      ...(emptyReason === undefined ? {} : { emptyReason }),
       createdAt: now(),
     };
 

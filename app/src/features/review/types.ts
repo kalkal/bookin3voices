@@ -124,7 +124,14 @@ export const refineResultSchema = z.object({
   /** Hash of the text the suggestions were computed on. */
   textHash: z.string().min(1),
   suggestions: z.array(suggestionSchema),
+  /** Why the list is empty (server code); unknown codes read as «nothing to fix». */
+  emptyReason: z
+    .enum(['nothing-to-fix', 'unsafe-dropped', 'already-rejected', 'nothing-usable'])
+    .optional()
+    .catch(undefined),
 });
+
+export type EmptyReason = NonNullable<z.infer<typeof refineResultSchema>['emptyReason']>;
 
 export type RefineResult = z.infer<typeof refineResultSchema>;
 

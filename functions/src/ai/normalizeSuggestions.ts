@@ -280,3 +280,15 @@ function applyDensityCap(candidates: Located[], text: string): Located[] {
   }
   return candidates.filter((sug) => chosen.has(sug));
 }
+
+/** Why a refinement returned no suggestions (a code for the app, never text). */
+export type EmptyReason =
+  'nothing-to-fix' | 'unsafe-dropped' | 'already-rejected' | 'nothing-usable';
+
+export function emptyReasonOf(normalized: NormalizedSuggestions): EmptyReason | undefined {
+  if (normalized.suggestions.length > 0) return undefined;
+  if (normalized.unsafe > 0) return 'unsafe-dropped';
+  if (normalized.alreadyRejected > 0) return 'already-rejected';
+  if (normalized.droppedItems.length > 0) return 'nothing-usable';
+  return 'nothing-to-fix';
+}

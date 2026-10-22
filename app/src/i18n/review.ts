@@ -33,6 +33,13 @@ export const review: Namespace = {
     'review.editor.refining': 'Refining…',
     'review.editor.refine': 'Refine with AI',
     'review.editor.refineSelection': 'Refine the selection',
+    'review.editor.refiningStatus': 'Refining in progress… it can take a few seconds.',
+    'review.empty.message': 'No suggestions for this part: {reason}',
+    'review.empty.nothingToFix': 'the text is already fine.',
+    'review.empty.unsafeDropped':
+      'the AI’s proposals would have changed the text too much, so I dropped them. Try again or pick another part.',
+    'review.empty.alreadyRejected': 'you had already rejected those proposals.',
+    'review.empty.nothingUsable': 'the AI’s answers were not usable on this text. Try again.',
     'review.editor.selectionTooShort':
       'Select at least {count} words to refine, or clear the selection to refine the whole chapter.',
 
@@ -86,6 +93,14 @@ export const review: Namespace = {
     'review.editor.refining': 'Rifinitura in corso…',
     'review.editor.refine': 'Rifinisci con AI',
     'review.editor.refineSelection': 'Rifinisci la selezione',
+    'review.editor.refiningStatus': 'Rifinitura in corso… può volerci qualche secondo.',
+    'review.empty.message': 'Nessun suggerimento per questa parte: {reason}',
+    'review.empty.nothingToFix': 'il testo va già bene.',
+    'review.empty.unsafeDropped':
+      'le proposte dell’AI avrebbero cambiato troppo il testo e le ho scartate. Riprova o scegli un’altra parte.',
+    'review.empty.alreadyRejected': 'avevi già rifiutato quelle proposte.',
+    'review.empty.nothingUsable':
+      'le risposte dell’AI non erano utilizzabili su questo testo. Riprova.',
     'review.editor.selectionTooShort':
       'Seleziona almeno {count} parole da rifinire, oppure togli la selezione per rifinire tutto il capitolo.',
 

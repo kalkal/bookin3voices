@@ -1,4 +1,5 @@
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Keyboard } from 'react-native';
 
 import { ThemeProvider } from '../../../theme';
 import { InMemoryChapterRepository } from '../../chapters';
@@ -336,7 +337,7 @@ describe('ChapterReviewFlow — refine the selection', () => {
       nativeEvent: { selection: { start: from, end: from + 'aprì la finestra'.length } },
     });
     await fireEvent.press(screen.getByTestId('editor-refine'));
-    expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(
+    expect(await screen.findByTestId('editor-selection-hint')).toHaveTextContent(
       /togli la selezione/,
     );
     expect(screen.getByTestId('editor-input')).toBeOnTheScreen();
@@ -355,12 +356,72 @@ describe('ChapterReviewFlow — refine the selection', () => {
       nativeEvent: { selection: { start: from, end: from + 'aprì la finestra'.length } },
     });
     await fireEvent.press(screen.getByTestId('editor-refine'));
-    expect(await screen.findByTestId('editor-refine-error')).toHaveTextContent(
+    expect(await screen.findByTestId('editor-selection-hint')).toHaveTextContent(
       /Seleziona almeno 5 parole da rifinire, oppure togli la selezione per rifinire tutto il capitolo\./,
     );
     // retrying the same selection would say the same: no Retry button
     expect(screen.queryByTestId('editor-refine-retry')).toBeNull();
     expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+});
+
+describe('ChapterReviewFlow — refine never looks silent', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('while waiting, a visible «in corso» line; then an empty result says why', async () => {
+    let answer: (result: RefineResult) => void = () => {};
+    const provider: SuggestionsProvider = {
+      refine: () =>
+        new Promise<RefineResult>((resolve) => {
+          answer = resolve;
+        }),
+    };
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-refine-status')).toHaveTextContent(/in corso/);
+
+    await act(async () =>
+      answer({ textHash: textHash(BRANO), suggestions: [], emptyReason: 'unsafe-dropped' }),
+    );
+    expect(screen.queryByTestId('editor-refine-status')).toBeNull();
+    expect(await screen.findByTestId('editor-refine-empty')).toHaveTextContent(
+      /Nessun suggerimento per questa parte: .*cambiato troppo il testo/,
+    );
+    await screen.unmount();
+  });
+
+  it.each([
+    ['nothing-to-fix', /il testo va già bene/],
+    ['already-rejected', /avevi già rifiutato/],
+    ['nothing-usable', /non erano utilizzabili/],
+  ] as const)('empty because %s: the reason is said in plain words', async (reason, pattern) => {
+    const provider: SuggestionsProvider = {
+      refine: async (request) => ({
+        textHash: request.textHash,
+        suggestions: [],
+        emptyReason: reason,
+      }),
+    };
+    const { screen } = await setup(BRANO, provider);
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(await screen.findByTestId('editor-refine-empty')).toHaveTextContent(pattern);
+    await screen.unmount();
+  });
+
+  it('refining a selection in edit mode closes the keyboard', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const { screen } = await setup();
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-edit-toggle'));
+    const from = BRANO.indexOf('aprì');
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: from, end: BRANO.length } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(dismiss).toHaveBeenCalled();
     await screen.unmount();
   });
 });

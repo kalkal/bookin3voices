@@ -158,3 +158,67 @@ describe('chapter editor — the caret stays above the keyboard', () => {
     await screen.unmount();
   });
 });
+
+describe('chapter editor — the too-short selection hint never covers the text', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  /** The direct children of the room between the header and the keyboard. */
+  const roomChildren = (screen: Awaited<ReturnType<typeof openEditing>>) =>
+    screen.getByTestId('editor-keyboard-room').children;
+
+  it('selecting a few words shows nothing: the hint comes only when Refine is tapped', async () => {
+    const keyboard = fakeKeyboard();
+    const screen = await openEditing();
+    await act(async () => keyboard.show(310));
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: 0, end: 7 } },
+    });
+    expect(screen.queryByTestId('editor-selection-hint')).toBeNull();
+    expect(screen.queryByTestId('editor-refine-error')).toBeNull();
+    await screen.unmount();
+  });
+
+  it('after Refine, the hint is a line inside the toolbar above the keyboard, not over the text', async () => {
+    const keyboard = fakeKeyboard();
+    const screen = await openEditing();
+    await act(async () => keyboard.show(310));
+    const roomBefore = roomChildren(screen).length;
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: 0, end: 7 } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+
+    const hint = await screen.findByTestId('editor-selection-hint');
+    expect(hint).toHaveTextContent(/almeno 5 parole/);
+    // inside the toolbar...
+    let ancestor = hint.parent;
+    let inToolbar = false;
+    while (ancestor !== null) {
+      if (ancestor.props.testID === 'editor-toolbar') inToolbar = true;
+      ancestor = ancestor.parent;
+    }
+    expect(inToolbar).toBe(true);
+    // ...and nothing new between the text field and the toolbar (no banner taking its room)
+    expect(screen.queryByTestId('editor-refine-error')).toBeNull();
+    expect(roomChildren(screen)).toHaveLength(roomBefore);
+    // the field still fills the room above the toolbar and keeps the caret in view
+    expect(StyleSheet.flatten(screen.getByTestId('editor-input').props.style)).toMatchObject({
+      flex: 1,
+    });
+    await screen.unmount();
+  });
+
+  it('the hint goes away as soon as the selection or the text changes', async () => {
+    const screen = await openEditing();
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: 0, end: 7 } },
+    });
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await screen.findByTestId('editor-selection-hint');
+    await fireEvent(screen.getByTestId('editor-input'), 'selectionChange', {
+      nativeEvent: { selection: { start: 3, end: 3 } },
+    });
+    expect(screen.queryByTestId('editor-selection-hint')).toBeNull();
+    await screen.unmount();
+  });
+});

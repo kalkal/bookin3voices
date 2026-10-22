@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,6 +32,7 @@ import { countWords } from '../../lib/text';
 import { t, tn, uiLocale } from '../../i18n';
 import { useTheme } from '../../theme';
 import { HighlightedChapterText } from './HighlightedChapterText';
+import { MIN_SELECTION_WORDS, selectionWords } from './selection';
 import type { ChapterReviewController } from './useChapterReview';
 
 /** Tallest the open beats panel may be while the keyboard is up (it scrolls inside). */
@@ -80,9 +82,17 @@ export function ChapterEditorScreen({
     setSelection(null);
     void controller.applyManualEdit(draft);
   };
+  // shown only after tapping Refine with a too-short selection; cleared on any change
+  const [selectionHint, setSelectionHint] = useState('');
   const refineSelection = async (range: { from: number; to: number }) => {
-    // too short: stay in the editor with the selection, the message refers to it
-    if (!controller.checkSelection(draft, range)) return;
+    // too short: stay in the editor with the selection; the hint is a line in the
+    // toolbar above the keyboard, never a banner taking the text's room
+    if (selectionWords(draft, range) < MIN_SELECTION_WORDS) {
+      setSelectionHint(t('review.editor.selectionTooShort', { count: MIN_SELECTION_WORDS }));
+      return;
+    }
+    // the result and any message must not hide behind the keyboard
+    Keyboard.dismiss();
     // the typed text is applied first: the range refers to it
     setEditing(false);
     setSelection(null);
@@ -194,11 +204,13 @@ export function ChapterEditorScreen({
               value={draft}
               onChangeText={(next) => {
                 setDraft(next);
+                setSelectionHint('');
                 controller.editDraft(next);
               }}
               onSelectionChange={({ nativeEvent }) => {
                 const { start, end } = nativeEvent.selection;
                 setSelection(end > start ? { from: start, to: end } : null);
+                setSelectionHint('');
               }}
               style={{
                 color: colors.text,
@@ -340,57 +352,96 @@ export function ChapterEditorScreen({
         )}
 
         <View
+          testID="editor-toolbar"
           style={[
-            styles.panel,
+            styles.toolbar,
             {
               borderTopColor: colors.hairline,
               paddingHorizontal: spacing.xl,
-              paddingTop: spacing.lg,
+              paddingTop: selectionHint !== '' ? spacing.sm : spacing.lg,
               paddingBottom: panelBottom,
-              gap: spacing.md,
+              gap: spacing.sm,
             },
           ]}
         >
-          <RoundButton
-            testID="editor-edit-toggle"
-            icon={editing ? 'checkmark' : 'pencil'}
-            color={editing ? colors.primary : colors.textMutedStrong}
-            borderColor={editing ? colors.primary : colors.hairlineGold}
-            disabled={controller.loadState !== 'ready'}
-            onPress={editing ? finishEditing : startEditing}
-          />
-          <View style={styles.refineButton}>
-            <PrimaryButton
-              testID="editor-refine"
-              label={
-                controller.refining
-                  ? t('review.editor.refining')
-                  : selection !== null
-                    ? t('review.editor.refineSelection')
-                    : t('review.editor.refine')
-              }
-              disabled={
-                controller.refining ||
-                (editing && selection === null) ||
-                controller.loadState !== 'ready' ||
-                (controller.text === '' && !editing)
-              }
-              onPress={() => {
-                if (editing && selection !== null) {
-                  void refineSelection(selection);
-                  return;
-                }
-                flushDraft();
-                void controller.refine();
+          {selectionHint !== '' ? (
+            <Text
+              testID="editor-selection-hint"
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              numberOfLines={2}
+              style={{
+                color: colors.accentText,
+                fontFamily: fonts.body,
+                fontSize: typeScale.caption,
               }}
-              icon={
-                controller.refining ? (
-                  <ActivityIndicator size="small" color={colors.onPrimary} />
-                ) : (
-                  <Ionicons name="sparkles-outline" size={18} color={colors.onPrimary} />
-                )
-              }
+            >
+              {selectionHint}
+            </Text>
+          ) : null}
+          {controller.refining ? (
+            <Text
+              testID="editor-refine-status"
+              accessibilityLiveRegion="polite"
+              style={{
+                color: colors.textMutedStrong,
+                fontFamily: fonts.bodyItalic,
+                fontSize: typeScale.caption,
+              }}
+            >
+              {t('review.editor.refiningStatus')}
+            </Text>
+          ) : controller.refineEmptyMessage !== '' ? (
+            <Text
+              testID="editor-refine-empty"
+              accessibilityLiveRegion="polite"
+              style={{ color: colors.text, fontFamily: fonts.body, fontSize: typeScale.caption }}
+            >
+              {controller.refineEmptyMessage}
+            </Text>
+          ) : null}
+          <View style={[styles.panel, { gap: spacing.md }]}>
+            <RoundButton
+              testID="editor-edit-toggle"
+              icon={editing ? 'checkmark' : 'pencil'}
+              color={editing ? colors.primary : colors.textMutedStrong}
+              borderColor={editing ? colors.primary : colors.hairlineGold}
+              disabled={controller.loadState !== 'ready'}
+              onPress={editing ? finishEditing : startEditing}
             />
+            <View style={styles.refineButton}>
+              <PrimaryButton
+                testID="editor-refine"
+                label={
+                  controller.refining
+                    ? t('review.editor.refining')
+                    : selection !== null
+                      ? t('review.editor.refineSelection')
+                      : t('review.editor.refine')
+                }
+                disabled={
+                  controller.refining ||
+                  (editing && selection === null) ||
+                  controller.loadState !== 'ready' ||
+                  (controller.text === '' && !editing)
+                }
+                onPress={() => {
+                  if (editing && selection !== null) {
+                    void refineSelection(selection);
+                    return;
+                  }
+                  flushDraft();
+                  void controller.refine();
+                }}
+                icon={
+                  controller.refining ? (
+                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                  ) : (
+                    <Ionicons name="sparkles-outline" size={18} color={colors.onPrimary} />
+                  )
+                }
+              />
+            </View>
           </View>
         </View>
       </View>
@@ -431,8 +482,8 @@ const styles = StyleSheet.create({
   headerText: { flex: 1, gap: 2 },
   textArea: { flex: 1 },
   outlineRoom: { flexGrow: 0, flexShrink: 0 },
+  toolbar: { borderTopWidth: 1 },
   panel: {
-    borderTopWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
