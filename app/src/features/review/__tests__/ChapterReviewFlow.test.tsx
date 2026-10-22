@@ -664,6 +664,47 @@ describe('ChapterReviewFlow — the refine panel: scope and kinds', () => {
     await screen.unmount();
   });
 
+  it('the scope is a choice: a chosen paragraph can be widened to the whole chapter', async () => {
+    const { provider, requests } = recording();
+    const TWO = `Prima riga del capitolo con abbastanza parole.\n${BRANO}`;
+    const { screen } = await setupWith(TWO, provider);
+    await fireEvent.press(await screen.findByTestId('editor-text-p1'));
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    expect(screen.getByTestId('refine-scope-paragraph')).toHaveProp('accessibilityState', {
+      checked: true,
+    });
+    expect(screen.queryByTestId('refine-scope-selection')).toBeNull();
+    await fireEvent.press(screen.getByTestId('refine-scope-chapter'));
+    expect(screen.getByTestId('refine-scope-chapter')).toHaveProp('accessibilityState', {
+      checked: true,
+    });
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]?.range).toBeUndefined();
+    await screen.unmount();
+  });
+
+  it('the title is one of the scopes: choosing it asks for titles, the kinds do not apply', async () => {
+    const titleCalls: unknown[] = [];
+    const titleService: TitleRefineService = {
+      suggestTitles: async (request) => {
+        titleCalls.push(request);
+        return { ok: true, proposals: ['Acqua alta'] };
+      },
+    };
+    const { provider, requests } = recording();
+    const { screen } = await setupWith(BRANO, provider, { titleService });
+    await screen.findByTestId('editor-text-p0');
+    await fireEvent.press(screen.getByTestId('editor-refine'));
+    await fireEvent.press(screen.getByTestId('refine-scope-title'));
+    expect(screen.queryByTestId('refine-kind-style')).toBeNull();
+    await fireEvent.press(screen.getByTestId('refine-start'));
+    expect(await screen.findByTestId('editor-title-proposal-0')).toHaveTextContent('Acqua alta');
+    expect(titleCalls).toHaveLength(1);
+    expect(requests).toHaveLength(0);
+    await screen.unmount();
+  });
+
   it('Annulla closes the panel without refining', async () => {
     const { provider, requests } = recording();
     const { screen } = await setup(BRANO, provider);

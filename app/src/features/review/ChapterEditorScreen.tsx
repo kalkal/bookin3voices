@@ -128,6 +128,8 @@ export function ChapterEditorScreen({
 
   // the refine panel: what is refined (scope) and which kinds are checked
   const [panelScope, setPanelScope] = useState<RefineScope | null>(null);
+  // the scopes on offer when the panel opened: the user may switch between them
+  const [panelChoices, setPanelChoices] = useState<readonly RefineScope[]>([]);
   const [kindsOn, setKindsOn] = useState<readonly SuggestionKind[]>(SUGGESTION_KINDS);
   const toggleKind = (kind: SuggestionKind) =>
     setKindsOn((current) =>
@@ -144,14 +146,24 @@ export function ChapterEditorScreen({
       }
       // the panel and the result must not hide behind the keyboard
       Keyboard.dismiss();
-      setPanelScope({ kind: 'selection', range: selection });
-    } else if (paragraph !== null) setPanelScope({ kind: 'paragraph', range: paragraph });
-    else setPanelScope({ kind: 'chapter' });
+    }
+    const choices: RefineScope[] = [];
+    if (editing && selection !== null) choices.push({ kind: 'selection', range: selection });
+    if (!editing && paragraph !== null) choices.push({ kind: 'paragraph', range: paragraph });
+    choices.push({ kind: 'chapter' });
+    if (!editing && title?.available) choices.push({ kind: 'title' });
+    setPanelChoices(choices);
+    setPanelScope(choices[0] ?? { kind: 'chapter' });
   };
   const startRefine = () => {
     const scope = panelScope;
     setPanelScope(null);
     if (scope === null) return;
+    if (scope.kind === 'title') {
+      // the title has its own small path (refineTitle) and panel
+      void title?.request();
+      return;
+    }
     // all four on = the usual request
     const kinds = kindsOn.length === SUGGESTION_KINDS.length ? undefined : kindsOn;
     if (scope.kind === 'selection') {
@@ -513,6 +525,10 @@ export function ChapterEditorScreen({
             // in the toolbar, like the hint: the text keeps its room above the keyboard
             <RefinePanel
               scope={panelScope.kind}
+              scopes={panelChoices.map((choice) => choice.kind)}
+              onScope={(kind) =>
+                setPanelScope(panelChoices.find((choice) => choice.kind === kind) ?? panelScope)
+              }
               kindsOn={kindsOn}
               onToggle={toggleKind}
               onStart={startRefine}
