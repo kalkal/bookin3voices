@@ -143,6 +143,24 @@ describe('BookScreen', () => {
     await screen.unmount();
   });
 
+  it('each row shows a read and a dictate button, labelled for screen readers', async () => {
+    const onOpenChapter = jest.fn();
+    const onDictateChapter = jest.fn();
+    const { result } = renderBook({ onOpenChapter, onDictateChapter });
+    const screen = await result;
+
+    const read = await screen.findByTestId('book-chapter-read-c1');
+    expect(read).toHaveProp('accessibilityLabel', expect.stringMatching(/^Leggi /));
+    expect(screen.getByTestId('book-chapter-mic-c1')).toHaveProp(
+      'accessibilityLabel',
+      expect.stringMatching(/^Detta /),
+    );
+    await fireEvent.press(read);
+    expect(onOpenChapter).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1' }), 1);
+    expect(onDictateChapter).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
   it('long press enables reordering and the arrows move the chapters', async () => {
     const { result, chapters } = renderBook();
     const screen = await result;

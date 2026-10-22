@@ -1,9 +1,10 @@
 /**
  * Book screen: header with title and denormalized counters, three tabs.
  * *Chapters*: ordered list with Roman numeral, color-coded status
- * (draft/refined/final), word count, mic on the row (→ Dictation) and tap on
- * the row (→ Editor); reordering with long press (up/down arrows — real
- * drag & drop will arrive with a gesture library); "+ New chapter" at the end.
+ * (draft/refined/final), word count, read and mic buttons on the row (→ Editor,
+ * → Dictation) and tap on the row (→ Editor); reordering with long press
+ * (up/down arrows — real drag & drop will arrive with a gesture library);
+ * "+ New chapter" at the end.
  * *Synopsis*: synopsis + generated outline with corkboard preview
  * (features/outline). *Export*: KDP metadata, format and generation with the
  * share sheet (features/export).
@@ -213,15 +214,28 @@ export function BookScreen({
           </Pressable>
         </View>
       ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('books.dictate', { title: item.title })}
-          testID={`book-chapter-mic-${item.id}`}
-          onPress={() => onDictateChapter(item, index + 1)}
-          style={[styles.roundButton, { borderColor: colors.primary }]}
-        >
-          <Ionicons name="mic-outline" size={17} color={colors.primary} />
-        </Pressable>
+        // two explicit actions side by side, so a first-time reader does not
+        // mistake one for the other (owner, 22 Oct); the row tap still reads
+        <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('books.read', { title: item.title })}
+            testID={`book-chapter-read-${item.id}`}
+            onPress={() => onOpenChapter(item, index + 1)}
+            style={[styles.roundButton, { borderColor: colors.primary }]}
+          >
+            <Ionicons name="book-outline" size={17} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('books.dictate', { title: item.title })}
+            testID={`book-chapter-mic-${item.id}`}
+            onPress={() => onDictateChapter(item, index + 1)}
+            style={[styles.roundButton, { borderColor: colors.primary }]}
+          >
+            <Ionicons name="mic-outline" size={17} color={colors.primary} />
+          </Pressable>
+        </View>
       )}
     </Pressable>
   );
