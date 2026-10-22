@@ -1,7 +1,5 @@
 <p align="center"><a href="https://github.com/kalkal"><img src="docs/brand/kalkal-mark.svg" alt="kalkal" height="56"></a></p>
 
-<p align="center"><a href="https://github.com/kalkal"><img src="docs/brand/kalkal-mark.svg" alt="kalkal" height="56"></a></p>
-
 # bookin3voice
 
 Dictate a book out loud, get precise style suggestions from an AI, and export files that are
