@@ -1,7 +1,7 @@
 // Integration test of the generateOutline callable against the
 // Firestore emulator (NEVER real projects). The model is an injected fake
-// (OutlineModel Strategy): real Gemini calls live in the optional smoke test
-// geminiOutline.smoke.test.ts. The following is verified:
+// (OutlineModel Strategy); the real model is exercised by the golden set
+// (npm run golden). The following is verified:
 //  - happy path: validated outline and users/{uid}/outlines/{requestId} registry entry;
 //  - context: chapters with text enter the prompt as "already written",
 //    empty ones do not; the book style (or the one the app sends) shapes it;

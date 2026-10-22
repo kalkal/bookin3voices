@@ -6,7 +6,7 @@
 export interface AiJsonRequest {
   systemInstruction: string;
   userText: string;
-  /** Response shape in the Gemini/OpenAPI dialect (upper-case type names). */
+  /** Response shape in the OpenAPI dialect (upper-case type names). */
   responseSchema: Record<string, unknown>;
   temperature: number;
   /** Output budget; keep below the smallest supported model limit (Nova Lite and Pro: 10K). */
@@ -34,7 +34,7 @@ export interface AiError {
 
 export type AiResult = { ok: true; value: unknown } | { ok: false; error: AiError };
 
-export const AI_PROVIDER_NAMES = ['bedrock', 'gemini'] as const;
+export const AI_PROVIDER_NAMES = ['bedrock'] as const;
 export type AiProviderName = (typeof AI_PROVIDER_NAMES)[number];
 
 export interface AiProvider {

@@ -26,7 +26,7 @@ export const ANACHRONISM_SEVERITIES = ['impossible', 'unlikely'] as const;
 export interface HistoryPrompt {
   systemInstruction: string;
   userText: string;
-  /** Gemini's OpenAPI dialect, like the refine schema (the Bedrock provider converts it). */
+  /** OpenAPI dialect, like the refine schema (the Bedrock provider converts it). */
   responseSchema: Record<string, unknown>;
 }
 

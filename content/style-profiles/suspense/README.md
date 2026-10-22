@@ -16,5 +16,5 @@ examples and passages. It is loaded by the `refineChapter` Cloud Function
   live here, never passages from novels.
 - Every change to Style Bible / few-shots / prompt / model → rerun the whole golden set
   (`npm run golden` in `functions/`). A style regression is a bug.
-- Real passages from the book only on the paid Gemini tier; the fictional passages in
-  this folder are fine on the free tier during development.
+- Real passages from the book only through a provider that does not use prompts for
+  training (Amazon Nova on Bedrock); the fictional passages in this folder are always fine.

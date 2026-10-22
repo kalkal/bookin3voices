@@ -1,4 +1,4 @@
-// Contract of the Markdown backup (exit route independent of Firebase/Gemini).
+// Contract of the Markdown backup (exit route independent of Firebase and of the AI provider).
 // Callable input validated with Zod at the boundary, Firestore documents
 // validated on read (parse, don't validate), response as a base64 zip - same
 // MVP-without-Storage approach as the Export feature.

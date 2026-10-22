@@ -39,7 +39,7 @@ describe('CallableSuggestionsProvider', () => {
           data: {
             // extra server fields (diagnostics): the schema drops them
             requestId: 'ref-1',
-            model: 'gemini-3.5-flash',
+            model: 'amazon.nova-lite-v1:0',
             promptVersion: 1,
             discarded: 0,
             textHash: textHash(TEXT),

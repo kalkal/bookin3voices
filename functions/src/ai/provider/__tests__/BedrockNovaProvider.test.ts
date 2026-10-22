@@ -72,7 +72,7 @@ describe('BedrockNovaProvider', () => {
     expect(input.messages[0].content[0].text).toBe('Text to review.');
     expect(input.inferenceConfig).toEqual({ maxTokens: 2048, temperature: 0.3 });
     expect(input.toolConfig.toolChoice).toEqual({ tool: { name: 'return_result' } });
-    // Gemini dialect converted to plain JSON Schema
+    // OpenAPI dialect converted to plain JSON Schema
     expect(input.toolConfig.tools[0].toolSpec.inputSchema.json).toEqual({
       type: 'object',
       properties: { suggestions: { type: 'array', items: { type: 'string' } } },

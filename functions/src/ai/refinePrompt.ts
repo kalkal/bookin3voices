@@ -4,7 +4,7 @@
 // be replayed on the whole golden set with the runner (tools/goldenSetRunner)
 // BEFORE being merged; this maintenance rule is binding.
 //
-// Structure designed for Gemini's implicit caching: the stable prefix (Style
+// Structure designed for prompt caching: the stable prefix (Style
 // Bible + few-shot + format rules) is all in the system instruction, while the
 // material that changes (book/chapter context and text) is in the user text,
 // at the end.
@@ -48,7 +48,7 @@ export interface RefinePromptInput {
 export interface RefinePrompt {
   systemInstruction: string;
   userText: string;
-  /** JSON Schema (Gemini's OpenAPI dialect) for structured output. */
+  /** JSON Schema (OpenAPI dialect, upper-case type names) for structured output. */
   responseSchema: Record<string, unknown>;
 }
 

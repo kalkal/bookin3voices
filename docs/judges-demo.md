@@ -149,8 +149,7 @@ lags hours behind, so it is not the brake).
 
 - **Functions**: `functions/.env.judges.example` → `functions/.env.<demo project id>`.
   Secrets: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of a dedicated IAM user that
-  may only `bedrock:InvokeModel` the chosen Nova model in us-east-1, plus a placeholder
-  `GEMINI_API_KEY` (the AI functions declare it; in the demo it is never used).
+  may only `bedrock:InvokeModel` the chosen Nova model in us-east-1.
 - **Rules**: `firestore.demo.rules` and `storage.demo.rules` (Storage fully closed: the
   app stores no files), deployed with `--config firebase.demo.json`; `config`,
   `demoAccess`, `usageDaily` and `usageTotal` are not in them, so clients can neither

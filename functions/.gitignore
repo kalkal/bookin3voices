@@ -4,8 +4,8 @@ lib/
 # dipendenze
 node_modules/
 
-# segreti locali per l'Emulator Suite (chiave Gemini free di sviluppo):
-# NON entrano mai nel repo — in produzione si usa Secret Manager.
+# local secrets for the Emulator Suite (AWS keys for development):
+# NEVER in the repo — production uses Secret Manager.
 .secret.local
 *.local
 

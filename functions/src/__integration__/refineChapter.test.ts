@@ -1,7 +1,7 @@
 // Integration test of the refineChapter callable against the
 // Firestore emulator (NEVER real projects). The model is an injected fake
-// (RefineModel Strategy); the real call lives in the optional smoke test
-// geminiRefine.smoke.test.ts. The following is verified:
+// (RefineModel Strategy); the real model is exercised by the golden set
+// (npm run golden). The following is verified:
 //  - happy path: suggestions validated, anchored, batch-written to the
 //    `suggestions` subcollection + users/{uid}/refines/{requestId} registry entry;
 //  - synopsis/outline context: the book synopsis and chapter outline enter the prompt;
@@ -13,17 +13,16 @@
 //  - non-conforming output twice → 'unavailable' and NO partial
 //    write (atomicity);
 //  - fallback on a 503 from the primary;
-//  - provider from settings/app (default gemini; unknown → failed-precondition);
+//  - the provider is the deployment's: an aiProvider left in settings/app is ignored;
 //  - clear errors (auth, input, non-matching textHash, missing chapter).
 
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import type { CallableRequest } from 'firebase-functions/v2/https';
 
-import { GeminiHttpError } from '../ai/GeminiRefineModel';
 import { logger } from 'firebase-functions';
 
-import type { AiProvider, AiResult } from '../ai/provider/types';
+import { AiProviderError, aiError, type AiProvider, type AiResult } from '../ai/provider/types';
 import { createRefineChapterHandler, type RefineChapterDeps } from '../ai/refineChapter';
 import type { RefinePrompt } from '../ai/refinePrompt';
 import type { RefineChapterResponse, RefineModel } from '../ai/refineTypes';
@@ -151,10 +150,9 @@ function input(bookId: string, chapterId: string, requestId: string, text = TEST
 function makeDeps(primary: RefineModel, fallback?: RefineModel): RefineChapterDeps {
   return {
     db,
-    defaultProvider: 'gemini',
+    defaultProvider: 'bedrock',
     providers: {
-      gemini: { primary, ...(fallback === undefined ? {} : { fallback }) },
-      bedrock: { primary },
+      bedrock: { primary, ...(fallback === undefined ? {} : { fallback }) },
     },
     loadStyleProfile: () => PROFILO_FINTO,
     now: () => NOW,
@@ -360,7 +358,10 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
     const primary = new FakeRefineModel(
-      [new GeminiHttpError(503, 'high demand'), new GeminiHttpError(503, 'high demand')],
+      [
+        new AiProviderError(aiError('unavailable', 'high demand')),
+        new AiProviderError(aiError('unavailable', 'high demand')),
+      ],
       'fake-primary',
     );
     const fallback = new FakeRefineModel([OUTPUT_FINTO], 'fake-fallback');
@@ -376,16 +377,16 @@ describe('refineChapter (Firestore emulator, fake model)', () => {
     expect(fallback.prompts).toHaveLength(1);
   });
 
-  it('provider from settings/app: explicit gemini ok, unknown → failed-precondition', async () => {
+  it('an aiProvider left in settings/app is ignored: the deployment model answers', async () => {
     const uid = freshUid();
     const { bookId, chapterId } = await seed(uid);
-    await db.doc(`users/${uid}/settings/app`).set({ aiProvider: 'gemini' });
-    await run(makeDeps(new FakeRefineModel()), uid, input(bookId, chapterId, 'req-prov'));
+    await db.doc(`users/${uid}/settings/app`).set({ aiProvider: 'retired-provider' });
+    const model = new FakeRefineModel();
 
-    await db.doc(`users/${uid}/settings/app`).set({ aiProvider: 'skynet' });
-    await expect(
-      run(makeDeps(new FakeRefineModel()), uid, input(bookId, chapterId, 'req-prov-2')),
-    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    const response = await run(makeDeps(model), uid, input(bookId, chapterId, 'req-prov'));
+
+    expect(response.suggestions).toHaveLength(3);
+    expect(model.prompts).toHaveLength(1);
   });
 
   it('non-matching textHash → invalid-argument', async () => {
@@ -487,7 +488,7 @@ describe('refineChapter with the history check (Firestore emulator, fake models)
   function historyProvider(results: AiResult[]): AiProvider {
     let calls = 0;
     return {
-      name: 'gemini',
+      name: 'bedrock',
       modelName: 'fake-history',
       generateJson: async () => results[Math.min(calls++, results.length - 1)] as AiResult,
     };
@@ -495,7 +496,7 @@ describe('refineChapter with the history check (Firestore emulator, fake models)
 
   function depsWithHistory(provider: AiProvider): RefineChapterDeps {
     const deps = makeDeps(new FakeRefineModel([MAIN_STORICO]));
-    return { ...deps, history: { gemini: () => provider, bedrock: () => provider } };
+    return { ...deps, history: { bedrock: () => provider } };
   }
 
   afterEach(() => jest.restoreAllMocks());
@@ -548,7 +549,7 @@ describe('refineChapter with the history check (Firestore emulator, fake models)
     const main = new FakeRefineModel([MAIN_STORICO]);
     let historyCalls = 0;
     const counting: AiProvider = {
-      name: 'gemini',
+      name: 'bedrock',
       modelName: 'fake-history',
       generateJson: async () => {
         historyCalls += 1;
@@ -557,7 +558,7 @@ describe('refineChapter with the history check (Firestore emulator, fake models)
     };
     const deps = {
       ...makeDeps(main),
-      history: { gemini: () => counting, bedrock: () => counting },
+      history: { bedrock: () => counting },
     };
 
     await run(deps, uid, {

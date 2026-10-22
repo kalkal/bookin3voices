@@ -25,9 +25,9 @@
 // Bedrock client. No network and no real model call: it checks the code side
 // (normalization, proposal guard, density) on every passage that has a recording;
 // the prompt and the model still need the live run.
-// Provider: AI_PROVIDER (bedrock = Amazon Nova, the default, through the AWS
-// credential chain, e.g. AWS_PROFILE; gemini = env GEMINI_API_KEY), the same
-// factory the callables use. Fictitious passages only. Keys are never printed.
+// Provider: Amazon Nova on Bedrock, through the AWS credential chain (e.g.
+// AWS_PROFILE), the same factory the callables use. Fictitious passages only.
+// Keys are never printed.
 
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -135,14 +135,6 @@ function extractBrano(markdown: string, file: string): string {
 
 function countWords(text: string): number {
   return text.split(/\s+/).filter((w) => w !== '').length;
-}
-
-// ---------- API key ----------
-
-function resolveApiKey(): string {
-  const fromEnv = process.env.GEMINI_API_KEY;
-  if (fromEnv !== undefined && fromEnv !== '') return fromEnv;
-  throw new Error('Set the GEMINI_API_KEY environment variable.');
 }
 
 // ---------- checking a passage ----------
@@ -457,7 +449,6 @@ export async function runOfflinePassage(
   } as unknown as BedrockRuntimeClient;
   const deps = {
     env: { AI_PROVIDER: 'bedrock', BEDROCK_MODEL_ID: 'recorded-nova' },
-    gemini: { model: () => '', apiKey: () => '' },
     createBedrockClient: () => client,
   };
   const model = new ProviderModel(() => createProvider(deps, 'primary'), REFINE_TEMPERATURE);
@@ -521,33 +512,23 @@ async function main(): Promise<void> {
   }
   const startedAt = new Date();
   // Same provider, model ids and env var names as the callables (AI_PROVIDER,
-  // BEDROCK_MODEL_ID*, GEMINI_MODEL_REFINE*): the script loads functions/.env when
+  // BEDROCK_MODEL_ID*): the script loads functions/.env when
   // it exists, so without arguments it exercises the configured model; otherwise
   // the regression brake would report green on a model other than the one in service.
-  // --model / --fallback override the configured model ids of the selected provider.
+  // --model / --fallback override the configured model ids.
   const envFile = path.resolve(__dirname, '..', '..', '.env');
   if (existsSync(envFile)) process.loadEnvFile(envFile);
   const env = { ...process.env };
   const providerName = selectProviderName(env);
   const primaryArg = argValue('model');
   const fallbackArg = argValue('fallback');
-  if (providerName === 'bedrock') {
-    if (primaryArg !== undefined) env.BEDROCK_MODEL_ID = primaryArg;
-    if (fallbackArg !== undefined) env.BEDROCK_MODEL_ID_FALLBACK = fallbackArg;
-  }
-  const geminiNames: Record<ModelRole, string> = {
-    primary: primaryArg ?? env.GEMINI_MODEL_REFINE ?? 'gemini-3.5-flash',
-    fallback: fallbackArg ?? env.GEMINI_MODEL_REFINE_FALLBACK ?? 'gemini-3.6-flash',
-    outline: env.GEMINI_MODEL_PRO ?? '',
-  };
+  if (primaryArg !== undefined) env.BEDROCK_MODEL_ID = primaryArg;
+  if (fallbackArg !== undefined) env.BEDROCK_MODEL_ID_FALLBACK = fallbackArg;
   const only = argValue('only');
   const out = argValue('out');
   const dry = process.argv.includes('--dry');
 
-  const deps = {
-    env,
-    gemini: { model: (role: ModelRole) => geminiNames[role], apiKey: resolveApiKey },
-  };
+  const deps = { env };
   const modelFor = (role: ModelRole) =>
     new ProviderModel(() => createProvider(deps, role), REFINE_TEMPERATURE);
   const primary = modelFor('primary');

@@ -83,7 +83,7 @@ const FIXTURES: Fixture[] = [
   {
     nome: 'settings',
     path: (uid) => `users/${uid}/settings/app`,
-    dati: { aiProvider: 'gemini', theme: 'library' },
+    dati: { aiProvider: 'bedrock', theme: 'library' },
     update: { theme: 'dark' },
   },
   {

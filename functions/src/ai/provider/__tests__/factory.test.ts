@@ -7,11 +7,9 @@ import {
 import { ProviderModel } from '../ProviderModel';
 import { AiProviderError, type AiProvider, type AiResult } from '../types';
 
-const gemini = { model: () => 'gemini-x', apiKey: () => 'k' };
 const fakeClient = () => ({ send: async () => ({}) }) as never;
 const deps = (env: Record<string, string>): ProviderFactoryDeps => ({
   env,
-  gemini,
   createBedrockClient: fakeClient,
 });
 
@@ -23,10 +21,9 @@ describe('provider selection', () => {
     expect(provider.modelName).toBe('amazon.nova-pro-v1:0');
   });
 
-  it('AI_PROVIDER=gemini switches to Gemini (case-insensitive)', () => {
-    const provider = createProvider(deps({ AI_PROVIDER: ' Gemini ' }), 'primary');
-    expect(provider.name).toBe('gemini');
-    expect(provider.modelName).toBe('gemini-x');
+  it('AI_PROVIDER=bedrock is accepted (case-insensitive)', () => {
+    expect(selectProviderName({ AI_PROVIDER: ' Bedrock ' })).toBe('bedrock');
+    expect(createProvider(deps({ AI_PROVIDER: 'BEDROCK' }), 'primary').name).toBe('bedrock');
   });
 
   it('an unknown AI_PROVIDER fails loudly', () => {
@@ -35,9 +32,10 @@ describe('provider selection', () => {
     );
   });
 
-  it('an explicit name overrides the environment', () => {
-    const provider = createProvider(deps({ AI_PROVIDER: 'gemini' }), 'primary', 'bedrock');
-    expect(provider.name).toBe('bedrock');
+  it('building a model with another AI_PROVIDER fails loudly, never falls back', () => {
+    expect(() => createProvider(deps({ AI_PROVIDER: 'skynet' }), 'primary')).toThrow(
+      'AI_PROVIDER must be one of bedrock',
+    );
   });
 
   it('Bedrock model ids come from env per role; no fallback by default', () => {

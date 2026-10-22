@@ -2,7 +2,7 @@
 // text - one file per chapter (frontmatter with title/order/status/word count)
 // plus one index per book, delivered as a base64 zip. Without bookId the WHOLE
 // library is exported: it is the exit route that is independent of
-// Firebase/Gemini. Storage is not enabled in the MVP (Spark plan): as with
+// Firebase and of the AI provider. Storage is not enabled in the MVP (Spark plan): as with
 // exportBook, the file is returned in the response; the Storage variant for
 // backups above the callable limit is noted as future work.
 //

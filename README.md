@@ -8,8 +8,7 @@ Dictate a book out loud, get precise style suggestions from an AI, and export fi
 ready for Amazon KDP (EPUB and DOCX).
 
 bookin3voice is a mobile app (React Native / Expo) backed by Firebase. Suggestions and chapter
-outlines come from **Amazon Nova on Amazon Bedrock** by default; Google Gemini is available as
-an alternative provider. Licensed under the [GNU AGPL v3.0 only](LICENSE), Copyright 2026 kalkal.
+outlines come from **Amazon Nova on Amazon Bedrock**. Licensed under the [GNU AGPL v3.0 only](LICENSE), Copyright 2026 kalkal.
 
 ## Why it matters
 
@@ -67,7 +66,6 @@ from Amazon Nova Pro in the Suspense / Horror style.*
                 ▼                                      │ AiProvider   │ Firestore
         Firestore + Auth (per-user rules)              ▼ port         ▼
                                               Amazon Nova (Bedrock)  users/{uid}/…
-                                              or Gemini
 ```
 
 - **Per-user data** lives under `users/{uid}/…`; security rules deny everything else and are
@@ -75,7 +73,7 @@ from Amazon Nova Pro in the Suspense / Horror style.*
 - **One AI port.** `functions/src/ai/provider/` defines `AiProvider.generateJson(request)` that
   returns a value (`{ ok: true, value }` or `{ ok: false, error }`), never throws, and has a
   per-call timeout. Prompts, the JSON contract, validation (Zod) and the "exact span, found
-  once" rule are shared by every provider.
+  once" rule live outside the provider, so the model can change without touching them.
 - **Safe suggestions.** The model must quote the exact words it wants to change; the server
   discards anything that is absent or ambiguous in the text, caps the density and drops
   overlaps, so a suggestion can never be applied blindly.
@@ -88,13 +86,12 @@ security-rules tests · `e2e/` Maestro flows · [`docs/local-development.md`](do
 
 ## AI provider
 
-Default: **Amazon Nova Pro on Amazon Bedrock**, through the Converse API
+The AI is **Amazon Nova Pro on Amazon Bedrock**, through the Converse API
 (`@aws-sdk/client-bedrock-runtime`). Nova has no native JSON mode, so the answer is forced into
 the JSON schema with a single tool and `toolChoice`; plain or fenced JSON text is also accepted.
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `AI_PROVIDER` | `bedrock` or `gemini` | `bedrock` |
 | `BEDROCK_MODEL_ID` | Bedrock model id or inference profile id | `amazon.nova-pro-v1:0` |
 | `BEDROCK_MODEL_ID_OUTLINE` / `BEDROCK_MODEL_ID_FALLBACK` | optional outline model / fallback model | same as above / none |
 | `BEDROCK_REGION` (or `AWS_REGION`) | AWS region | `us-east-1` |
@@ -117,8 +114,7 @@ is roughly 13 times cheaper per token and works too, with weaker suggestions; se
 variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), a profile (`AWS_PROFILE`, including
 SSO), or an IAM role. For the emulator put them in `functions/.secret.local`; in production
 use Secret Manager (`firebase functions:secrets:set AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY`; deployment declares both AWS secrets and `GEMINI_API_KEY`, so create
-each one, with a dummy value for the provider you do not use).
+`AWS_SECRET_ACCESS_KEY`; deployment declares both, so create each one before you deploy).
 
 **Minimum permission.** Create an IAM user (or role) that can only call the one model:
 
@@ -140,12 +136,7 @@ If you use an inference profile id (`us.amazon.nova-pro-v1:0`) also allow the pr
 foundation model in the destination regions. Depending on the account you may also have to
 enable access to the model in the Bedrock console.
 
-**Switch to Gemini.** Set `AI_PROVIDER=gemini`, put `GEMINI_API_KEY` in `functions/.secret.local`
-(or Secret Manager) and choose the model names in `functions/.env` (`GEMINI_MODEL_*`). The
-names in `functions/.env.example` are examples: check the current
-[Gemini model list](https://ai.google.dev/gemini-api/docs/models) before you deploy.
-
-Both providers share the same prompts, timeouts (80 s per call, 140 s for the outline; three attempts at most), error
+Every call has a timeout (80 s per call, 140 s for the outline; three attempts at most), typed error
 classes (`throttled`, `timeout`, `blocked`, `truncated`, `invalid_json`, ...) and logging (no
 prompt or text is ever logged).
 
@@ -182,7 +173,7 @@ the commands inside them by hand.
 
 # 2. configure the functions
 cp functions/.env.example functions/.env          # then edit if needed
-# put AWS credentials (or GEMINI_API_KEY) in functions/.secret.local, never in git
+# put AWS credentials in functions/.secret.local, never in git
 
 # 3. start the emulators (Auth, Firestore, Functions, Storage, UI on :4000)
 npm --prefix functions run build && firebase emulators:start
@@ -200,7 +191,7 @@ fill in the `EXPO_PUBLIC_FIREBASE_*` values.
 
 ```bash
 # unit tests, no services needed
-(cd functions && npm test)   # AI providers, styles, KDP preflight, exporters
+(cd functions && npm test)   # AI provider, styles, KDP preflight, exporters
 (cd app && npm test)         # screens, repositories, state machines
 
 # on the Firebase emulators (Java 21 + firebase-tools 14)

@@ -24,10 +24,9 @@ the profile must hold up across registers without flattening them.
   `checks.json`, which must stay aligned with the passages: the runner fails loudly if
   they diverge), grammar hierarchy and format; coverage of the "MUST" items is reported
   as a diagnostic. The model comes from the same provider factory as the callables
-  (`AI_PROVIDER`, default `bedrock` = Amazon Nova with the usual AWS credentials, for
-  example `AWS_PROFILE`; `gemini` = key from env `GEMINI_API_KEY`), ONLY fictional
-  passages. It loads `functions/.env` when present (variables already exported win) and
-  prints the number of model calls at the end. Options:
+  (Amazon Nova on Bedrock with the usual AWS credentials, for example `AWS_PROFILE`),
+  ONLY fictional passages. It loads `functions/.env` when present (variables already
+  exported win) and prints the number of model calls at the end. Options:
   `-- --model X --fallback Y --only 04 --out report.md --dry`.
 - **Offline run (no model call, safe for CI)**: `npm run golden:offline` in `functions/`
   (and the `goldenSetOffline` jest test) replays the hand-written answers in `recorded/`
@@ -62,7 +61,8 @@ the profile must hold up across registers without flattening them.
   (`npm run golden` in `functions/`). A style regression is a bug in every respect.
 - When a passage is added or changed, update its entry in `checks.json` (verbatim
   quotations: the runner checks alignment, even with `--dry`).
-- The passages are fictional: in development they may also be used on Gemini's free tier.
-  The **real** passages of the book go ONLY through the paid tier.
+- The passages are fictional: in development they may be sent to any model.
+  The **real** passages of the book go ONLY to a provider that does not use prompts for
+  training (Amazon Nova on Bedrock).
 - The set grows: when a real passage exposes a new defect, a fictional passage that
   reproduces that defect is added here, with its expected outcome.

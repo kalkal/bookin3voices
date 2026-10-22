@@ -1,7 +1,7 @@
-// Daily usage cap for the callables that consume Gemini (hardening). With the
+// Daily usage cap for the callables that consume the AI model (hardening). With the
 // public web config (apiKey/appId in the preview profile of eas.json) anyone
-// can signInAnonymously and hammer refineChapter/generateOutline: on a FREE key
-// that burns quota, on a paid key it burns money.
+// can signInAnonymously and hammer refineChapter/generateOutline: every call
+// to Amazon Nova costs money.
 //
 // Real App Check (Play Integrity) is not practical here: the app uses the
 // Firebase JS SDK (not @react-native-firebase), which only supports reCAPTCHA
@@ -129,7 +129,7 @@ export interface EnforceUsageOptions {
  * Must be invoked BEFORE the model call and AFTER the idempotency
  * short-circuit (requestId): a network retry reuses the saved response and
  * must NOT consume budget. Throws `resource-exhausted` (429 on the client side)
- * when the cap is reached, without having touched Gemini.
+ * when the cap is reached, without having called the model.
  */
 export async function enforceUsageLimit(options: EnforceUsageOptions): Promise<void> {
   const { db, uid, action, now = Date.now, limits = DEFAULT_USAGE_LIMITS } = options;

@@ -1,4 +1,4 @@
-// Gemini's responseSchema uses the OpenAPI dialect (type names in upper case,
+// The prompts' responseSchema uses the OpenAPI dialect (type names in upper case,
 // `propertyOrdering`). Bedrock tool input schemas are standard JSON Schema.
 
 const DROPPED_KEYS = new Set(['propertyOrdering', 'nullable']);

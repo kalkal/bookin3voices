@@ -75,18 +75,16 @@ describe('SettingsScreen', () => {
     const screen = await renderScreen(storage);
     expect(await screen.findByTestId('ai-engine')).toHaveTextContent('AI: Amazon Nova Pro');
     expect(screen.getByTestId('ai-model')).toHaveTextContent(/amazon\.nova-pro-v1:0/);
-    expect(screen.queryByTestId('provider-bedrock')).toBeNull();
-    expect(screen.queryByTestId('provider-gemini')).toBeNull();
-    expect(screen.queryByText(/Gemini/)).toBeNull();
+    expect(screen.queryAllByTestId(/^provider-/)).toHaveLength(0);
     expect(screen.getByTestId('goal-value')).toHaveTextContent('500');
     await screen.unmount();
   });
 
-  it('the old local «Google Gemini» choice (September) is ignored and cleaned', async () => {
+  it('the old local engine choice (September) is ignored and cleaned', async () => {
     const { storage, data } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
-        aiProvider: 'gemini',
+        aiProvider: 'legacy-engine',
         theme: 'candlelight',
         dailyGoalWords: 700,
         backupFrequency: 'weekly',
@@ -94,7 +92,7 @@ describe('SettingsScreen', () => {
     });
     const screen = await renderScreen(storage);
     expect(await screen.findByTestId('ai-engine')).toHaveTextContent('AI: Amazon Nova Pro');
-    expect(screen.queryByText(/Gemini/)).toBeNull();
+    expect(screen.queryByText(/legacy-engine/)).toBeNull();
     await waitFor(() => expect(JSON.parse(data.get(KEY) ?? '{}')).not.toHaveProperty('aiProvider'));
     expect(JSON.parse(data.get(KEY) ?? '{}')).toMatchObject({ dailyGoalWords: 700 });
     await screen.unmount();
@@ -152,7 +150,7 @@ describe('SettingsScreen', () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
-        aiProvider: 'gemini',
+        aiProvider: 'legacy-engine',
         theme: 'paper',
         dailyGoalWords: 100,
         backupFrequency: 'weekly',
@@ -223,7 +221,7 @@ describe('SettingsScreen', () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
-        aiProvider: 'gemini',
+        aiProvider: 'legacy-engine',
         theme: 'paper',
         dailyGoalWords: 500,
         backupFrequency: 'weekly',

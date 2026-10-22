@@ -34,17 +34,16 @@ export interface OutlinePromptInput {
 export interface OutlinePrompt {
   systemInstruction: string;
   userText: string;
-  /** JSON Schema (Gemini's OpenAPI dialect) for structured output. */
+  /** JSON Schema (OpenAPI dialect, upper-case type names) for structured output. */
   responseSchema: Record<string, unknown>;
 }
 
 /**
- * Response schema for Gemini's structured output: mirrors outlineSchema
- * (types.ts) in the API's OpenAPI dialect. `propertyOrdering` stabilizes the
- * field order in the generated JSON (Google's recommendation).
- * NO minItems/maxItems: the endpoint rejects them with 400 (verified on
- * gemini-3.6-flash); the numeric limits are enforced by the Zod outlineSchema
- * and appear here only in the descriptions.
+ * Response schema for the structured output: mirrors outlineSchema (types.ts)
+ * in the OpenAPI dialect; the Bedrock provider turns it into plain JSON Schema
+ * (provider/schema.ts drops `propertyOrdering`). NO minItems/maxItems: the
+ * numeric limits are enforced by the Zod outlineSchema and appear here only in
+ * the descriptions.
  */
 export const OUTLINE_RESPONSE_SCHEMA: Record<string, unknown> = {
   type: 'OBJECT',

@@ -22,7 +22,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import { HttpsError, type CallableRequest } from 'firebase-functions/v2/https';
-import { z } from 'zod';
 
 import { buildRefineDebugTrace } from './debugTrace';
 import { mergeWithHistory, runHistoryCheckWithin } from './history/historyCheck';
@@ -58,16 +57,15 @@ import { reportSuspiciousInput } from '../security/suspiciousInput';
 import { enforceUsageLimit, type UsageAction, type UsageLimit } from '../usage/rateLimit';
 
 /** Ids of the supported AI providers (the app only shows the one in use). */
-export const AI_PROVIDER_IDS = ['bedrock', 'gemini'] as const;
+/** Amazon Nova on Bedrock is the only provider. */
+export const AI_PROVIDER_IDS = ['bedrock'] as const;
 export type AiProviderId = (typeof AI_PROVIDER_IDS)[number];
-
-const settingsProviderSchema = z.object({ aiProvider: z.enum(AI_PROVIDER_IDS).catch('bedrock') });
 
 export interface RefineChapterDeps {
   db: Firestore;
   /** Models per provider: primary + optional fallback (Strategy). */
   providers: Record<AiProviderId, { primary: RefineModel; fallback?: RefineModel }>;
-  /** Provider used when the user has no explicit choice (deployment-level AI_PROVIDER). */
+  /** The deployment's provider (AI_PROVIDER); the user's settings never choose it. */
   defaultProvider?: AiProviderId;
   /** Style profile loader, injectable in tests. */
   loadStyleProfile?: (profileId: string) => StyleProfileContent;
@@ -87,30 +85,6 @@ export interface RefineChapterDeps {
   debugTrace?: boolean;
   /** Judges' demo (DEMO_GATE=1): access code, demo caps and text limit (demo/demoGate.ts). */
   demoGate?: boolean;
-}
-
-/**
- * Active provider from users/{uid}/settings/app: missing document or
- * malformed field → default bedrock; an explicit unknown provider →
- * failed-precondition (a clear error beats silently ignoring the choice).
- */
-export async function readAiProviderId(
-  db: Firestore,
-  uid: string,
-  defaultId: AiProviderId = 'bedrock',
-): Promise<AiProviderId> {
-  const snap = await db.doc(`users/${uid}/settings/app`).get();
-  if (!snap.exists) return defaultId;
-  const data = snap.data() as { aiProvider?: unknown } | undefined;
-  const raw = data?.aiProvider;
-  if (raw === undefined) return defaultId;
-  if (typeof raw !== 'string' || !AI_PROVIDER_IDS.includes(raw as AiProviderId)) {
-    throw new HttpsError(
-      'failed-precondition',
-      `Unsupported AI provider: ${String(raw).slice(0, 40)}.`,
-    );
-  }
-  return settingsProviderSchema.parse({ aiProvider: raw }).aiProvider;
 }
 
 /**
@@ -309,11 +283,8 @@ export async function runRefineChapter(
   // monitoring only, after the cap: free text is data, flagged by kind, never refused
   reportSuspiciousInput('chapterText', input.text, { requestId: input.requestId });
 
-  // in the demo the user's provider choice is ignored: only the deployment's (Nova)
-  const providerId =
-    demo !== undefined
-      ? (deps.defaultProvider ?? 'bedrock')
-      : await readAiProviderId(db, uid, deps.defaultProvider);
+  // an `aiProvider` left in an old users/{uid}/settings/app is ignored
+  const providerId = deps.defaultProvider ?? 'bedrock';
   const provider = providers[providerId];
 
   const { book, chapter, chapterRef } = await readContext(db, uid, input);

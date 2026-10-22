@@ -4,9 +4,7 @@
 //
 // Checks, with the app's real Firebase SDK:
 //  1. email/password signup + sign-in on the Auth emulator;
-//  2. `ping` callable on the Functions emulator;
-//  3. (if GEMINI_SMOKE=1) `geminiSmoke` callable with a FAKE TEXT —
-//     never real book text: free key only in development.
+//  2. `ping` callable on the Functions emulator.
 
 import { initializeApp } from 'firebase/app';
 import {
@@ -54,16 +52,6 @@ console.log('[3/3] Ping callable on Functions emulator...');
 const ping = httpsCallable(functions, 'ping');
 const pong = await ping({});
 console.log(`      OK — response: ${JSON.stringify(pong.data)}`);
-
-if (process.env.GEMINI_SMOKE === '1') {
-  console.log('[extra] geminiSmoke callable with fake text...');
-  const geminiSmoke = httpsCallable(functions, 'geminiSmoke');
-  const testoFittizio =
-    'Brano di prova inventato: la ruota del mulino di Rocca Bassa girò tre volte, ' +
-    'poi taceva. Rispondi con una sola frase di conferma che hai letto il brano.';
-  const result = await geminiSmoke({ text: testoFittizio });
-  console.log(`      OK — ${JSON.stringify(result.data).slice(0, 300)}`);
-}
 
 console.log('\nSmoke test passed.');
 process.exit(0);

@@ -18,7 +18,7 @@ describe('aiModel', () => {
     ['us.amazon.nova-pro-v1:0', 'Amazon Nova Pro'],
     ['amazon.nova-lite-v1:0', 'Amazon Nova Lite'],
     ['amazon.nova-premier-v1:0', 'Amazon Nova Premier'],
-    ['gemini-3.6-flash', 'Google Gemini'],
+    ['mistral.mistral-large-2407-v1:0', 'mistral.mistral-large-2407-v1:0'],
     ['something-else', 'something-else'],
   ])('%s is shown as %s', (model, label) => {
     expect(aiModelLabel(model)).toBe(label);

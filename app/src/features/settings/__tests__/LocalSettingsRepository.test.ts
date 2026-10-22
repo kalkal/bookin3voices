@@ -44,7 +44,7 @@ describe('LocalSettingsRepository', () => {
     const { storage } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
-        aiProvider: 'gemini',
+        aiProvider: 'bedrock',
         theme: 'candlelight',
         dailyGoalWords: 900,
         backupFrequency: 'monthly',
@@ -64,7 +64,7 @@ describe('LocalSettingsRepository', () => {
     const { storage, data } = memoryStorage({
       [KEY]: JSON.stringify({
         schemaVersion: 1,
-        aiProvider: 'gemini',
+        aiProvider: 'bedrock',
         theme: 'candlelight',
         dailyGoalWords: 900,
         backupFrequency: 'monthly',

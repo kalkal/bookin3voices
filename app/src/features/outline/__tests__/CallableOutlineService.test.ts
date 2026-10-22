@@ -7,7 +7,7 @@ import { CallableOutlineService } from '../CallableOutlineService';
 const RISPOSTA_VALIDA = {
   requestId: 'out-1',
   bookId: 'mulino',
-  model: 'gemini-test',
+  model: 'amazon.nova-pro-v1:0',
   promptVersion: 1,
   createdAt: 123,
   chapters: [{ title: 'La gola chiusa', summary: 'Riassunto.', beats: ['beat 1', 'beat 2'] }],

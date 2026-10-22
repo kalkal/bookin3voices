@@ -282,7 +282,7 @@ describe('the gated callables never reach the model without access', () => {
           db,
           demoGate: true,
           now: () => NOW,
-          providers: { bedrock: { primary: model }, gemini: { primary: model } },
+          providers: { bedrock: { primary: model } },
         },
         'phone-1',
         { bookId: 'b', chapterId: 'c', text, textHash: textHash(text), requestId: 'r1' },

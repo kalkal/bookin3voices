@@ -38,20 +38,10 @@ The functions read their keys as secrets (`defineSecret`). Locally the Emulator 
 loads them from `functions/.secret.local` (**ignored by git**); in production they come
 from Secret Manager.
 
-The default AI provider is Amazon Nova on Amazon Bedrock (see the "AI provider" section of
+The AI provider is Amazon Nova on Amazon Bedrock (see the "AI provider" section of
 the `README.md`): put `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in
 `functions/.secret.local`, or start the emulators with an AWS profile (`AWS_PROFILE`).
-
-To use Gemini instead, set `AI_PROVIDER=gemini` in `functions/.env` and add one line to
-`functions/.secret.local`:
-
-```text
-GEMINI_API_KEY=<your key>
-```
-
-Use your own key from Google AI Studio. Keys never go in the repository, in logs or in
-output. If you use the free tier, send only invented sample text: Google may use free-tier
-prompts for training.
+Keys never go in the repository, in logs or in output.
 
 ## End-to-end smoke test
 
@@ -62,8 +52,6 @@ npm run emulators:smoke
 ```
 
 It checks sign-up and sign-in on the Auth emulator and the `ping` callable on Functions.
-With `GEMINI_SMOKE=1` it also calls the `geminiSmoke` callable, which sends one invented
-sentence to Gemini and reports only the outcome and the model.
 
 ## Connecting the app to the emulators
 

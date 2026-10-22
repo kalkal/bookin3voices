@@ -1,9 +1,9 @@
-// Provider selection. AI_PROVIDER=bedrock (default, Amazon Nova) | gemini.
+// Provider selection: Amazon Nova on Bedrock is the only provider. AI_PROVIDER
+// may only say `bedrock`; any other value fails loudly at startup.
 
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 
 import { BedrockNovaProvider, DEFAULT_NOVA_MODEL_ID } from './BedrockNovaProvider';
-import { GeminiProvider } from './GeminiProvider';
 import { AI_PROVIDER_NAMES, type AiProvider, type AiProviderName } from './types';
 
 export type Env = Record<string, string | undefined>;
@@ -26,8 +26,6 @@ export type ModelRole = 'primary' | 'fallback' | 'outline';
 
 export interface ProviderFactoryDeps {
   env: Env;
-  /** Gemini model names per role (from firebase params) and its API key. */
-  gemini: { model: (role: ModelRole) => string; apiKey: () => string };
   /** Injectable for tests; default builds a real Bedrock client. */
   createBedrockClient?: (region: string) => BedrockRuntimeClient;
 }
@@ -41,21 +39,11 @@ export function bedrockModelId(env: Env, role: ModelRole): string {
 }
 
 /** Builds the provider for a role. Call lazily (at request time). */
-export function createProvider(
-  deps: ProviderFactoryDeps,
-  role: ModelRole,
-  nameOverride?: AiProviderName,
-): AiProvider {
-  const name = nameOverride ?? selectProviderName(deps.env);
+export function createProvider(deps: ProviderFactoryDeps, role: ModelRole): AiProvider {
+  // a misconfigured AI_PROVIDER stops the call instead of quietly using something else
+  selectProviderName(deps.env);
   // the outline uses the larger model and 2 attempts: allow a longer single call
   const timeoutMs = role === 'outline' ? OUTLINE_TIMEOUT_MS : undefined;
-  if (name === 'gemini') {
-    return new GeminiProvider({
-      model: () => deps.gemini.model(role),
-      apiKey: deps.gemini.apiKey,
-      timeoutMs,
-    });
-  }
   const region =
     (deps.env.BEDROCK_REGION ?? deps.env.AWS_REGION ?? '').trim() || DEFAULT_AWS_REGION;
   const make = deps.createBedrockClient ?? ((r: string) => new BedrockRuntimeClient({ region: r }));
